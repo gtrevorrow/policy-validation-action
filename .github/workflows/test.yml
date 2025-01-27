@@ -19,30 +19,59 @@ jobs:
       - name: Build action
         run: npm run build
         
-      - name: Create test policy file
+      - name: Create test policies
         run: |
           mkdir -p test/policies
-          cat > test/policies/test.tf << 'EOL'
-          resource "oci_identity_policy" "test_policy" {
-            name = "test_policy"
-            description = "Test policy"
+          # Valid policy file
+          cat > test/policies/valid.tf << 'EOL'
+          resource "oci_identity_policy" "valid_policy" {
             statements = [
               "Allow group Administrators to manage all-resources in tenancy",
-              "Allow group Developers to use instances in compartment dev",
-              "Invalid policy statement that should fail"
+              "Allow group Developers to use instances in compartment dev"
+            ]
+          }
+          EOL
+          
+          # Invalid policy file
+          cat > test/policies/invalid.tf << 'EOL'
+          resource "oci_identity_policy" "invalid_policy" {
+            statements = [
+              "Invalid policy statement that should fail",
+              "Allow BadSyntax manage"
             ]
           }
           EOL
           
       - name: Test valid policy
-        id: validate-policy
+        id: test-valid
+        continue-on-error: true
         uses: ./
         with:
-          path: './test/policies'
+          path: './test/policies/valid.tf'
           
-      - name: Check validation output
+      - name: Test invalid policy
+        id: test-invalid
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './test/policies/invalid.tf'
+          
+      - name: Verify test results
         run: |
-          if [[ -z "${{ steps.validate-policy.outputs.allow_segments }}" ]]; then
-            echo "No policy segments found"
+          # Valid policy should succeed
+          if [ "${{ steps.test-valid.outcome }}" != "success" ]; then
+            echo "Valid policy test failed unexpectedly"
+            exit 1
+          fi
+          
+          # Invalid policy should fail
+          if [ "${{ steps.test-invalid.outcome }}" != "failure" ]; then
+            echo "Invalid policy test succeeded unexpectedly"
+            exit 1
+          fi
+          
+          # Check output format
+          if [ -z "${{ steps.test-valid.outputs.allow_segments }}" ]; then
+            echo "No segments found in valid policy"
             exit 1
           fi

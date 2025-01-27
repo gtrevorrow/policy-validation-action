@@ -1,20 +1,30 @@
 import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
-import { CharStreams, CommonTokenStream, TokenSource } from 'antlr4ts';
-import { ANTLRErrorListener, RecognitionException, Recognizer } from 'antlr4ts';
+import { 
+    CharStreams, 
+    CommonTokenStream,
+    ErrorListener,
+    RecognitionException,
+    Recognizer,
+    CharStream,
+    Token,
+    Parser,
+    Lexer
+} from 'antlr4';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
-import { Parser } from 'antlr4ts/Parser';
 
 // Add custom error listener implementation
-class PolicyErrorListener implements ANTLRErrorListener<any> {
-    syntaxError(recognizer: Recognizer<any, any>, 
-                offendingSymbol: any, 
-                line: number, 
-                charPositionInLine: number, 
-                msg: string, 
-                e: RecognitionException | undefined): void {
+class PolicyErrorListener implements ErrorListener<Token> {
+    syntaxError(
+        recognizer: Recognizer<Token>,
+        offendingSymbol: Token | undefined,
+        line: number,
+        charPositionInLine: number,
+        msg: string,
+        e: RecognitionException | undefined
+    ): void {
         throw new Error(`Line ${line}:${charPositionInLine} - ${msg}`);
     }
 }
@@ -57,14 +67,12 @@ async function findTerraformFiles(dir: string): Promise<string[]> {
 function parsePolicy(text: string): boolean {
     try {
         const inputStream = CharStreams.fromString(text);
-        const lexer = new PolicyLexer(inputStream);
-        const tokenStream = new CommonTokenStream(lexer as unknown as TokenSource);
+        const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
+        const tokenStream = new CommonTokenStream(lexer);
         const parser = new PolicyParser(tokenStream);
         
-        // Cast parser to access error listener methods
-        const parserWithListeners = parser as unknown as Parser;
-        parserWithListeners.removeErrorListeners();
-        parserWithListeners.addErrorListener(new PolicyErrorListener());
+        parser.removeErrorListeners();
+        parser.addErrorListener(new PolicyErrorListener());
         
         const tree = parser.policy();
         return true;
