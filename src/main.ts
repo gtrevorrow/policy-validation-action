@@ -50,15 +50,25 @@ async function processFile(filePath: string): Promise<string[]> {
 }
 
 async function findTerraformFiles(dir: string): Promise<string[]> {
-    const normalizedDir = path.resolve(dir);
-    core.debug(`Searching for .tf files in: ${normalizedDir}`);
-    const files: string[] = [];
+    const normalizedPath = path.resolve(dir);
+    core.debug(`Checking path: ${normalizedPath}`);
+
     try {
-        const entries = await fs.promises.readdir(normalizedDir, { withFileTypes: true });
-        core.debug(`Found ${entries.length} entries in directory`);
+        const stats = await fs.promises.stat(normalizedPath);
+        
+        // If path is a single file, return it if it's a .tf file
+        if (stats.isFile()) {
+            core.debug(`Processing single file: ${normalizedPath}`);
+            return normalizedPath.endsWith('.tf') ? [normalizedPath] : [];
+        }
+
+        // If path is a directory, scan for .tf files
+        const files: string[] = [];
+        const entries = await fs.promises.readdir(normalizedPath, { withFileTypes: true });
+        core.debug(`Scanning directory with ${entries.length} entries`);
 
         for (const entry of entries) {
-            const fullPath = path.join(normalizedDir, entry.name);
+            const fullPath = path.join(normalizedPath, entry.name);
             if (entry.isDirectory()) {
                 core.debug(`Recursing into directory: ${fullPath}`);
                 files.push(...await findTerraformFiles(fullPath));
@@ -67,10 +77,11 @@ async function findTerraformFiles(dir: string): Promise<string[]> {
                 files.push(fullPath);
             }
         }
+        return files;
     } catch (error) {
-        core.error(`Error reading directory ${normalizedDir}: ${error}`);
+        core.error(`Error processing path ${normalizedPath}: ${error}`);
+        return [];
     }
-    return files;
 }
 
 function parsePolicy(text: string): boolean {
@@ -100,19 +111,8 @@ async function run(): Promise<void> {
         
         // Resolve path relative to workspace
         const workspacePath = process.env.GITHUB_WORKSPACE || process.cwd();
-        core.debug(`Workspace path: ${workspacePath}`);
-        
         const scanPath = path.resolve(workspacePath, inputPath);
         core.debug(`Resolved scan path: ${scanPath}`);
-        
-        // Check if path exists
-        try {
-            await fs.promises.access(scanPath);
-            core.debug(`Confirmed path exists: ${scanPath}`);
-        } catch (error) {
-            core.setFailed(`Path does not exist: ${scanPath}`);
-            return;
-        }
 
         const tfFiles = await findTerraformFiles(scanPath);
         core.debug(`Found ${tfFiles.length} Terraform files`);
