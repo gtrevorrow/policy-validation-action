@@ -111,13 +111,12 @@ jobs:
             exit 1
           fi
           
-          # Variable interpolation test should succeed
+          # Variable interpolation tests should succeed
           if [ "${{ steps.test-vars.outcome }}" != "success" ]; then
             echo "Variable interpolation test failed unexpectedly"
             exit 1
           fi
           
-          # Conditions with variables test should succeed
           if [ "${{ steps.test-conditions.outcome }}" != "success" ]; then
             echo "Conditions with variables test failed unexpectedly"
             exit 1
@@ -129,8 +128,17 @@ jobs:
             exit 1
           fi
           
-          # Check if variables were properly handled
-          if [[ ! "${{ steps.test-vars.outputs.allow_segments }}" == *"${var.admin_group}"* ]]; then
+          # Check if variables were properly handled - using grep to avoid shell expansion issues
+          echo "${{ steps.test-vars.outputs.allow_segments }}" | grep -q '\${var\.admin_group}'
+          if [ $? -ne 0 ]; then
             echo "Variable interpolation not properly preserved in output"
             exit 1
           fi
+
+          # Print all outputs for debugging
+          echo "Valid policy output:"
+          echo "${{ steps.test-valid.outputs.allow_segments }}"
+          echo "Variable policy output:"
+          echo "${{ steps.test-vars.outputs.allow_segments }}"
+          echo "Conditions policy output:"
+          echo "${{ steps.test-conditions.outputs.allow_segments }}"
