@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import * as path from 'path';
 import { program } from 'commander';
-import { findTerraformFiles, processFile, parsePolicy, formatPolicyStatements } from './Main';
+import { findTerraformFiles, processFile, parsePolicy, formatPolicyStatements } from './main';
 import chalk from 'chalk';
 import { Logger } from './types';
 
