@@ -5,7 +5,7 @@
   "scripts": {
     "prebuild": "rm -rf lib dist",
     "build:ts": "tsc",
-    "build:ncc": "ncc build lib/main.js -o dist",
+    "build:ncc": "ncc build lib/main.js -o dist -m",
     "build": "npm run build:ts && npm run build:ncc",
     "test": "jest"
   },
