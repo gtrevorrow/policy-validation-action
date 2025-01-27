@@ -98,47 +98,57 @@ jobs:
           path: './test/policies/valid_conditions.tf'
           
       - name: Verify test results
+        shell: bash
         run: |
-          # Valid policy should succeed
-          if [ "${{ steps.test-valid.outcome }}" != "success" ]; then
+          # Helper function to check step outcome
+          check_outcome() {
+            local step=$1
+            local expected=$2
+            if [[ "$step" != "$expected" ]]; then
+              echo "Expected outcome '$expected' but got '$step'"
+              return 1
+            fi
+            return 0
+          }
+
+          # Run checks
+          check_outcome "${{ steps.test-valid.outcome }}" "success" || {
             echo "Valid policy test failed unexpectedly"
             exit 1
-          fi
-          
-          # Invalid policy should fail
-          if [ "${{ steps.test-invalid.outcome }}" != "failure" ]; then
+          }
+
+          check_outcome "${{ steps.test-invalid.outcome }}" "failure" || {
             echo "Invalid policy test succeeded unexpectedly"
             exit 1
-          fi
-          
-          # Variable interpolation tests should succeed
-          if [ "${{ steps.test-vars.outcome }}" != "success" ]; then
+          }
+
+          check_outcome "${{ steps.test-vars.outcome }}" "success" || {
             echo "Variable interpolation test failed unexpectedly"
             exit 1
-          fi
-          
-          if [ "${{ steps.test-conditions.outcome }}" != "success" ]; then
+          }
+
+          check_outcome "${{ steps.test-conditions.outcome }}" "success" || {
             echo "Conditions with variables test failed unexpectedly"
             exit 1
-          fi
-          
-          # Check output format
-          if [ -z "${{ steps.test-valid.outputs.allow_segments }}" ]; then
+          }
+
+          # Check for non-empty output
+          if [[ -z "${{ steps.test-valid.outputs.allow_segments }}" ]]; then
             echo "No segments found in valid policy"
             exit 1
           fi
-          
-          # Check if variables were properly handled - using grep to avoid shell expansion issues
-          echo "${{ steps.test-vars.outputs.allow_segments }}" | grep -q '\${var\.admin_group}'
-          if [ $? -ne 0 ]; then
+
+          # Check for variable interpolation pattern using printf to handle escaping
+          printf '%s' "${{ steps.test-vars.outputs.allow_segments }}" | grep -q '\${var\.admin_group}' || {
             echo "Variable interpolation not properly preserved in output"
             exit 1
-          fi
+          }
 
-          # Print all outputs for debugging
+          # Debug output
+          echo "=== Test Results ==="
           echo "Valid policy output:"
-          echo "${{ steps.test-valid.outputs.allow_segments }}"
+          printf '%s\n' "${{ steps.test-valid.outputs.allow_segments }}"
           echo "Variable policy output:"
-          echo "${{ steps.test-vars.outputs.allow_segments }}"
+          printf '%s\n' "${{ steps.test-vars.outputs.allow_segments }}"
           echo "Conditions policy output:"
-          echo "${{ steps.test-conditions.outputs.allow_segments }}"
+          printf '%s\n' "${{ steps.test-conditions.outputs.allow_segments }}"
