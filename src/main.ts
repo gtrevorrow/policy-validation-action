@@ -59,7 +59,7 @@ function formatPolicyStatements(segments: string[]): string {
     return segments.map(segment => `Allow ${segment}`).join('\n');
 }
 
-export async function processFile(filePath: string, logger?: Logger): Promise<string[]> {
+async function processFile(filePath: string, logger?: Logger): Promise<string[]> {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
         return extractAllowSegments(data);
@@ -77,7 +77,7 @@ function getWorkspacePath(): string {
            process.cwd();                     // Fallback to current directory
 }
 
-export async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[]> {
+async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[]> {
     // Resolve path relative to CI platform's workspace
     const workspacePath = getWorkspacePath();
     const normalizedPath = path.resolve(workspacePath, dir);
@@ -154,7 +154,7 @@ export async function findTerraformFiles(dir: string, logger?: Logger): Promise<
     }
 }
 
-export function parsePolicy(text: string, logger?: Logger): boolean {
+function parsePolicy(text: string, logger?: Logger): boolean {
     try {
         const inputStream = CharStreams.fromString(text);
         const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
@@ -244,7 +244,7 @@ if (process.env.GITHUB_ACTION) {
     runAction();
 }
 
-// Add exports for the functions needed by cli.ts
+// Single export statement at the end of the file
 export {
     findTerraformFiles,
     processFile,
