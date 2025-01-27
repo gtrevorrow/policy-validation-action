@@ -31,20 +31,20 @@ class PolicyErrorListener implements ErrorListener<Token> {
 }
 
 function extractPolicyExpressions(text: string): string[] {
-    // First extract statements array from HCL
-    const statementsMatch = text.match(/statements\s*=\s*\[([\s\S]*?)\]/);
+    // Use a more precise regex that handles multiline statements better
+    const statementsMatch = text.match(/statements\s*=\s*\[\s*((?:"[^"]*"|'[^']*'|\$\{[^}]*\}|\s|,)*)\s*\]/);
     if (!statementsMatch || !statementsMatch[1]) {
         core.debug('No statements array found in Terraform file');
         return [];
     }
 
-    // Parse the statements array content with a more precise regex
+    // Split statements more carefully, handling quoted strings
     return statementsMatch[1]
-        .split(',')
+        .split(/,(?=\s*["'])/g)  // Split on commas that are followed by quotes
         .map(s => s.trim())
         .filter(s => s)
-        .map(s => s.replace(/^"/, '').replace(/"$/, '')) // Remove quotes
-        .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s)); // Match all valid expression types
+        .map(s => s.replace(/^["'](.*)["']$/, '$1'))  // Remove outer quotes
+        .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s));
 }
 
 function formatPolicyStatements(expressions: string[]): string {
