@@ -48,7 +48,8 @@ function extractPolicyExpressions(text: string): string[] {
 }
 
 function formatPolicyStatements(expressions: string[]): string {
-    return expressions.join('\n');
+    // Ensure each statement is on its own line with proper separation
+    return expressions.map(expr => expr.trim()).join('\n');
 }
 
 async function processFile(filePath: string, logger?: Logger): Promise<string[]> {
@@ -151,31 +152,38 @@ async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[
 
 function parsePolicy(text: string, logger?: Logger): boolean {
     try {
-        const inputStream = CharStreams.fromString(text);
-        const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
-        const tokenStream = new CommonTokenStream(lexer);
-        const parser = new PolicyParser(tokenStream);
+        // Debug the input text to see what's being parsed
+        logger?.debug('Parsing policy text:');
+        logger?.debug(text);
         
-        parser.removeErrorListeners();
-        parser.addErrorListener({
-            syntaxError(
-                recognizer: Recognizer<Token>,
-                offendingSymbol: Token | undefined,
-                line: number,
-                charPositionInLine: number,
-                msg: string,
-                e: RecognitionException | undefined
-            ): void {
-                const lines = text.split('\n');
-                const errorLine = lines[line - 1];
-                logger?.error('Failed to parse policy statement:');
-                logger?.error(`Statement: "${errorLine}"`);
-                logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
-                throw new Error(`Line ${line}:${charPositionInLine} - ${msg}`);
-            }
-        });
+        // Process each statement separately
+        const statements = text.split('\n').filter(s => s.trim());
         
-        const tree = parser.policy();
+        for (const statement of statements) {
+            const inputStream = CharStreams.fromString(statement);
+            const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
+            const tokenStream = new CommonTokenStream(lexer);
+            const parser = new PolicyParser(tokenStream);
+            
+            parser.removeErrorListeners();
+            parser.addErrorListener({
+                syntaxError(
+                    recognizer: Recognizer<Token>,
+                    offendingSymbol: Token | undefined,
+                    line: number,
+                    charPositionInLine: number,
+                    msg: string,
+                    e: RecognitionException | undefined
+                ): void {
+                    logger?.error('Failed to parse policy statement:');
+                    logger?.error(`Statement: "${statement}"`);
+                    logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
+                    throw new Error(`Policy parsing error: ${msg}`);
+                }
+            });
+            
+            parser.policy();
+        }
         return true;
     } catch (error) {
         if (error instanceof Error) {
