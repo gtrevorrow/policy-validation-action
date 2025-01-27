@@ -4,9 +4,10 @@ inputs:
   path:
     description: 'Path to policy file or directory'
     required: true
+    default: '.'
 outputs:
   allow_segments:
     description: 'Found allow segments in policy'
 runs:
   using: 'node16'
-  main: 'dist/index.js'
+  main: 'dist/main.js'
