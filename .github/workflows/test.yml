@@ -103,10 +103,10 @@ jobs:
         run: |
           # Helper function to check step outcome
           check_outcome() {
-            local step="$1"
-            local expected="$2"
-            if [ "${step}" != "${expected}" ]; then
-              echo "Expected outcome '${expected}' but got '${step}'"
+            local step=$1
+            local expected=$2
+            if [ "$step" != "$expected" ]; then
+              echo "Expected outcome '$expected' but got '$step'"
               return 1
             fi
             return 0
@@ -133,14 +133,14 @@ jobs:
             exit 1
           }
 
-          # Check for non-empty output
-          if [[ -z "${{ steps.test-valid.outputs.allow_segments }}" ]]; then
+          # Check for non-empty output using test command
+          if [ -z "${{ steps.test-valid.outputs.allow_segments }}" ]; then
             echo "No segments found in valid policy"
             exit 1
           fi
 
-          # Check for variable interpolation pattern using printf to handle escaping
-          printf '%s' "${{ steps.test-vars.outputs.allow_segments }}" | grep -q '\${var\.admin_group}' || {
+          # Check for variable interpolation pattern directly
+          echo "${{ steps.test-vars.outputs.allow_segments }}" | grep -q 'var\.admin_group' || {
             echo "Variable interpolation not properly preserved in output"
             exit 1
           }
@@ -148,11 +148,11 @@ jobs:
           # Debug output
           echo "=== Test Results ==="
           echo "Valid policy output:"
-          printf '%s\n' "${{ steps.test-valid.outputs.allow_segments }}"
+          echo "${{ steps.test-valid.outputs.allow_segments }}"
           echo "Variable policy output:"
-          printf '%s\n' "${{ steps.test-vars.outputs.allow_segments }}"
+          echo "${{ steps.test-vars.outputs.allow_segments }}"
           echo "Conditions policy output:"
-          printf '%s\n' "${{ steps.test-conditions.outputs.allow_segments }}"
+          echo "${{ steps.test-conditions.outputs.allow_segments }}"
 
       - name: Run tests
         run: npm test
