@@ -12,6 +12,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
+          cache: 'npm'
           
       - name: Install dependencies
         run: npm ci
@@ -152,3 +153,21 @@ jobs:
           printf '%s\n' "${{ steps.test-vars.outputs.allow_segments }}"
           echo "Conditions policy output:"
           printf '%s\n' "${{ steps.test-conditions.outputs.allow_segments }}"
+
+      - name: Run tests
+        run: npm test
+
+      - name: Verify test results
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "Tests passed successfully"
+            exit 0
+          else
+            echo "Tests failed"
+            exit 1
+          fi
+
+      - name: Test action
+        uses: ./
+        with:
+          path: './test/fixtures'
