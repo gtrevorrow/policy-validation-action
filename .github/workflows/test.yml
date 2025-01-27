@@ -1,0 +1,48 @@
+name: Test Policy Validation Action
+on: [push, pull_request]
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    name: Test Policy Validation
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build action
+        run: npm run build
+        
+      - name: Create test policy file
+        run: |
+          mkdir -p test/policies
+          cat > test/policies/test.tf << 'EOL'
+          resource "oci_identity_policy" "test_policy" {
+            name = "test_policy"
+            description = "Test policy"
+            statements = [
+              "Allow group Administrators to manage all-resources in tenancy",
+              "Allow group Developers to use instances in compartment dev",
+              "Invalid policy statement that should fail"
+            ]
+          }
+          EOL
+          
+      - name: Test valid policy
+        id: validate-policy
+        uses: ./
+        with:
+          path: './test/policies'
+          
+      - name: Check validation output
+        run: |
+          if [[ -z "${{ steps.validate-policy.outputs.allow_segments }}" ]]; then
+            echo "No policy segments found"
+            exit 1
+          fi

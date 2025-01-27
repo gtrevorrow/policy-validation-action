@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "generate-antlr",
+			"command": "antlr4",
+			"args": [
+				"-o",
+				"src/generated",
+				"-visitor",
+				"-no-listener",
+				"Policy.g4"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"reveal": "silent"
+			}
+		}
+	]
+}

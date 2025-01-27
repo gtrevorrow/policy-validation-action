@@ -1,0 +1,10 @@
+name: "policy-validation-action"
+description: "GitHub Action to validate policy files."
+runs:
+  using: node16
+  main: dist/main.js
+inputs:
+  path:
+    description: 'Directory to scan'
+    required: false
+    default: '.'
