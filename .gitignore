@@ -1,0 +1,11 @@
+dist/
+lib/
+coverage/
+.env
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/
+.idea/
+*.swp
+Thumbs.db
