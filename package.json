@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
+    "prebuild": "rm -rf lib dist",
     "build:ts": "tsc",
-    "build": "npm run build:ts && ncc build lib/Main.js -o dist",
+    "build:ncc": "ncc build lib/main.js -o dist",
+    "build": "npm run build:ts && npm run build:ncc",
     "test": "jest"
   },
   "author": "Gordon Trevorrow",
