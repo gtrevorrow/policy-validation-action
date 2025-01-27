@@ -53,6 +53,17 @@ jobs:
           }
           EOL
           
+          # Valid policy file with HCL variables in conditions
+          cat > test/policies/valid_conditions.tf << 'EOL'
+          resource "oci_identity_policy" "valid_policy_conditions" {
+            statements = [
+              "Allow group Developers to use instances in compartment dev where request.user.id = '${var.user_id}'",
+              "Allow group Admins to manage volumes in compartment prod where request.networkSource.name = ${var.network_source}",
+              "Allow any-user to use instances in compartment public where request.time BETWEEN ${var.start_time} AND ${var.end_time}"
+            ]
+          }
+          EOL
+          
           # Verify files were created
           ls -la test/policies/
           cat test/policies/valid.tf
@@ -79,6 +90,13 @@ jobs:
         with:
           path: './test/policies/valid_vars.tf'
           
+      - name: Test conditions with variables
+        id: test-conditions
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './test/policies/valid_conditions.tf'
+          
       - name: Verify test results
         run: |
           # Valid policy should succeed
@@ -96,6 +114,12 @@ jobs:
           # Variable interpolation test should succeed
           if [ "${{ steps.test-vars.outcome }}" != "success" ]; then
             echo "Variable interpolation test failed unexpectedly"
+            exit 1
+          fi
+          
+          # Conditions with variables test should succeed
+          if [ "${{ steps.test-conditions.outcome }}" != "success" ]; then
+            echo "Conditions with variables test failed unexpectedly"
             exit 1
           fi
           
