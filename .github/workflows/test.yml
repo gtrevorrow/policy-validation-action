@@ -159,7 +159,7 @@ jobs:
 
       - name: Verify test results
         run: |
-          if [ ${{ job.status }} == 'success' ]; then
+          if [[ "${{ job.status }}" == "success" ]]; then
             echo "Tests passed successfully"
             exit 0
           else
