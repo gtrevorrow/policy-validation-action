@@ -133,13 +133,13 @@ jobs:
             exit 1
           }
 
-          # Check for non-empty output using test command
+          # Check valid policy output exists
           if [ -z "${{ steps.test-valid.outputs.allow_segments }}" ]; then
             echo "No segments found in valid policy"
             exit 1
           fi
 
-          # Check for variable interpolation pattern directly
+          # Check for variable interpolation pattern using a safer grep approach
           echo "${{ steps.test-vars.outputs.allow_segments }}" | grep -q 'var\.admin_group' || {
             echo "Variable interpolation not properly preserved in output"
             exit 1
