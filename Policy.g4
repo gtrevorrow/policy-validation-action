@@ -32,9 +32,16 @@ grammar Policy;
  comparison          : variable operator (value|valueList|timeWindow| patternMatch) ;
  variable            : (WORD | HCL_VAR) (('.' (WORD | HCL_VAR) )+)? ;
  operator            : ('=' | '!''=' | BEFORE | IN | BETWEEN) ;
- value               : (WORD | QUOTED_STRING | QUOTED_STRING '/' WORD | QUOTED_STRING (WS WORD)+ | HCL_VAR);
- valueList           : '(' (QUOTED_STRING | HCL_VAR) ( ',' (QUOTED_STRING | HCL_VAR) )*  ')';
- timeWindow          : (QUOTED_STRING | HCL_VAR) AND (QUOTED_STRING | HCL_VAR);
+ value               : (WORD 
+                     | QUOTED_STRING 
+                     | QUOTED_STRING '/' WORD 
+                     | QUOTED_STRING (WS WORD)+ 
+                     | HCL_VAR
+                     | '\'' HCL_VAR '\''  // Add support for quoted variables
+                     );
+ valueList           : '(' (QUOTED_STRING | HCL_VAR | '\'' HCL_VAR '\'') ( ',' (QUOTED_STRING | HCL_VAR | '\'' HCL_VAR '\'') )*  ')';
+ timeWindow          : (QUOTED_STRING | HCL_VAR | '\'' HCL_VAR '\'') AND (QUOTED_STRING | HCL_VAR | '\'' HCL_VAR '\'');
+
  comparisonList      : logicalCombine '{' condition  (',' condition)* '}' ;
  logicalCombine      : ( ALL | ANY ) ;
  patternMatch        : ('/' WORD '*/'|'/*' WORD '/'| '/' WORD '/') ;
