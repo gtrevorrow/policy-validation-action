@@ -71,7 +71,7 @@ jobs:
             statements = [
               "Define group Administrators as admins",
               "Endorse group Developers to use instances in tenancy",
-              "Admit group ServiceAdmins of tenancy-abc to manage instances in compartment prod",
+              "Admit group ServiceAdmins of tenancyabc to manage instances in compartment prod",
               "Allow group ${var.admin_group} to manage all-resources in tenancy"
             ]
           }
