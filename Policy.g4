@@ -19,10 +19,10 @@ grammar Policy;
  groupSubject        : GROUP (groupName| groupID) (','(groupName|groupID))* ;
  resourceSubject     : RESOURCE resourceSubjectId (resourceSubjectId)*;
  serviceSubject      : SERVICE serviceSubjectId (',' serviceSubjectId)*;
- groupName           : (WORD | QUOTED_STRING '/' QUOTED_STRING | QUOTED_STRING | WORD '/' WORD | WORD '/' QUOTED_STRING);
- resourceSubjectId   : WORD ('\'' WORD '\'' | '\'' WORD '/' WORD '\'' )+?;
- serviceSubjectId    : WORD;
- groupID             : ID WORD;
+ groupName           : (WORD | QUOTED_STRING '/' QUOTED_STRING | QUOTED_STRING | WORD '/' WORD | WORD '/' QUOTED_STRING | HCL_VAR);
+ resourceSubjectId   : (WORD | HCL_VAR) ('\'' (WORD | HCL_VAR) '\'' | '\'' (WORD | HCL_VAR) '/' (WORD | HCL_VAR) '\'' )+?;
+ serviceSubjectId    : (WORD | HCL_VAR);
+ groupID             : ID (WORD | HCL_VAR);
  dynamicGroupSubject : DYNAMICGROUP ID? WORD ;
  tenancySubject      : TENANCY WORD ;
  definedSubject      : (groupSubject | dynamicGroupSubject | serviceSubject | tenancySubject);
@@ -74,7 +74,16 @@ grammar Policy;
  ALL                 : A L L  ;
  AS                  : A S;
  ID                  : I D;
- WORD                : (LETTER | DIGIT | '_' | '-' | '.' | ':'| '@')+ ; // Word is last to prevent ambiguity
+
+ /*
+  * HCL (HashiCorp Configuration Language) variable interpolation support
+  * Matches ${var.name} syntax used in Terraform files
+  * Example: Allow group ${var.admin_group} to manage all-resources in tenancy
+  */
+ HCL_VAR             : '${' (~[}])+ '}' ;
+
+ // Word is last to prevent ambiguity with other tokens
+ WORD                : (LETTER | DIGIT | '_' | '-' | '.' | ':'| '@')+ ;
 
  fragment LETTER     : [a-zA-Z] ;
  fragment DIGIT      : [0-9] ;

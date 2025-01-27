@@ -42,6 +42,17 @@ jobs:
           }
           EOL
           
+          # Valid policy file with HCL variables
+          cat > test/policies/valid_vars.tf << 'EOL'
+          resource "oci_identity_policy" "valid_policy_vars" {
+            statements = [
+              "Allow group ${var.admin_group} to manage all-resources in tenancy",
+              "Allow group Developers to use ${var.resource_type} in compartment ${var.dev_compartment}",
+              "Allow any-user to use ${var.public_resource} in compartment ${var.public_compartment} where request.user.id = '${var.allowed_user}'"
+            ]
+          }
+          EOL
+          
           # Verify files were created
           ls -la test/policies/
           cat test/policies/valid.tf
@@ -61,6 +72,13 @@ jobs:
         with:
           path: './test/policies/invalid.tf'
           
+      - name: Test policy with variables
+        id: test-vars
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './test/policies/valid_vars.tf'
+          
       - name: Verify test results
         run: |
           # Valid policy should succeed
@@ -75,8 +93,20 @@ jobs:
             exit 1
           fi
           
+          # Variable interpolation test should succeed
+          if [ "${{ steps.test-vars.outcome }}" != "success" ]; then
+            echo "Variable interpolation test failed unexpectedly"
+            exit 1
+          fi
+          
           # Check output format
           if [ -z "${{ steps.test-valid.outputs.allow_segments }}" ]; then
             echo "No segments found in valid policy"
+            exit 1
+          fi
+          
+          # Check if variables were properly handled
+          if [[ ! "${{ steps.test-vars.outputs.allow_segments }}" == *"${var.admin_group}"* ]]; then
+            echo "Variable interpolation not properly preserved in output"
             exit 1
           fi
