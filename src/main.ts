@@ -111,13 +111,29 @@ function parsePolicy(text: string): boolean {
         const parser = new PolicyParser(tokenStream);
         
         parser.removeErrorListeners();
-        parser.addErrorListener(new PolicyErrorListener());
+        parser.addErrorListener({
+            syntaxError(
+                recognizer: Recognizer<Token>,
+                offendingSymbol: Token | undefined,
+                line: number,
+                charPositionInLine: number,
+                msg: string,
+                e: RecognitionException | undefined
+            ): void {
+                const lines = text.split('\n');
+                const errorLine = lines[line - 1];
+                core.error('Failed to parse policy statement:');
+                core.error(`Statement: "${errorLine}"`);
+                core.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
+                throw new Error(`Line ${line}:${charPositionInLine} - ${msg}`);
+            }
+        });
         
         const tree = parser.policy();
         return true;
     } catch (error) {
         if (error instanceof Error) {
-            core.error(`Policy parsing error: ${error.message}`);
+            core.error(`Policy validation failed`);
         }
         return false;
     }
