@@ -12,9 +12,9 @@ import {
     Parser,
     Lexer
 } from 'antlr4';
+import { Logger, ValidationResult, POLICY_STATEMENTS_REGEX } from './types';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
-import { Logger, ValidationResult } from './types';
 
 // Add custom error listener implementation
 class PolicyErrorListener implements ErrorListener<Token> {
@@ -29,8 +29,6 @@ class PolicyErrorListener implements ErrorListener<Token> {
         throw new Error(`Line ${line}:${charPositionInLine} - ${msg}`);
     }
 }
-
-const POLICY_STATEMENTS_REGEX = /statements\s*=\s*\[\s*((?:[^[\]]*?(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]/s;
 
 function extractPolicyExpressions(text: string): string[] {
     const statementsMatch = text.match(POLICY_STATEMENTS_REGEX);

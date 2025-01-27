@@ -119,6 +119,51 @@ resource "oci_identity_policy" "example" {
 }
 ```
 
+## Configuration
+
+### Policy Statement Pattern
+
+The action uses a regular expression to extract policy statements from Terraform files. This pattern can be customized for each supported CI platform using environment variables:
+
+#### GitHub Actions
+
+```yaml
+- uses: ./policy-validation-action
+  env:
+    POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+  with:
+    path: './policies'
+```
+
+#### GitLab CI
+
+```yaml
+validate_policies:
+  script:
+    - export POLICY_STATEMENTS_PATTERN='statements\s*=\s*\[\s*((?:[^[\]]*?(?:"(?:[^"\\]|\\.)*"|'"'"'(?:[^'"'"'\\]|\\.)*'"'"'|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]'
+    - npm ci
+    - npm run validate
+```
+
+#### BitBucket Pipelines
+
+```yaml
+pipelines:
+  default:
+    - step:
+        script:
+          - export POLICY_STATEMENTS_PATTERN='statements\s*=\s*\[\s*((?:[^[\]]*?(?:"(?:[^"\\]|\\.)*"|'"'"'(?:[^'"'"'\\]|\\.)*'"'"'|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]'
+          - npm ci
+          - npm run validate
+```
+
+If no pattern is specified, the action will use a default pattern that handles:
+- Multiline statements
+- Quoted strings (both single and double quotes)
+- Variable interpolation ${var.name}
+- Nested structures
+- Comments
+
 ## Error Messages
 
 When a policy statement is invalid, the action provides detailed error messages including:

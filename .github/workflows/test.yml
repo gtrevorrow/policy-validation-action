@@ -215,5 +215,7 @@ jobs:
 
       - name: Test action
         uses: ./
+        env:
+          POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
         with:
           path: './test/fixtures'
