@@ -5,6 +5,11 @@ A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements 
 ## Features
 
 - Validates OCI policy statements in Terraform files
+- Supports multiple policy expression types:
+  - Allow statements
+  - Define statements
+  - Endorse statements
+  - Admit statements
 - Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines)
 - Handles HCL variable interpolation (${var.name})
 - Colored CLI output with verbose mode
@@ -82,7 +87,8 @@ validate_policies:
 
 | Name | Description |
 |------|-------------|
-| `allow_segments` | List of validated allow statements found in policies |
+| `policy_expressions` | List of all validated policy expressions (Allow, Define, Endorse, Admit) |
+| `allow_segments` | List of validated allow statements (backward compatibility) |
 
 ## Example
 

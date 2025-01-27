@@ -51,3 +51,23 @@ release:
       echo "registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/" >> .npmrc
       echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
     - npm publish
+
+validate_policies:
+  image: node:16
+  script:
+    - npm ci
+    - npm run build
+    # Create test files similar to GitHub Actions workflow
+    - mkdir -p test/policies
+    - |
+      cat > test/policies/all_expressions.tf << 'EOL'
+      resource "oci_identity_policy" "all_expressions" {
+        statements = [
+          "Define group Administrators as admins",
+          "Endorse group Developers to use instances in tenancy",
+          "Admit group ServiceAdmins of tenancy-abc to manage instances in compartment prod",
+          "Allow group admins to manage all-resources in tenancy"
+        ]
+      }
+      EOL
+    - npx policy-validation-action --path test/policies

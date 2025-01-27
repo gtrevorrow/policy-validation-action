@@ -6,7 +6,14 @@ export interface Logger {
 }
 
 export interface ValidationResult {
-    success: boolean;
-    segments: string[];
-    errors: string[];
+    isValid: boolean;
+    expressions: string[];
+    errors?: string[];
+}
+
+export enum ExpressionType {
+    Allow = 'Allow',
+    Define = 'Define',
+    Endorse = 'Endorse',
+    Admit = 'Admit'
 }

@@ -30,7 +30,7 @@ class PolicyErrorListener implements ErrorListener<Token> {
     }
 }
 
-function extractAllowSegments(text: string): string[] {
+function extractPolicyExpressions(text: string): string[] {
     // First extract statements array from HCL
     const statementsMatch = text.match(/statements\s*=\s*\[([\s\S]*?)\]/);
     if (!statementsMatch || !statementsMatch[1]) {
@@ -38,33 +38,28 @@ function extractAllowSegments(text: string): string[] {
         return [];
     }
 
-    // Parse the statements array content
-    const statements = statementsMatch[1]
+    // Parse the statements array content with a more precise regex
+    return statementsMatch[1]
         .split(',')
         .map(s => s.trim())
         .filter(s => s)
-        .map(s => s.replace(/^"/, '').replace(/"$/, '')); // Remove quotes
-
-    // Extract allow segments from each statement
-    return statements
-        .filter(s => s.toLowerCase().includes('allow'))
-        .map(s => {
-            const match = s.match(/^"?Allow\s+(.*?)"?$/i);
-            return match ? match[1] : '';
-        })
-        .filter(s => s);
+        .map(s => s.replace(/^"/, '').replace(/"$/, '')) // Remove quotes
+        .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s)); // Match all valid expression types
 }
 
-function formatPolicyStatements(segments: string[]): string {
-    return segments.map(segment => `Allow ${segment}`).join('\n');
+function formatPolicyStatements(expressions: string[]): string {
+    return expressions.join('\n');
 }
 
 async function processFile(filePath: string, logger?: Logger): Promise<string[]> {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
-        return extractAllowSegments(data);
+        const expressions = extractPolicyExpressions(data);
+        logger?.debug(`Found ${expressions.length} policy expressions in ${filePath}`);
+        return expressions;
     } catch (error) {
-        logger?.error(`Error processing ${filePath}: ${error}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger?.error(`Error processing ${filePath}: ${errorMessage}`);
         return [];
     }
 }
@@ -213,15 +208,15 @@ async function runAction(): Promise<void> {
             return;
         }
 
-        let allSegments: string[] = [];
+        let allExpressions: string[] = [];
         for (const file of tfFiles) {
-            const segments = await processFile(file, actionLogger);
-            core.debug(`Extracted segments from ${file}: ${JSON.stringify(segments)}`);
-            allSegments.push(...segments);
+            const expressions = await processFile(file, actionLogger);
+            core.debug(`Extracted expressions from ${file}: ${JSON.stringify(expressions)}`);
+            allExpressions.push(...expressions);
         }
 
-        if (allSegments.length > 0) {
-            const policyText = formatPolicyStatements(allSegments);
+        if (allExpressions.length > 0) {
+            const policyText = formatPolicyStatements(allExpressions);
             core.info('Validating policy statements...');
             
             if (!parsePolicy(policyText, actionLogger)) {
@@ -230,9 +225,14 @@ async function runAction(): Promise<void> {
             }
             
             core.info('Policy validation successful');
-            core.setOutput('allow_segments', allSegments);
-            core.info('Found and validated allow segments:');
-            allSegments.forEach(segment => core.info(segment));
+            core.setOutput('policy_expressions', allExpressions);
+            
+            // For backward compatibility
+            const allowStatements = allExpressions.filter(expr => expr.toLowerCase().startsWith('allow'));
+            core.setOutput('allow_segments', allowStatements);
+            
+            core.info('Found and validated policy expressions:');
+            allExpressions.forEach(expr => core.info(expr));
         }
     } catch (error) {
         core.setFailed(`Action failed: ${error}`);

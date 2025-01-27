@@ -65,6 +65,18 @@ jobs:
           }
           EOL
           
+          # Test file with all expression types
+          cat > test/policies/all_expressions.tf << 'EOL'
+          resource "oci_identity_policy" "all_expressions" {
+            statements = [
+              "Define group Administrators as admins",
+              "Endorse group Developers to use instances in tenancy",
+              "Admit group ServiceAdmins of tenancy-abc to manage instances in compartment prod",
+              "Allow group ${var.admin_group} to manage all-resources in tenancy"
+            ]
+          }
+          EOL
+          
           # Verify files were created
           ls -la test/policies/
           cat test/policies/valid.tf
@@ -97,6 +109,13 @@ jobs:
         uses: ./
         with:
           path: './test/policies/valid_conditions.tf'
+          
+      - name: Test all expressions
+        id: test-expressions
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './test/policies/all_expressions.tf'
           
       - name: Verify test results
         shell: bash
@@ -153,6 +172,22 @@ jobs:
           echo "${{ steps.test-vars.outputs.allow_segments }}"
           echo "Conditions policy output:"
           echo "${{ steps.test-conditions.outputs.allow_segments }}"
+
+          # Helper function to check expression type
+          check_expression_type() {
+            local output="$1"
+            local type="$2"
+            if ! echo "$output" | grep -q "^$type"; then
+              echo "Missing $type expression in output"
+              return 1
+            fi
+            return 0
+          }
+
+          # Check all expression types
+          for type in "Define" "Endorse" "Admit" "Allow"; do
+            check_expression_type "${{ steps.test-expressions.outputs.policy_expressions }}" "$type" || exit 1
+          done
 
       - name: Test Allow Segments
         run: |

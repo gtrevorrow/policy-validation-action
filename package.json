@@ -1,7 +1,7 @@
 {
   "name": "policy-validation-action",
   "version": "1.0.0",
-  "main": "lib/main.js",
+  "main": "lib/Main.js",
   "bin": {
     "policy-validator": "lib/cli.js"
   },
