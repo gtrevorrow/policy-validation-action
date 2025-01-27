@@ -30,20 +30,22 @@ class PolicyErrorListener implements ErrorListener<Token> {
     }
 }
 
+const POLICY_STATEMENTS_REGEX = /statements\s*=\s*\[\s*((?:[^[\]]*?(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]/s;
+
 function extractPolicyExpressions(text: string): string[] {
-    // Use a more precise regex that handles multiline statements better
-    const statementsMatch = text.match(/statements\s*=\s*\[\s*((?:"[^"]*"|'[^']*'|\$\{[^}]*\}|\s|,)*)\s*\]/);
+    const statementsMatch = text.match(POLICY_STATEMENTS_REGEX);
     if (!statementsMatch || !statementsMatch[1]) {
         core.debug('No statements array found in Terraform file');
         return [];
     }
 
-    // Split statements more carefully, handling quoted strings
+    // Split statements handling nested structures and comments
     return statementsMatch[1]
-        .split(/,(?=\s*["'])/g)  // Split on commas that are followed by quotes
+        .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)  // Split on commas outside quotes
         .map(s => s.trim())
-        .filter(s => s)
+        .filter(s => s && !s.startsWith('#'))  // Remove empty and comment lines
         .map(s => s.replace(/^["'](.*)["']$/, '$1'))  // Remove outer quotes
+        .map(s => s.replace(/\\(["'])/, '$1'))  // Unescape quotes
         .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s));
 }
 
