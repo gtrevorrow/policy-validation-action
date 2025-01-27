@@ -1,10 +1,12 @@
-name: "policy-validation-action"
-description: "GitHub Action to validate policy files."
-runs:
-  using: node16
-  main: dist/main.js
+name: 'Policy Validation Action'
+description: 'Validates OCI policy statements'
 inputs:
   path:
-    description: 'Directory to scan'
-    required: false
-    default: '.'
+    description: 'Path to policy file or directory'
+    required: true
+outputs:
+  allow_segments:
+    description: 'Found allow segments in policy'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
