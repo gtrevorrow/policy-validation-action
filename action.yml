@@ -1,13 +1,13 @@
-name: 'Policy Validation Action'
-description: 'Validates OCI policy statements'
+name: 'OCI Policy Validator'
+description: 'Validates OCI policy statements in Terraform configurations'
 inputs:
   path:
     description: 'Path to policy file or directory'
-    required: true
+    required: false
     default: '.'
 outputs:
   allow_segments:
-    description: 'Found allow segments in policy'
+    description: 'List of validated allow statements found in policies'
 runs:
   using: 'node16'
-  main: 'dist/index.js'  # Changed from main.js to index.js to match ncc output
+  main: 'lib/main.js'

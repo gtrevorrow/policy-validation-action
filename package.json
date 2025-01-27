@@ -1,7 +1,7 @@
 {
   "name": "policy-validation-action",
   "version": "1.0.0",
-  "main": "lib/index.js",
+  "main": "lib/main.js",
   "bin": {
     "policy-validator": "lib/cli.js"
   },
@@ -10,9 +10,7 @@
   ],
   "scripts": {
     "prebuild": "rm -rf lib",
-    "build:ts": "tsc",
-    "build:ncc": "ncc build lib/main.js -o dist -m",
-    "build": "tsc && chmod +x lib/cli.js || true",
+    "build": "tsc && chmod +x lib/cli.js",
     "test": "jest",
     "start": "node lib/cli.js"
   },
