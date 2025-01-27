@@ -50,21 +50,25 @@ async function processFile(filePath: string): Promise<string[]> {
 }
 
 async function findTerraformFiles(dir: string): Promise<string[]> {
-    const normalizedDir = path.resolve(dir); // Normalize the path
+    const normalizedDir = path.resolve(dir);
+    core.debug(`Searching for .tf files in: ${normalizedDir}`);
     const files: string[] = [];
     try {
         const entries = await fs.promises.readdir(normalizedDir, { withFileTypes: true });
+        core.debug(`Found ${entries.length} entries in directory`);
 
         for (const entry of entries) {
             const fullPath = path.join(normalizedDir, entry.name);
             if (entry.isDirectory()) {
+                core.debug(`Recursing into directory: ${fullPath}`);
                 files.push(...await findTerraformFiles(fullPath));
             } else if (entry.name.endsWith('.tf')) {
+                core.debug(`Found Terraform file: ${fullPath}`);
                 files.push(fullPath);
             }
         }
     } catch (error) {
-        core.debug(`Error reading directory ${normalizedDir}: ${error}`);
+        core.error(`Error reading directory ${normalizedDir}: ${error}`);
     }
     return files;
 }
@@ -91,10 +95,27 @@ function parsePolicy(text: string): boolean {
 
 async function run(): Promise<void> {
     try {
-        // Use GitHub workspace as base path
-        const scanPath = path.resolve(core.getInput('path') || process.env.GITHUB_WORKSPACE || '.');
-        core.debug(`Scanning directory: ${scanPath}`);
+        const inputPath = core.getInput('path');
+        core.debug(`Input path: ${inputPath}`);
+        
+        // Resolve path relative to workspace
+        const workspacePath = process.env.GITHUB_WORKSPACE || process.cwd();
+        core.debug(`Workspace path: ${workspacePath}`);
+        
+        const scanPath = path.resolve(workspacePath, inputPath);
+        core.debug(`Resolved scan path: ${scanPath}`);
+        
+        // Check if path exists
+        try {
+            await fs.promises.access(scanPath);
+            core.debug(`Confirmed path exists: ${scanPath}`);
+        } catch (error) {
+            core.setFailed(`Path does not exist: ${scanPath}`);
+            return;
+        }
+
         const tfFiles = await findTerraformFiles(scanPath);
+        core.debug(`Found ${tfFiles.length} Terraform files`);
         
         if (tfFiles.length === 0) {
             core.warning('No .tf files found');

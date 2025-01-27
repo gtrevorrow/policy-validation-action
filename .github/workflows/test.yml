@@ -42,6 +42,11 @@ jobs:
           }
           EOL
           
+          # Verify files were created
+          ls -la test/policies/
+          cat test/policies/valid.tf
+          cat test/policies/invalid.tf
+          
       - name: Test valid policy
         id: test-valid
         continue-on-error: true
