@@ -30,9 +30,28 @@ class PolicyErrorListener implements ErrorListener<Token> {
 }
 
 function extractAllowSegments(text: string): string[] {
-    const pattern = /allow\s+(.*?)(?=\s+allow|$)/gi;
-    const matches = text.matchAll(pattern);
-    return Array.from(matches).map((match) => match[1]);
+    // First extract statements array from HCL
+    const statementsMatch = text.match(/statements\s*=\s*\[([\s\S]*?)\]/);
+    if (!statementsMatch || !statementsMatch[1]) {
+        core.debug('No statements array found in Terraform file');
+        return [];
+    }
+
+    // Parse the statements array content
+    const statements = statementsMatch[1]
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s)
+        .map(s => s.replace(/^"/, '').replace(/"$/, '')); // Remove quotes
+
+    // Extract allow segments from each statement
+    return statements
+        .filter(s => s.toLowerCase().includes('allow'))
+        .map(s => {
+            const match = s.match(/^"?Allow\s+(.*?)"?$/i);
+            return match ? match[1] : '';
+        })
+        .filter(s => s);
 }
 
 function formatPolicyStatements(segments: string[]): string {
@@ -125,6 +144,7 @@ async function run(): Promise<void> {
         let allSegments: string[] = [];
         for (const file of tfFiles) {
             const segments = await processFile(file);
+            core.debug(`Extracted segments from ${file}: ${JSON.stringify(segments)}`);
             allSegments.push(...segments);
         }
 
