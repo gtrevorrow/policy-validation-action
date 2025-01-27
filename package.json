@@ -2,12 +2,19 @@
   "name": "policy-validation-action",
   "version": "1.0.0",
   "main": "dist/index.js",
+  "bin": {
+    "policy-validator": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "prebuild": "rm -rf lib dist",
     "build:ts": "tsc",
     "build:ncc": "ncc build lib/main.js -o dist -m",
-    "build": "npm run build:ts && npm run build:ncc",
-    "test": "jest"
+    "build": "tsc && chmod +x dist/cli.js",
+    "test": "jest",
+    "start": "node dist/cli.js"
   },
   "author": "Gordon Trevorrow",
   "license": "UPL-1.0",
@@ -16,9 +23,12 @@
     "@actions/github": "^5.1.1",
     "@types/antlr4": "^4.11.6",
     "antlr4": "^4.13.1",
-    "antlr4ts": "^0.5.0-alpha.4"
+    "antlr4ts": "^0.5.0-alpha.4",
+    "commander": "^9.0.0"
   },
   "devDependencies": {
+    "@types/chalk": "^0.4.31",
+    "@types/commander": "^2.12.0",
     "@types/node": "^16.18.0",
     "@vercel/ncc": "^0.36.1",
     "typescript": "^5.0.0"

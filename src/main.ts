@@ -14,6 +14,7 @@ import {
 } from 'antlr4';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
+import { Logger, ValidationResult } from './types';
 
 // Add custom error listener implementation
 class PolicyErrorListener implements ErrorListener<Token> {
@@ -58,52 +59,102 @@ function formatPolicyStatements(segments: string[]): string {
     return segments.map(segment => `Allow ${segment}`).join('\n');
 }
 
-async function processFile(filePath: string): Promise<string[]> {
+export async function processFile(filePath: string, logger?: Logger): Promise<string[]> {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
         return extractAllowSegments(data);
     } catch (error) {
-        core.error(`Error processing ${filePath}: ${error}`);
+        logger?.error(`Error processing ${filePath}: ${error}`);
         return [];
     }
 }
 
-async function findTerraformFiles(dir: string): Promise<string[]> {
-    const normalizedPath = path.resolve(dir);
-    core.debug(`Checking path: ${normalizedPath}`);
+function getWorkspacePath(): string {
+    // Check each CI platform's environment variable
+    return process.env.GITHUB_WORKSPACE ||    // GitHub Actions
+           process.env.CI_PROJECT_DIR ||      // GitLab CI
+           process.env.BITBUCKET_CLONE_DIR || // BitBucket Pipelines
+           process.cwd();                     // Fallback to current directory
+}
+
+export async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[]> {
+    // Resolve path relative to CI platform's workspace
+    const workspacePath = getWorkspacePath();
+    const normalizedPath = path.resolve(workspacePath, dir);
+    logger?.debug(`CI workspace: ${workspacePath}`);
+    logger?.debug(`Resolved path: ${normalizedPath}`);
 
     try {
+        // First check if path exists and is accessible
+        try {
+            await fs.promises.access(normalizedPath, fs.constants.R_OK);
+        } catch (error) {
+            logger?.error(`Path ${normalizedPath} is not accessible: ${error}`);
+            return [];
+        }
+
         const stats = await fs.promises.stat(normalizedPath);
         
-        // If path is a single file, return it if it's a .tf file
         if (stats.isFile()) {
-            core.debug(`Processing single file: ${normalizedPath}`);
+            logger?.debug(`Processing single file: ${normalizedPath}`);
             return normalizedPath.endsWith('.tf') ? [normalizedPath] : [];
         }
 
-        // If path is a directory, scan for .tf files
-        const files: string[] = [];
-        const entries = await fs.promises.readdir(normalizedPath, { withFileTypes: true });
-        core.debug(`Scanning directory with ${entries.length} entries`);
+        if (!stats.isDirectory()) {
+            logger?.error(`Path ${normalizedPath} is neither a file nor a directory`);
+            return [];
+        }
 
-        for (const entry of entries) {
-            const fullPath = path.join(normalizedPath, entry.name);
-            if (entry.isDirectory()) {
-                core.debug(`Recursing into directory: ${fullPath}`);
-                files.push(...await findTerraformFiles(fullPath));
-            } else if (entry.name.endsWith('.tf')) {
-                core.debug(`Found Terraform file: ${fullPath}`);
-                files.push(fullPath);
+        const files: string[] = [];
+        
+        try {
+            const entries = await fs.promises.readdir(normalizedPath, { withFileTypes: true });
+            logger?.debug(`Scanning directory with ${entries.length} entries`);
+
+            for (const entry of entries) {
+                const fullPath = path.join(normalizedPath, entry.name);
+                try {
+                    if (entry.isDirectory()) {
+                        logger?.debug(`Recursing into directory: ${fullPath}`);
+                        files.push(...await findTerraformFiles(fullPath, logger));
+                    } else if (entry.isFile() && entry.name.endsWith('.tf')) {
+                        logger?.debug(`Found Terraform file: ${fullPath}`);
+                        files.push(fullPath);
+                    }
+                } catch (error) {
+                    logger?.error(`Error processing entry ${fullPath}: ${error}`);
+                    // Continue with next entry instead of failing completely
+                    continue;
+                }
+            }
+        } catch (error) {
+            // Fallback to older readdir method if withFileTypes fails
+            logger?.warn(`Advanced directory reading failed, falling back to basic mode: ${error}`);
+            const names = await fs.promises.readdir(normalizedPath);
+            for (const name of names) {
+                const fullPath = path.join(normalizedPath, name);
+                try {
+                    const entryStats = await fs.promises.stat(fullPath);
+                    if (entryStats.isDirectory()) {
+                        files.push(...await findTerraformFiles(fullPath, logger));
+                    } else if (name.endsWith('.tf')) {
+                        files.push(fullPath);
+                    }
+                } catch (error) {
+                    logger?.error(`Error processing entry ${fullPath}: ${error}`);
+                    continue;
+                }
             }
         }
+        
         return files;
     } catch (error) {
-        core.error(`Error processing path ${normalizedPath}: ${error}`);
+        logger?.error(`Error processing path ${normalizedPath}: ${error}`);
         return [];
     }
 }
 
-function parsePolicy(text: string): boolean {
+export function parsePolicy(text: string, logger?: Logger): boolean {
     try {
         const inputStream = CharStreams.fromString(text);
         const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
@@ -122,9 +173,9 @@ function parsePolicy(text: string): boolean {
             ): void {
                 const lines = text.split('\n');
                 const errorLine = lines[line - 1];
-                core.error('Failed to parse policy statement:');
-                core.error(`Statement: "${errorLine}"`);
-                core.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
+                logger?.error('Failed to parse policy statement:');
+                logger?.error(`Statement: "${errorLine}"`);
+                logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
                 throw new Error(`Line ${line}:${charPositionInLine} - ${msg}`);
             }
         });
@@ -133,23 +184,28 @@ function parsePolicy(text: string): boolean {
         return true;
     } catch (error) {
         if (error instanceof Error) {
-            core.error(`Policy validation failed`);
+            logger?.error(`Policy validation failed`);
         }
         return false;
     }
 }
 
-async function run(): Promise<void> {
+// GitHub Action specific wrapper
+async function runAction(): Promise<void> {
+    const actionLogger: Logger = {
+        debug: (msg) => core.debug(msg),
+        info: (msg) => core.info(msg),
+        warn: (msg) => core.warning(msg),
+        error: (msg) => core.error(msg)
+    };
+
     try {
         const inputPath = core.getInput('path');
-        core.debug(`Input path: ${inputPath}`);
+        const scanPath = path.resolve(getWorkspacePath(), inputPath);
+        actionLogger.debug(`Input path: ${inputPath}`);
+        actionLogger.debug(`Resolved scan path: ${scanPath}`);
         
-        // Resolve path relative to workspace
-        const workspacePath = process.env.GITHUB_WORKSPACE || process.cwd();
-        const scanPath = path.resolve(workspacePath, inputPath);
-        core.debug(`Resolved scan path: ${scanPath}`);
-
-        const tfFiles = await findTerraformFiles(scanPath);
+        const tfFiles = await findTerraformFiles(scanPath, actionLogger);
         core.debug(`Found ${tfFiles.length} Terraform files`);
         
         if (tfFiles.length === 0) {
@@ -159,7 +215,7 @@ async function run(): Promise<void> {
 
         let allSegments: string[] = [];
         for (const file of tfFiles) {
-            const segments = await processFile(file);
+            const segments = await processFile(file, actionLogger);
             core.debug(`Extracted segments from ${file}: ${JSON.stringify(segments)}`);
             allSegments.push(...segments);
         }
@@ -168,7 +224,7 @@ async function run(): Promise<void> {
             const policyText = formatPolicyStatements(allSegments);
             core.info('Validating policy statements...');
             
-            if (!parsePolicy(policyText)) {
+            if (!parsePolicy(policyText, actionLogger)) {
                 core.setFailed('Policy validation failed - check error messages above');
                 return;
             }
@@ -183,4 +239,15 @@ async function run(): Promise<void> {
     }
 }
 
-run();
+// Only run the action if we're in a GitHub Action environment
+if (process.env.GITHUB_ACTION) {
+    runAction();
+}
+
+// Add exports for the functions needed by cli.ts
+export {
+    findTerraformFiles,
+    processFile,
+    parsePolicy,
+    formatPolicyStatements
+};

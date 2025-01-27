@@ -1,13 +1,17 @@
-# Policy Validation Action
+# OCI Policy Validation Tool
 
-A GitHub Action to validate Oracle Cloud Infrastructure (OCI) policy statements in Terraform configurations.
+A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements in Terraform configurations. Supports GitHub Actions, GitLab CI, and BitBucket Pipelines.
 
 ## Features
 
-- Scans Terraform files for OCI policy statements
-- Validates policy statement syntax
-- Supports both single file and directory scanning
-- Provides detailed error messages for invalid policies
+- Validates OCI policy statements in Terraform files
+- Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines)
+- Handles HCL variable interpolation (${var.name})
+- Colored CLI output with verbose mode
+- Automatic workspace detection
+- Recursive directory scanning
+
+## Installation
 
 ## Usage
 
@@ -15,6 +19,48 @@ A GitHub Action to validate Oracle Cloud Infrastructure (OCI) policy statements 
 - uses: policy-validation-action@v1
   with:
     path: './path/to/policies'  # Directory containing .tf files or path to single .tf file
+```
+
+## Usage in CI Platforms
+
+### GitHub Actions
+
+Add this to your `.github/workflows/validate-policies.yml`:
+```yaml
+name: Validate Policies
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Validate policies
+        uses: policy-validation-action@v1
+        with:
+          path: './path/to/policies'
+```
+
+### BitBucket Pipelines
+
+Add this to your `bitbucket-pipelines.yml`:
+```yaml
+pipelines:
+  default:
+    - step:
+        name: Validate Policies
+        image: node:14
+        script:
+          - npx policy-validation-action --path './path/to/policies'
+```
+
+### GitLab CI
+
+Add this to your `.gitlab-ci.yml`:
+```yaml
+validate_policies:
+  image: node:14
+  script:
+    - npx policy-validation-action --path './path/to/policies'
 ```
 
 ## Inputs

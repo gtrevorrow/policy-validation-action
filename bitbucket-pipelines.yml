@@ -1,0 +1,86 @@
+image: node:16
+
+definitions:
+  steps:
+    - step: &build
+        name: Build
+        clone:
+          depth: full  # Ensure we have full repository access
+        caches:
+          - node
+        script:
+          - npm ci
+          - npm run build
+        artifacts:
+          - dist/**
+
+    - step: &test
+        name: Test
+        caches:
+          - node
+        script:
+          - npm ci
+          - npm run build
+          # Create test policies
+          - |
+            mkdir -p test/policies
+            cat > test/policies/valid.tf << 'EOL'
+            resource "oci_identity_policy" "valid_policy" {
+              statements = [
+                "Allow group Administrators to manage all-resources in tenancy",
+                "Allow group Developers to use instances in compartment dev"
+              ]
+            }
+            EOL
+            cat > test/policies/valid_vars.tf << 'EOL'
+            resource "oci_identity_policy" "valid_policy_vars" {
+              statements = [
+                "Allow group ${var.admin_group} to manage all-resources in tenancy",
+                "Allow group Developers to use ${var.resource_type} in compartment ${var.dev_compartment}"
+              ]
+            }
+            EOL
+          # Run tests
+          - node dist/cli.js --path test/policies/valid.tf
+          - node dist/cli.js --path test/policies/valid_vars.tf
+
+pipelines:
+  default:
+    - step: *build
+    - step: *test
+  
+  branches:
+    main:
+      - step: *build
+      - step: *test
+      - step:
+          name: Publish
+          deployment: production
+          script:
+            - npm ci
+            - npm version ${BITBUCKET_TAG}
+            - npm publish
+          condition:
+            changesets:
+              includePaths:
+                - "**"
+              includeTags:
+                - "^v[0-9]+.[0-9]+.[0-9]+$"
+
+  pull-requests:
+    '**':
+      - step: *build
+      - step: *test
+
+custom:
+  release:
+    - step: *build
+    - step: *test
+    - step:
+        name: Publish to NPM
+        script:
+          - pipe: atlassian/npm-publish:0.3.0
+            variables:
+              NPM_TOKEN: $NPM_TOKEN
+caches:
+  node: ~/.npm
