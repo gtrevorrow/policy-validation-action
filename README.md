@@ -11,12 +11,21 @@ A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements 
 - Automatic workspace detection
 - Recursive directory scanning
 
+## Prerequisites
+
+- Node.js 14 or higher
+- For CI/CD usage: Access to GitHub Actions, GitLab CI, or BitBucket Pipelines
+- Terraform files containing OCI policy statements
+
 ## Installation
+
+For local usage:
+```
 
 ## Usage
 
 ```yaml
-- uses: policy-validation-action@v1
+- uses: policy-validation-action@v1.0.0
   with:
     path: './path/to/policies'  # Directory containing .tf files or path to single .tf file
 ```
@@ -35,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Validate policies
-        uses: policy-validation-action@v1
+        uses: policy-validation-action@v1.0.0
         with:
           path: './path/to/policies'
 ```
@@ -88,7 +97,7 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Validate policies
-        uses: policy-validation-action@v1
+        uses: policy-validation-action@v1.0.0
         with:
           path: './terraform'
 ```
