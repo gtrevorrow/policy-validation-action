@@ -19,6 +19,17 @@
 			"presentation": {
 				"reveal": "silent"
 			}
+		},
+		{
+			"type": "npm",
+			"script": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"reveal": "silent"
+			}
 		}
 	]
 }
