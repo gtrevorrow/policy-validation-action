@@ -12,8 +12,6 @@ import {
 	Interval, IntervalSet
 } from 'antlr4';
 import PolicyListener from "./PolicyListener.js";
-import PolicyVisitor from "./PolicyVisitor.js";
-
 // for running tests with parameters, TODO: discuss strategy for typed parameters in CI
 // eslint-disable-next-line no-unused-vars
 type int = number;
@@ -792,10 +790,11 @@ export default class PolicyParser extends Parser {
 	public endorseScope(): EndorseScopeContext {
 		let localctx: EndorseScopeContext = new EndorseScopeContext(this, this._ctx, this.state);
 		this.enterRule(localctx, 18, PolicyParser.RULE_endorseScope);
+		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 202;
+			this.state = 205;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 20:
@@ -808,8 +807,25 @@ export default class PolicyParser extends Parser {
 				{
 				this.state = 200;
 				this.match(PolicyParser.TENANCY);
-				this.state = 201;
-				this.match(PolicyParser.WORD);
+				this.state = 202;
+				this._errHandler.sync(this);
+				_la = this._input.LA(1);
+				if (_la===18) {
+					{
+					this.state = 201;
+					this.match(PolicyParser.WS);
+					}
+				}
+
+				this.state = 204;
+				_la = this._input.LA(1);
+				if(!(_la===46 || _la===47)) {
+				this._errHandler.recoverInline(this);
+				}
+				else {
+					this._errHandler.reportMatch(this);
+				    this.consume();
+				}
 				}
 				break;
 			default:
@@ -838,36 +854,36 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 209;
+			this.state = 212;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 31:
 				{
-				this.state = 204;
+				this.state = 207;
 				this.groupSubject();
 				}
 				break;
 			case 32:
 				{
-				this.state = 205;
+				this.state = 208;
 				this.serviceSubject();
 				}
 				break;
 			case 30:
 				{
-				this.state = 206;
+				this.state = 209;
 				this.dynamicGroupSubject();
 				}
 				break;
 			case 24:
 				{
-				this.state = 207;
+				this.state = 210;
 				this.resourceSubject();
 				}
 				break;
 			case 19:
 				{
-				this.state = 208;
+				this.state = 211;
 				this.match(PolicyParser.ANYUSER);
 				}
 				break;
@@ -898,50 +914,60 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 211;
-			this.match(PolicyParser.GROUP);
 			this.state = 214;
+			this.match(PolicyParser.GROUP);
+			this.state = 216;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			if (_la===18) {
+				{
+				this.state = 215;
+				this.match(PolicyParser.WS);
+				}
+			}
+
+			this.state = 220;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 17:
 			case 46:
 			case 47:
 				{
-				this.state = 212;
+				this.state = 218;
 				this.groupName();
 				}
 				break;
 			case 45:
 				{
-				this.state = 213;
+				this.state = 219;
 				this.groupID();
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 223;
+			this.state = 229;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 216;
+				this.state = 222;
 				this.match(PolicyParser.T__1);
-				this.state = 219;
+				this.state = 225;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
 				case 17:
 				case 46:
 				case 47:
 					{
-					this.state = 217;
+					this.state = 223;
 					this.groupName();
 					}
 					break;
 				case 45:
 					{
-					this.state = 218;
+					this.state = 224;
 					this.groupID();
 					}
 					break;
@@ -950,7 +976,7 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 225;
+				this.state = 231;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -978,21 +1004,21 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 226;
+			this.state = 232;
 			this.match(PolicyParser.RESOURCE);
-			this.state = 227;
+			this.state = 233;
 			this.resourceSubjectId();
-			this.state = 231;
+			this.state = 237;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===46 || _la===47) {
 				{
 				{
-				this.state = 228;
+				this.state = 234;
 				this.resourceSubjectId();
 				}
 				}
-				this.state = 233;
+				this.state = 239;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1020,23 +1046,23 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 234;
-			this.match(PolicyParser.SERVICE);
-			this.state = 235;
-			this.serviceSubjectId();
 			this.state = 240;
+			this.match(PolicyParser.SERVICE);
+			this.state = 241;
+			this.serviceSubjectId();
+			this.state = 246;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 236;
+				this.state = 242;
 				this.match(PolicyParser.T__1);
-				this.state = 237;
+				this.state = 243;
 				this.serviceSubjectId();
 				}
 				}
-				this.state = 242;
+				this.state = 248;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1063,54 +1089,54 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 255;
+			this.state = 261;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 31, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 33, this._ctx) ) {
 			case 1:
 				{
-				this.state = 243;
+				this.state = 249;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 2:
 				{
-				this.state = 244;
+				this.state = 250;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 245;
+				this.state = 251;
 				this.match(PolicyParser.T__4);
-				this.state = 246;
+				this.state = 252;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 3:
 				{
-				this.state = 247;
+				this.state = 253;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 4:
 				{
-				this.state = 248;
+				this.state = 254;
 				this.match(PolicyParser.WORD);
-				this.state = 249;
+				this.state = 255;
 				this.match(PolicyParser.T__4);
-				this.state = 250;
+				this.state = 256;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 5:
 				{
-				this.state = 251;
+				this.state = 257;
 				this.match(PolicyParser.WORD);
-				this.state = 252;
+				this.state = 258;
 				this.match(PolicyParser.T__4);
-				this.state = 253;
+				this.state = 259;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 6:
 				{
-				this.state = 254;
+				this.state = 260;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
@@ -1140,7 +1166,7 @@ export default class PolicyParser extends Parser {
 			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 257;
+			this.state = 263;
 			_la = this._input.LA(1);
 			if(!(_la===46 || _la===47)) {
 			this._errHandler.recoverInline(this);
@@ -1149,21 +1175,21 @@ export default class PolicyParser extends Parser {
 				this._errHandler.reportMatch(this);
 			    this.consume();
 			}
-			this.state = 266;
+			this.state = 272;
 			this._errHandler.sync(this);
 			_alt = 1 + 1;
 			do {
 				switch (_alt) {
 				case 1 + 1:
 					{
-					this.state = 266;
+					this.state = 272;
 					this._errHandler.sync(this);
-					switch ( this._interp.adaptivePredict(this._input, 32, this._ctx) ) {
+					switch ( this._interp.adaptivePredict(this._input, 34, this._ctx) ) {
 					case 1:
 						{
-						this.state = 258;
+						this.state = 264;
 						this.match(PolicyParser.T__5);
-						this.state = 259;
+						this.state = 265;
 						_la = this._input.LA(1);
 						if(!(_la===46 || _la===47)) {
 						this._errHandler.recoverInline(this);
@@ -1172,15 +1198,15 @@ export default class PolicyParser extends Parser {
 							this._errHandler.reportMatch(this);
 						    this.consume();
 						}
-						this.state = 260;
+						this.state = 266;
 						this.match(PolicyParser.T__5);
 						}
 						break;
 					case 2:
 						{
-						this.state = 261;
+						this.state = 267;
 						this.match(PolicyParser.T__5);
-						this.state = 262;
+						this.state = 268;
 						_la = this._input.LA(1);
 						if(!(_la===46 || _la===47)) {
 						this._errHandler.recoverInline(this);
@@ -1189,9 +1215,9 @@ export default class PolicyParser extends Parser {
 							this._errHandler.reportMatch(this);
 						    this.consume();
 						}
-						this.state = 263;
+						this.state = 269;
 						this.match(PolicyParser.T__4);
-						this.state = 264;
+						this.state = 270;
 						_la = this._input.LA(1);
 						if(!(_la===46 || _la===47)) {
 						this._errHandler.recoverInline(this);
@@ -1200,7 +1226,7 @@ export default class PolicyParser extends Parser {
 							this._errHandler.reportMatch(this);
 						    this.consume();
 						}
-						this.state = 265;
+						this.state = 271;
 						this.match(PolicyParser.T__5);
 						}
 						break;
@@ -1210,9 +1236,9 @@ export default class PolicyParser extends Parser {
 				default:
 					throw new NoViableAltException(this);
 				}
-				this.state = 268;
+				this.state = 274;
 				this._errHandler.sync(this);
-				_alt = this._interp.adaptivePredict(this._input, 33, this._ctx);
+				_alt = this._interp.adaptivePredict(this._input, 35, this._ctx);
 			} while (_alt !== 1 && _alt !== ATN.INVALID_ALT_NUMBER);
 			}
 		}
@@ -1238,7 +1264,7 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 270;
+			this.state = 276;
 			_la = this._input.LA(1);
 			if(!(_la===46 || _la===47)) {
 			this._errHandler.recoverInline(this);
@@ -1271,9 +1297,9 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 272;
+			this.state = 278;
 			this.match(PolicyParser.ID);
-			this.state = 273;
+			this.state = 279;
 			_la = this._input.LA(1);
 			if(!(_la===46 || _la===47)) {
 			this._errHandler.recoverInline(this);
@@ -1306,19 +1332,19 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 275;
+			this.state = 281;
 			this.match(PolicyParser.DYNAMICGROUP);
-			this.state = 277;
+			this.state = 283;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===45) {
 				{
-				this.state = 276;
+				this.state = 282;
 				this.match(PolicyParser.ID);
 				}
 			}
 
-			this.state = 279;
+			this.state = 285;
 			this.match(PolicyParser.WORD);
 			}
 		}
@@ -1340,13 +1366,31 @@ export default class PolicyParser extends Parser {
 	public tenancySubject(): TenancySubjectContext {
 		let localctx: TenancySubjectContext = new TenancySubjectContext(this, this._ctx, this.state);
 		this.enterRule(localctx, 38, PolicyParser.RULE_tenancySubject);
+		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 281;
+			this.state = 287;
 			this.match(PolicyParser.TENANCY);
-			this.state = 282;
-			this.match(PolicyParser.WORD);
+			this.state = 289;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			if (_la===18) {
+				{
+				this.state = 288;
+				this.match(PolicyParser.WS);
+				}
+			}
+
+			this.state = 291;
+			_la = this._input.LA(1);
+			if(!(_la===46 || _la===47)) {
+			this._errHandler.recoverInline(this);
+			}
+			else {
+				this._errHandler.reportMatch(this);
+			    this.consume();
+			}
 			}
 		}
 		catch (re) {
@@ -1370,30 +1414,30 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 288;
+			this.state = 297;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 31:
 				{
-				this.state = 284;
+				this.state = 293;
 				this.groupSubject();
 				}
 				break;
 			case 30:
 				{
-				this.state = 285;
+				this.state = 294;
 				this.dynamicGroupSubject();
 				}
 				break;
 			case 32:
 				{
-				this.state = 286;
+				this.state = 295;
 				this.serviceSubject();
 				}
 				break;
 			case 34:
 				{
-				this.state = 287;
+				this.state = 296;
 				this.tenancySubject();
 				}
 				break;
@@ -1420,11 +1464,19 @@ export default class PolicyParser extends Parser {
 	public defined(): DefinedContext {
 		let localctx: DefinedContext = new DefinedContext(this, this._ctx, this.state);
 		this.enterRule(localctx, 42, PolicyParser.RULE_defined);
+		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 290;
-			this.match(PolicyParser.WORD);
+			this.state = 299;
+			_la = this._input.LA(1);
+			if(!(_la===46 || _la===47)) {
+			this._errHandler.recoverInline(this);
+			}
+			else {
+				this._errHandler.reportMatch(this);
+			    this.consume();
+			}
 			}
 		}
 		catch (re) {
@@ -1449,7 +1501,7 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 292;
+			this.state = 301;
 			_la = this._input.LA(1);
 			if(!(_la===46 || _la===47)) {
 			this._errHandler.recoverInline(this);
@@ -1481,20 +1533,20 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 296;
+			this.state = 305;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 41:
 			case 43:
 				{
-				this.state = 294;
+				this.state = 303;
 				this.comparisonList();
 				}
 				break;
 			case 46:
 			case 47:
 				{
-				this.state = 295;
+				this.state = 304;
 				this.comparison();
 				}
 				break;
@@ -1524,34 +1576,34 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 298;
+			this.state = 307;
 			this.variable();
-			this.state = 299;
+			this.state = 308;
 			this.operator();
-			this.state = 304;
+			this.state = 313;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 37, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 40, this._ctx) ) {
 			case 1:
 				{
-				this.state = 300;
+				this.state = 309;
 				this.value();
 				}
 				break;
 			case 2:
 				{
-				this.state = 301;
+				this.state = 310;
 				this.valueList();
 				}
 				break;
 			case 3:
 				{
-				this.state = 302;
+				this.state = 311;
 				this.timeWindow();
 				}
 				break;
 			case 4:
 				{
-				this.state = 303;
+				this.state = 312;
 				this.patternMatch();
 				}
 				break;
@@ -1580,7 +1632,7 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 306;
+			this.state = 315;
 			_la = this._input.LA(1);
 			if(!(_la===46 || _la===47)) {
 			this._errHandler.recoverInline(this);
@@ -1589,20 +1641,20 @@ export default class PolicyParser extends Parser {
 				this._errHandler.reportMatch(this);
 			    this.consume();
 			}
-			this.state = 313;
+			this.state = 322;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===7) {
 				{
-				this.state = 309;
+				this.state = 318;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 307;
+					this.state = 316;
 					this.match(PolicyParser.T__6);
-					this.state = 308;
+					this.state = 317;
 					_la = this._input.LA(1);
 					if(!(_la===46 || _la===47)) {
 					this._errHandler.recoverInline(this);
@@ -1613,7 +1665,7 @@ export default class PolicyParser extends Parser {
 					}
 					}
 					}
-					this.state = 311;
+					this.state = 320;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 				} while (_la===7);
@@ -1643,38 +1695,38 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 321;
+			this.state = 330;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 8:
 				{
-				this.state = 315;
+				this.state = 324;
 				this.match(PolicyParser.T__7);
 				}
 				break;
 			case 9:
 				{
-				this.state = 316;
+				this.state = 325;
 				this.match(PolicyParser.T__8);
-				this.state = 317;
+				this.state = 326;
 				this.match(PolicyParser.T__7);
 				}
 				break;
 			case 14:
 				{
-				this.state = 318;
+				this.state = 327;
 				this.match(PolicyParser.BEFORE);
 				}
 				break;
 			case 27:
 				{
-				this.state = 319;
+				this.state = 328;
 				this.match(PolicyParser.IN);
 				}
 				break;
 			case 15:
 				{
-				this.state = 320;
+				this.state = 329;
 				this.match(PolicyParser.BETWEEN);
 				}
 				break;
@@ -1705,48 +1757,48 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 339;
+			this.state = 348;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 42, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 45, this._ctx) ) {
 			case 1:
 				{
-				this.state = 323;
+				this.state = 332;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 2:
 				{
-				this.state = 324;
+				this.state = 333;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 3:
 				{
-				this.state = 325;
+				this.state = 334;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 326;
+				this.state = 335;
 				this.match(PolicyParser.T__4);
-				this.state = 327;
+				this.state = 336;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 4:
 				{
-				this.state = 328;
+				this.state = 337;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 331;
+				this.state = 340;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 329;
+					this.state = 338;
 					this.match(PolicyParser.WS);
-					this.state = 330;
+					this.state = 339;
 					this.match(PolicyParser.WORD);
 					}
 					}
-					this.state = 333;
+					this.state = 342;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 				} while (_la===18);
@@ -1754,17 +1806,17 @@ export default class PolicyParser extends Parser {
 				break;
 			case 5:
 				{
-				this.state = 335;
+				this.state = 344;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 336;
+				this.state = 345;
 				this.match(PolicyParser.T__5);
-				this.state = 337;
+				this.state = 346;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 338;
+				this.state = 347;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -1793,66 +1845,66 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 341;
+			this.state = 350;
 			this.match(PolicyParser.T__9);
-			this.state = 347;
+			this.state = 356;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 17:
 				{
-				this.state = 342;
+				this.state = 351;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 46:
 				{
-				this.state = 343;
+				this.state = 352;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 344;
+				this.state = 353;
 				this.match(PolicyParser.T__5);
-				this.state = 345;
+				this.state = 354;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 346;
+				this.state = 355;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 359;
+			this.state = 368;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 349;
+				this.state = 358;
 				this.match(PolicyParser.T__1);
-				this.state = 355;
+				this.state = 364;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
 				case 17:
 					{
-					this.state = 350;
+					this.state = 359;
 					this.match(PolicyParser.QUOTED_STRING);
 					}
 					break;
 				case 46:
 					{
-					this.state = 351;
+					this.state = 360;
 					this.match(PolicyParser.HCL_VAR);
 					}
 					break;
 				case 6:
 					{
-					this.state = 352;
+					this.state = 361;
 					this.match(PolicyParser.T__5);
-					this.state = 353;
+					this.state = 362;
 					this.match(PolicyParser.HCL_VAR);
-					this.state = 354;
+					this.state = 363;
 					this.match(PolicyParser.T__5);
 					}
 					break;
@@ -1861,11 +1913,11 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 361;
+				this.state = 370;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 362;
+			this.state = 371;
 			this.match(PolicyParser.T__10);
 			}
 		}
@@ -1890,58 +1942,58 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 369;
+			this.state = 378;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 17:
 				{
-				this.state = 364;
+				this.state = 373;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 46:
 				{
-				this.state = 365;
+				this.state = 374;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 366;
+				this.state = 375;
 				this.match(PolicyParser.T__5);
-				this.state = 367;
+				this.state = 376;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 368;
+				this.state = 377;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 371;
+			this.state = 380;
 			this.match(PolicyParser.AND);
-			this.state = 377;
+			this.state = 386;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 17:
 				{
-				this.state = 372;
+				this.state = 381;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 46:
 				{
-				this.state = 373;
+				this.state = 382;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 374;
+				this.state = 383;
 				this.match(PolicyParser.T__5);
-				this.state = 375;
+				this.state = 384;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 376;
+				this.state = 385;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -1972,29 +2024,29 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 379;
+			this.state = 388;
 			this.logicalCombine();
-			this.state = 380;
+			this.state = 389;
 			this.match(PolicyParser.T__0);
-			this.state = 381;
+			this.state = 390;
 			this.condition();
-			this.state = 386;
+			this.state = 395;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 382;
+				this.state = 391;
 				this.match(PolicyParser.T__1);
-				this.state = 383;
+				this.state = 392;
 				this.condition();
 				}
 				}
-				this.state = 388;
+				this.state = 397;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 389;
+			this.state = 398;
 			this.match(PolicyParser.T__2);
 			}
 		}
@@ -2020,7 +2072,7 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 391;
+			this.state = 400;
 			_la = this._input.LA(1);
 			if(!(_la===41 || _la===43)) {
 			this._errHandler.recoverInline(this);
@@ -2052,36 +2104,36 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 402;
+			this.state = 411;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 49, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 52, this._ctx) ) {
 			case 1:
 				{
-				this.state = 393;
+				this.state = 402;
 				this.match(PolicyParser.T__4);
-				this.state = 394;
+				this.state = 403;
 				this.match(PolicyParser.WORD);
-				this.state = 395;
+				this.state = 404;
 				this.match(PolicyParser.T__11);
 				}
 				break;
 			case 2:
 				{
-				this.state = 396;
+				this.state = 405;
 				this.match(PolicyParser.T__12);
-				this.state = 397;
+				this.state = 406;
 				this.match(PolicyParser.WORD);
-				this.state = 398;
+				this.state = 407;
 				this.match(PolicyParser.T__4);
 				}
 				break;
 			case 3:
 				{
-				this.state = 399;
+				this.state = 408;
 				this.match(PolicyParser.T__4);
-				this.state = 400;
+				this.state = 409;
 				this.match(PolicyParser.WORD);
-				this.state = 401;
+				this.state = 410;
 				this.match(PolicyParser.T__4);
 				}
 				break;
@@ -2103,7 +2155,7 @@ export default class PolicyParser extends Parser {
 		return localctx;
 	}
 
-	public static readonly _serializedATN: number[] = [4,1,47,405,2,0,7,0,2,
+	public static readonly _serializedATN: number[] = [4,1,47,414,2,0,7,0,2,
 	1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,2,
 	10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,2,15,7,15,2,16,7,16,2,17,
 	7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,2,22,7,22,2,23,7,23,2,24,7,
@@ -2117,127 +2169,131 @@ export default class PolicyParser extends Parser {
 	1,4,3,4,159,8,4,1,4,1,4,3,4,163,8,4,1,4,3,4,166,8,4,1,5,1,5,3,5,170,8,5,
 	1,6,1,6,1,7,1,7,1,7,1,7,5,7,178,8,7,10,7,12,7,181,9,7,1,7,1,7,1,8,1,8,3,
 	8,187,8,8,1,8,1,8,1,8,5,8,192,8,8,10,8,12,8,195,9,8,1,8,3,8,198,8,8,1,9,
-	1,9,1,9,3,9,203,8,9,1,10,1,10,1,10,1,10,1,10,3,10,210,8,10,1,11,1,11,1,
-	11,3,11,215,8,11,1,11,1,11,1,11,3,11,220,8,11,5,11,222,8,11,10,11,12,11,
-	225,9,11,1,12,1,12,1,12,5,12,230,8,12,10,12,12,12,233,9,12,1,13,1,13,1,
-	13,1,13,5,13,239,8,13,10,13,12,13,242,9,13,1,14,1,14,1,14,1,14,1,14,1,14,
-	1,14,1,14,1,14,1,14,1,14,1,14,3,14,256,8,14,1,15,1,15,1,15,1,15,1,15,1,
-	15,1,15,1,15,1,15,4,15,267,8,15,11,15,12,15,268,1,16,1,16,1,17,1,17,1,17,
-	1,18,1,18,3,18,278,8,18,1,18,1,18,1,19,1,19,1,19,1,20,1,20,1,20,1,20,3,
-	20,289,8,20,1,21,1,21,1,22,1,22,1,23,1,23,3,23,297,8,23,1,24,1,24,1,24,
-	1,24,1,24,1,24,3,24,305,8,24,1,25,1,25,1,25,4,25,310,8,25,11,25,12,25,311,
-	3,25,314,8,25,1,26,1,26,1,26,1,26,1,26,1,26,3,26,322,8,26,1,27,1,27,1,27,
-	1,27,1,27,1,27,1,27,1,27,4,27,332,8,27,11,27,12,27,333,1,27,1,27,1,27,1,
-	27,3,27,340,8,27,1,28,1,28,1,28,1,28,1,28,1,28,3,28,348,8,28,1,28,1,28,
-	1,28,1,28,1,28,1,28,3,28,356,8,28,5,28,358,8,28,10,28,12,28,361,9,28,1,
-	28,1,28,1,29,1,29,1,29,1,29,1,29,3,29,370,8,29,1,29,1,29,1,29,1,29,1,29,
-	1,29,3,29,378,8,29,1,30,1,30,1,30,1,30,1,30,5,30,385,8,30,10,30,12,30,388,
-	9,30,1,30,1,30,1,31,1,31,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,3,
-	32,403,8,32,1,32,1,268,0,33,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,
-	32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,0,3,2,0,35,37,40,40,
-	1,0,46,47,2,0,41,41,43,43,446,0,70,1,0,0,0,2,76,1,0,0,0,4,99,1,0,0,0,6,
-	128,1,0,0,0,8,135,1,0,0,0,10,169,1,0,0,0,12,171,1,0,0,0,14,173,1,0,0,0,
-	16,197,1,0,0,0,18,202,1,0,0,0,20,209,1,0,0,0,22,211,1,0,0,0,24,226,1,0,
-	0,0,26,234,1,0,0,0,28,255,1,0,0,0,30,257,1,0,0,0,32,270,1,0,0,0,34,272,
-	1,0,0,0,36,275,1,0,0,0,38,281,1,0,0,0,40,288,1,0,0,0,42,290,1,0,0,0,44,
-	292,1,0,0,0,46,296,1,0,0,0,48,298,1,0,0,0,50,306,1,0,0,0,52,321,1,0,0,0,
-	54,339,1,0,0,0,56,341,1,0,0,0,58,369,1,0,0,0,60,379,1,0,0,0,62,391,1,0,
-	0,0,64,402,1,0,0,0,66,71,3,2,1,0,67,71,3,4,2,0,68,71,3,6,3,0,69,71,3,8,
-	4,0,70,66,1,0,0,0,70,67,1,0,0,0,70,68,1,0,0,0,70,69,1,0,0,0,71,72,1,0,0,
-	0,72,70,1,0,0,0,72,73,1,0,0,0,73,74,1,0,0,0,74,75,5,0,0,1,75,1,1,0,0,0,
-	76,77,5,22,0,0,77,88,3,20,10,0,78,80,5,25,0,0,79,78,1,0,0,0,79,80,1,0,0,
-	0,80,81,1,0,0,0,81,82,3,12,6,0,82,83,3,44,22,0,83,89,1,0,0,0,84,86,5,25,
-	0,0,85,84,1,0,0,0,85,86,1,0,0,0,86,87,1,0,0,0,87,89,3,14,7,0,88,79,1,0,
-	0,0,88,85,1,0,0,0,89,90,1,0,0,0,90,91,5,27,0,0,91,94,3,16,8,0,92,93,5,28,
-	0,0,93,95,3,46,23,0,94,92,1,0,0,0,94,95,1,0,0,0,95,97,1,0,0,0,96,98,5,16,
-	0,0,97,96,1,0,0,0,97,98,1,0,0,0,98,3,1,0,0,0,99,100,5,21,0,0,100,109,3,
-	20,10,0,101,102,5,25,0,0,102,103,3,10,5,0,103,104,3,44,22,0,104,110,1,0,
-	0,0,105,107,5,25,0,0,106,105,1,0,0,0,106,107,1,0,0,0,107,108,1,0,0,0,108,
-	110,3,14,7,0,109,101,1,0,0,0,109,106,1,0,0,0,110,111,1,0,0,0,111,119,5,
-	27,0,0,112,120,3,18,9,0,113,114,3,16,8,0,114,115,5,29,0,0,115,116,3,44,
-	22,0,116,117,5,27,0,0,117,118,3,18,9,0,118,120,1,0,0,0,119,112,1,0,0,0,
-	119,113,1,0,0,0,120,123,1,0,0,0,121,122,5,28,0,0,122,124,3,46,23,0,123,
-	121,1,0,0,0,123,124,1,0,0,0,124,126,1,0,0,0,125,127,5,16,0,0,126,125,1,
-	0,0,0,126,127,1,0,0,0,127,5,1,0,0,0,128,129,5,23,0,0,129,130,3,40,20,0,
-	130,131,5,44,0,0,131,133,3,42,21,0,132,134,5,16,0,0,133,132,1,0,0,0,133,
-	134,1,0,0,0,134,7,1,0,0,0,135,136,5,39,0,0,136,139,3,20,10,0,137,138,5,
-	26,0,0,138,140,3,18,9,0,139,137,1,0,0,0,139,140,1,0,0,0,140,149,1,0,0,0,
-	141,142,5,25,0,0,142,143,3,10,5,0,143,144,3,44,22,0,144,150,1,0,0,0,145,
-	147,5,25,0,0,146,145,1,0,0,0,146,147,1,0,0,0,147,148,1,0,0,0,148,150,3,
-	14,7,0,149,141,1,0,0,0,149,146,1,0,0,0,150,151,1,0,0,0,151,152,5,27,0,0,
-	152,158,3,16,8,0,153,154,5,29,0,0,154,155,3,44,22,0,155,156,5,27,0,0,156,
-	157,3,18,9,0,157,159,1,0,0,0,158,153,1,0,0,0,158,159,1,0,0,0,159,162,1,
-	0,0,0,160,161,5,28,0,0,161,163,3,46,23,0,162,160,1,0,0,0,162,163,1,0,0,
-	0,163,165,1,0,0,0,164,166,5,16,0,0,165,164,1,0,0,0,165,166,1,0,0,0,166,
-	9,1,0,0,0,167,170,3,12,6,0,168,170,5,38,0,0,169,167,1,0,0,0,169,168,1,0,
-	0,0,170,11,1,0,0,0,171,172,7,0,0,0,172,13,1,0,0,0,173,174,5,1,0,0,174,179,
-	5,47,0,0,175,176,5,2,0,0,176,178,5,47,0,0,177,175,1,0,0,0,178,181,1,0,0,
-	0,179,177,1,0,0,0,179,180,1,0,0,0,180,182,1,0,0,0,181,179,1,0,0,0,182,183,
-	5,3,0,0,183,15,1,0,0,0,184,186,5,33,0,0,185,187,5,45,0,0,186,185,1,0,0,
-	0,186,187,1,0,0,0,187,188,1,0,0,0,188,193,7,1,0,0,189,190,5,4,0,0,190,192,
-	7,1,0,0,191,189,1,0,0,0,192,195,1,0,0,0,193,191,1,0,0,0,193,194,1,0,0,0,
-	194,198,1,0,0,0,195,193,1,0,0,0,196,198,5,34,0,0,197,184,1,0,0,0,197,196,
-	1,0,0,0,198,17,1,0,0,0,199,203,5,20,0,0,200,201,5,34,0,0,201,203,5,47,0,
-	0,202,199,1,0,0,0,202,200,1,0,0,0,203,19,1,0,0,0,204,210,3,22,11,0,205,
-	210,3,26,13,0,206,210,3,36,18,0,207,210,3,24,12,0,208,210,5,19,0,0,209,
-	204,1,0,0,0,209,205,1,0,0,0,209,206,1,0,0,0,209,207,1,0,0,0,209,208,1,0,
-	0,0,210,21,1,0,0,0,211,214,5,31,0,0,212,215,3,28,14,0,213,215,3,34,17,0,
-	214,212,1,0,0,0,214,213,1,0,0,0,215,223,1,0,0,0,216,219,5,2,0,0,217,220,
-	3,28,14,0,218,220,3,34,17,0,219,217,1,0,0,0,219,218,1,0,0,0,220,222,1,0,
-	0,0,221,216,1,0,0,0,222,225,1,0,0,0,223,221,1,0,0,0,223,224,1,0,0,0,224,
-	23,1,0,0,0,225,223,1,0,0,0,226,227,5,24,0,0,227,231,3,30,15,0,228,230,3,
-	30,15,0,229,228,1,0,0,0,230,233,1,0,0,0,231,229,1,0,0,0,231,232,1,0,0,0,
-	232,25,1,0,0,0,233,231,1,0,0,0,234,235,5,32,0,0,235,240,3,32,16,0,236,237,
-	5,2,0,0,237,239,3,32,16,0,238,236,1,0,0,0,239,242,1,0,0,0,240,238,1,0,0,
-	0,240,241,1,0,0,0,241,27,1,0,0,0,242,240,1,0,0,0,243,256,5,47,0,0,244,245,
-	5,17,0,0,245,246,5,5,0,0,246,256,5,17,0,0,247,256,5,17,0,0,248,249,5,47,
-	0,0,249,250,5,5,0,0,250,256,5,47,0,0,251,252,5,47,0,0,252,253,5,5,0,0,253,
-	256,5,17,0,0,254,256,5,46,0,0,255,243,1,0,0,0,255,244,1,0,0,0,255,247,1,
-	0,0,0,255,248,1,0,0,0,255,251,1,0,0,0,255,254,1,0,0,0,256,29,1,0,0,0,257,
-	266,7,1,0,0,258,259,5,6,0,0,259,260,7,1,0,0,260,267,5,6,0,0,261,262,5,6,
-	0,0,262,263,7,1,0,0,263,264,5,5,0,0,264,265,7,1,0,0,265,267,5,6,0,0,266,
-	258,1,0,0,0,266,261,1,0,0,0,267,268,1,0,0,0,268,269,1,0,0,0,268,266,1,0,
-	0,0,269,31,1,0,0,0,270,271,7,1,0,0,271,33,1,0,0,0,272,273,5,45,0,0,273,
-	274,7,1,0,0,274,35,1,0,0,0,275,277,5,30,0,0,276,278,5,45,0,0,277,276,1,
-	0,0,0,277,278,1,0,0,0,278,279,1,0,0,0,279,280,5,47,0,0,280,37,1,0,0,0,281,
-	282,5,34,0,0,282,283,5,47,0,0,283,39,1,0,0,0,284,289,3,22,11,0,285,289,
-	3,36,18,0,286,289,3,26,13,0,287,289,3,38,19,0,288,284,1,0,0,0,288,285,1,
-	0,0,0,288,286,1,0,0,0,288,287,1,0,0,0,289,41,1,0,0,0,290,291,5,47,0,0,291,
-	43,1,0,0,0,292,293,7,1,0,0,293,45,1,0,0,0,294,297,3,60,30,0,295,297,3,48,
-	24,0,296,294,1,0,0,0,296,295,1,0,0,0,297,47,1,0,0,0,298,299,3,50,25,0,299,
-	304,3,52,26,0,300,305,3,54,27,0,301,305,3,56,28,0,302,305,3,58,29,0,303,
-	305,3,64,32,0,304,300,1,0,0,0,304,301,1,0,0,0,304,302,1,0,0,0,304,303,1,
-	0,0,0,305,49,1,0,0,0,306,313,7,1,0,0,307,308,5,7,0,0,308,310,7,1,0,0,309,
-	307,1,0,0,0,310,311,1,0,0,0,311,309,1,0,0,0,311,312,1,0,0,0,312,314,1,0,
-	0,0,313,309,1,0,0,0,313,314,1,0,0,0,314,51,1,0,0,0,315,322,5,8,0,0,316,
-	317,5,9,0,0,317,322,5,8,0,0,318,322,5,14,0,0,319,322,5,27,0,0,320,322,5,
-	15,0,0,321,315,1,0,0,0,321,316,1,0,0,0,321,318,1,0,0,0,321,319,1,0,0,0,
-	321,320,1,0,0,0,322,53,1,0,0,0,323,340,5,47,0,0,324,340,5,17,0,0,325,326,
-	5,17,0,0,326,327,5,5,0,0,327,340,5,47,0,0,328,331,5,17,0,0,329,330,5,18,
-	0,0,330,332,5,47,0,0,331,329,1,0,0,0,332,333,1,0,0,0,333,331,1,0,0,0,333,
-	334,1,0,0,0,334,340,1,0,0,0,335,340,5,46,0,0,336,337,5,6,0,0,337,338,5,
-	46,0,0,338,340,5,6,0,0,339,323,1,0,0,0,339,324,1,0,0,0,339,325,1,0,0,0,
-	339,328,1,0,0,0,339,335,1,0,0,0,339,336,1,0,0,0,340,55,1,0,0,0,341,347,
-	5,10,0,0,342,348,5,17,0,0,343,348,5,46,0,0,344,345,5,6,0,0,345,346,5,46,
-	0,0,346,348,5,6,0,0,347,342,1,0,0,0,347,343,1,0,0,0,347,344,1,0,0,0,348,
-	359,1,0,0,0,349,355,5,2,0,0,350,356,5,17,0,0,351,356,5,46,0,0,352,353,5,
-	6,0,0,353,354,5,46,0,0,354,356,5,6,0,0,355,350,1,0,0,0,355,351,1,0,0,0,
-	355,352,1,0,0,0,356,358,1,0,0,0,357,349,1,0,0,0,358,361,1,0,0,0,359,357,
-	1,0,0,0,359,360,1,0,0,0,360,362,1,0,0,0,361,359,1,0,0,0,362,363,5,11,0,
-	0,363,57,1,0,0,0,364,370,5,17,0,0,365,370,5,46,0,0,366,367,5,6,0,0,367,
-	368,5,46,0,0,368,370,5,6,0,0,369,364,1,0,0,0,369,365,1,0,0,0,369,366,1,
-	0,0,0,370,371,1,0,0,0,371,377,5,42,0,0,372,378,5,17,0,0,373,378,5,46,0,
-	0,374,375,5,6,0,0,375,376,5,46,0,0,376,378,5,6,0,0,377,372,1,0,0,0,377,
-	373,1,0,0,0,377,374,1,0,0,0,378,59,1,0,0,0,379,380,3,62,31,0,380,381,5,
-	1,0,0,381,386,3,46,23,0,382,383,5,2,0,0,383,385,3,46,23,0,384,382,1,0,0,
-	0,385,388,1,0,0,0,386,384,1,0,0,0,386,387,1,0,0,0,387,389,1,0,0,0,388,386,
-	1,0,0,0,389,390,5,3,0,0,390,61,1,0,0,0,391,392,7,2,0,0,392,63,1,0,0,0,393,
-	394,5,5,0,0,394,395,5,47,0,0,395,403,5,12,0,0,396,397,5,13,0,0,397,398,
-	5,47,0,0,398,403,5,5,0,0,399,400,5,5,0,0,400,401,5,47,0,0,401,403,5,5,0,
-	0,402,393,1,0,0,0,402,396,1,0,0,0,402,399,1,0,0,0,403,65,1,0,0,0,50,70,
-	72,79,85,88,94,97,106,109,119,123,126,133,139,146,149,158,162,165,169,179,
-	186,193,197,202,209,214,219,223,231,240,255,266,268,277,288,296,304,311,
-	313,321,333,339,347,355,359,369,377,386,402];
+	1,9,1,9,3,9,203,8,9,1,9,3,9,206,8,9,1,10,1,10,1,10,1,10,1,10,3,10,213,8,
+	10,1,11,1,11,3,11,217,8,11,1,11,1,11,3,11,221,8,11,1,11,1,11,1,11,3,11,
+	226,8,11,5,11,228,8,11,10,11,12,11,231,9,11,1,12,1,12,1,12,5,12,236,8,12,
+	10,12,12,12,239,9,12,1,13,1,13,1,13,1,13,5,13,245,8,13,10,13,12,13,248,
+	9,13,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,3,14,262,
+	8,14,1,15,1,15,1,15,1,15,1,15,1,15,1,15,1,15,1,15,4,15,273,8,15,11,15,12,
+	15,274,1,16,1,16,1,17,1,17,1,17,1,18,1,18,3,18,284,8,18,1,18,1,18,1,19,
+	1,19,3,19,290,8,19,1,19,1,19,1,20,1,20,1,20,1,20,3,20,298,8,20,1,21,1,21,
+	1,22,1,22,1,23,1,23,3,23,306,8,23,1,24,1,24,1,24,1,24,1,24,1,24,3,24,314,
+	8,24,1,25,1,25,1,25,4,25,319,8,25,11,25,12,25,320,3,25,323,8,25,1,26,1,
+	26,1,26,1,26,1,26,1,26,3,26,331,8,26,1,27,1,27,1,27,1,27,1,27,1,27,1,27,
+	1,27,4,27,341,8,27,11,27,12,27,342,1,27,1,27,1,27,1,27,3,27,349,8,27,1,
+	28,1,28,1,28,1,28,1,28,1,28,3,28,357,8,28,1,28,1,28,1,28,1,28,1,28,1,28,
+	3,28,365,8,28,5,28,367,8,28,10,28,12,28,370,9,28,1,28,1,28,1,29,1,29,1,
+	29,1,29,1,29,3,29,379,8,29,1,29,1,29,1,29,1,29,1,29,1,29,3,29,387,8,29,
+	1,30,1,30,1,30,1,30,1,30,5,30,394,8,30,10,30,12,30,397,9,30,1,30,1,30,1,
+	31,1,31,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,3,32,412,8,32,1,32,
+	1,274,0,33,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,
+	44,46,48,50,52,54,56,58,60,62,64,0,3,2,0,35,37,40,40,1,0,46,47,2,0,41,41,
+	43,43,458,0,70,1,0,0,0,2,76,1,0,0,0,4,99,1,0,0,0,6,128,1,0,0,0,8,135,1,
+	0,0,0,10,169,1,0,0,0,12,171,1,0,0,0,14,173,1,0,0,0,16,197,1,0,0,0,18,205,
+	1,0,0,0,20,212,1,0,0,0,22,214,1,0,0,0,24,232,1,0,0,0,26,240,1,0,0,0,28,
+	261,1,0,0,0,30,263,1,0,0,0,32,276,1,0,0,0,34,278,1,0,0,0,36,281,1,0,0,0,
+	38,287,1,0,0,0,40,297,1,0,0,0,42,299,1,0,0,0,44,301,1,0,0,0,46,305,1,0,
+	0,0,48,307,1,0,0,0,50,315,1,0,0,0,52,330,1,0,0,0,54,348,1,0,0,0,56,350,
+	1,0,0,0,58,378,1,0,0,0,60,388,1,0,0,0,62,400,1,0,0,0,64,411,1,0,0,0,66,
+	71,3,2,1,0,67,71,3,4,2,0,68,71,3,6,3,0,69,71,3,8,4,0,70,66,1,0,0,0,70,67,
+	1,0,0,0,70,68,1,0,0,0,70,69,1,0,0,0,71,72,1,0,0,0,72,70,1,0,0,0,72,73,1,
+	0,0,0,73,74,1,0,0,0,74,75,5,0,0,1,75,1,1,0,0,0,76,77,5,22,0,0,77,88,3,20,
+	10,0,78,80,5,25,0,0,79,78,1,0,0,0,79,80,1,0,0,0,80,81,1,0,0,0,81,82,3,12,
+	6,0,82,83,3,44,22,0,83,89,1,0,0,0,84,86,5,25,0,0,85,84,1,0,0,0,85,86,1,
+	0,0,0,86,87,1,0,0,0,87,89,3,14,7,0,88,79,1,0,0,0,88,85,1,0,0,0,89,90,1,
+	0,0,0,90,91,5,27,0,0,91,94,3,16,8,0,92,93,5,28,0,0,93,95,3,46,23,0,94,92,
+	1,0,0,0,94,95,1,0,0,0,95,97,1,0,0,0,96,98,5,16,0,0,97,96,1,0,0,0,97,98,
+	1,0,0,0,98,3,1,0,0,0,99,100,5,21,0,0,100,109,3,20,10,0,101,102,5,25,0,0,
+	102,103,3,10,5,0,103,104,3,44,22,0,104,110,1,0,0,0,105,107,5,25,0,0,106,
+	105,1,0,0,0,106,107,1,0,0,0,107,108,1,0,0,0,108,110,3,14,7,0,109,101,1,
+	0,0,0,109,106,1,0,0,0,110,111,1,0,0,0,111,119,5,27,0,0,112,120,3,18,9,0,
+	113,114,3,16,8,0,114,115,5,29,0,0,115,116,3,44,22,0,116,117,5,27,0,0,117,
+	118,3,18,9,0,118,120,1,0,0,0,119,112,1,0,0,0,119,113,1,0,0,0,120,123,1,
+	0,0,0,121,122,5,28,0,0,122,124,3,46,23,0,123,121,1,0,0,0,123,124,1,0,0,
+	0,124,126,1,0,0,0,125,127,5,16,0,0,126,125,1,0,0,0,126,127,1,0,0,0,127,
+	5,1,0,0,0,128,129,5,23,0,0,129,130,3,40,20,0,130,131,5,44,0,0,131,133,3,
+	42,21,0,132,134,5,16,0,0,133,132,1,0,0,0,133,134,1,0,0,0,134,7,1,0,0,0,
+	135,136,5,39,0,0,136,139,3,20,10,0,137,138,5,26,0,0,138,140,3,18,9,0,139,
+	137,1,0,0,0,139,140,1,0,0,0,140,149,1,0,0,0,141,142,5,25,0,0,142,143,3,
+	10,5,0,143,144,3,44,22,0,144,150,1,0,0,0,145,147,5,25,0,0,146,145,1,0,0,
+	0,146,147,1,0,0,0,147,148,1,0,0,0,148,150,3,14,7,0,149,141,1,0,0,0,149,
+	146,1,0,0,0,150,151,1,0,0,0,151,152,5,27,0,0,152,158,3,16,8,0,153,154,5,
+	29,0,0,154,155,3,44,22,0,155,156,5,27,0,0,156,157,3,18,9,0,157,159,1,0,
+	0,0,158,153,1,0,0,0,158,159,1,0,0,0,159,162,1,0,0,0,160,161,5,28,0,0,161,
+	163,3,46,23,0,162,160,1,0,0,0,162,163,1,0,0,0,163,165,1,0,0,0,164,166,5,
+	16,0,0,165,164,1,0,0,0,165,166,1,0,0,0,166,9,1,0,0,0,167,170,3,12,6,0,168,
+	170,5,38,0,0,169,167,1,0,0,0,169,168,1,0,0,0,170,11,1,0,0,0,171,172,7,0,
+	0,0,172,13,1,0,0,0,173,174,5,1,0,0,174,179,5,47,0,0,175,176,5,2,0,0,176,
+	178,5,47,0,0,177,175,1,0,0,0,178,181,1,0,0,0,179,177,1,0,0,0,179,180,1,
+	0,0,0,180,182,1,0,0,0,181,179,1,0,0,0,182,183,5,3,0,0,183,15,1,0,0,0,184,
+	186,5,33,0,0,185,187,5,45,0,0,186,185,1,0,0,0,186,187,1,0,0,0,187,188,1,
+	0,0,0,188,193,7,1,0,0,189,190,5,4,0,0,190,192,7,1,0,0,191,189,1,0,0,0,192,
+	195,1,0,0,0,193,191,1,0,0,0,193,194,1,0,0,0,194,198,1,0,0,0,195,193,1,0,
+	0,0,196,198,5,34,0,0,197,184,1,0,0,0,197,196,1,0,0,0,198,17,1,0,0,0,199,
+	206,5,20,0,0,200,202,5,34,0,0,201,203,5,18,0,0,202,201,1,0,0,0,202,203,
+	1,0,0,0,203,204,1,0,0,0,204,206,7,1,0,0,205,199,1,0,0,0,205,200,1,0,0,0,
+	206,19,1,0,0,0,207,213,3,22,11,0,208,213,3,26,13,0,209,213,3,36,18,0,210,
+	213,3,24,12,0,211,213,5,19,0,0,212,207,1,0,0,0,212,208,1,0,0,0,212,209,
+	1,0,0,0,212,210,1,0,0,0,212,211,1,0,0,0,213,21,1,0,0,0,214,216,5,31,0,0,
+	215,217,5,18,0,0,216,215,1,0,0,0,216,217,1,0,0,0,217,220,1,0,0,0,218,221,
+	3,28,14,0,219,221,3,34,17,0,220,218,1,0,0,0,220,219,1,0,0,0,221,229,1,0,
+	0,0,222,225,5,2,0,0,223,226,3,28,14,0,224,226,3,34,17,0,225,223,1,0,0,0,
+	225,224,1,0,0,0,226,228,1,0,0,0,227,222,1,0,0,0,228,231,1,0,0,0,229,227,
+	1,0,0,0,229,230,1,0,0,0,230,23,1,0,0,0,231,229,1,0,0,0,232,233,5,24,0,0,
+	233,237,3,30,15,0,234,236,3,30,15,0,235,234,1,0,0,0,236,239,1,0,0,0,237,
+	235,1,0,0,0,237,238,1,0,0,0,238,25,1,0,0,0,239,237,1,0,0,0,240,241,5,32,
+	0,0,241,246,3,32,16,0,242,243,5,2,0,0,243,245,3,32,16,0,244,242,1,0,0,0,
+	245,248,1,0,0,0,246,244,1,0,0,0,246,247,1,0,0,0,247,27,1,0,0,0,248,246,
+	1,0,0,0,249,262,5,47,0,0,250,251,5,17,0,0,251,252,5,5,0,0,252,262,5,17,
+	0,0,253,262,5,17,0,0,254,255,5,47,0,0,255,256,5,5,0,0,256,262,5,47,0,0,
+	257,258,5,47,0,0,258,259,5,5,0,0,259,262,5,17,0,0,260,262,5,46,0,0,261,
+	249,1,0,0,0,261,250,1,0,0,0,261,253,1,0,0,0,261,254,1,0,0,0,261,257,1,0,
+	0,0,261,260,1,0,0,0,262,29,1,0,0,0,263,272,7,1,0,0,264,265,5,6,0,0,265,
+	266,7,1,0,0,266,273,5,6,0,0,267,268,5,6,0,0,268,269,7,1,0,0,269,270,5,5,
+	0,0,270,271,7,1,0,0,271,273,5,6,0,0,272,264,1,0,0,0,272,267,1,0,0,0,273,
+	274,1,0,0,0,274,275,1,0,0,0,274,272,1,0,0,0,275,31,1,0,0,0,276,277,7,1,
+	0,0,277,33,1,0,0,0,278,279,5,45,0,0,279,280,7,1,0,0,280,35,1,0,0,0,281,
+	283,5,30,0,0,282,284,5,45,0,0,283,282,1,0,0,0,283,284,1,0,0,0,284,285,1,
+	0,0,0,285,286,5,47,0,0,286,37,1,0,0,0,287,289,5,34,0,0,288,290,5,18,0,0,
+	289,288,1,0,0,0,289,290,1,0,0,0,290,291,1,0,0,0,291,292,7,1,0,0,292,39,
+	1,0,0,0,293,298,3,22,11,0,294,298,3,36,18,0,295,298,3,26,13,0,296,298,3,
+	38,19,0,297,293,1,0,0,0,297,294,1,0,0,0,297,295,1,0,0,0,297,296,1,0,0,0,
+	298,41,1,0,0,0,299,300,7,1,0,0,300,43,1,0,0,0,301,302,7,1,0,0,302,45,1,
+	0,0,0,303,306,3,60,30,0,304,306,3,48,24,0,305,303,1,0,0,0,305,304,1,0,0,
+	0,306,47,1,0,0,0,307,308,3,50,25,0,308,313,3,52,26,0,309,314,3,54,27,0,
+	310,314,3,56,28,0,311,314,3,58,29,0,312,314,3,64,32,0,313,309,1,0,0,0,313,
+	310,1,0,0,0,313,311,1,0,0,0,313,312,1,0,0,0,314,49,1,0,0,0,315,322,7,1,
+	0,0,316,317,5,7,0,0,317,319,7,1,0,0,318,316,1,0,0,0,319,320,1,0,0,0,320,
+	318,1,0,0,0,320,321,1,0,0,0,321,323,1,0,0,0,322,318,1,0,0,0,322,323,1,0,
+	0,0,323,51,1,0,0,0,324,331,5,8,0,0,325,326,5,9,0,0,326,331,5,8,0,0,327,
+	331,5,14,0,0,328,331,5,27,0,0,329,331,5,15,0,0,330,324,1,0,0,0,330,325,
+	1,0,0,0,330,327,1,0,0,0,330,328,1,0,0,0,330,329,1,0,0,0,331,53,1,0,0,0,
+	332,349,5,47,0,0,333,349,5,17,0,0,334,335,5,17,0,0,335,336,5,5,0,0,336,
+	349,5,47,0,0,337,340,5,17,0,0,338,339,5,18,0,0,339,341,5,47,0,0,340,338,
+	1,0,0,0,341,342,1,0,0,0,342,340,1,0,0,0,342,343,1,0,0,0,343,349,1,0,0,0,
+	344,349,5,46,0,0,345,346,5,6,0,0,346,347,5,46,0,0,347,349,5,6,0,0,348,332,
+	1,0,0,0,348,333,1,0,0,0,348,334,1,0,0,0,348,337,1,0,0,0,348,344,1,0,0,0,
+	348,345,1,0,0,0,349,55,1,0,0,0,350,356,5,10,0,0,351,357,5,17,0,0,352,357,
+	5,46,0,0,353,354,5,6,0,0,354,355,5,46,0,0,355,357,5,6,0,0,356,351,1,0,0,
+	0,356,352,1,0,0,0,356,353,1,0,0,0,357,368,1,0,0,0,358,364,5,2,0,0,359,365,
+	5,17,0,0,360,365,5,46,0,0,361,362,5,6,0,0,362,363,5,46,0,0,363,365,5,6,
+	0,0,364,359,1,0,0,0,364,360,1,0,0,0,364,361,1,0,0,0,365,367,1,0,0,0,366,
+	358,1,0,0,0,367,370,1,0,0,0,368,366,1,0,0,0,368,369,1,0,0,0,369,371,1,0,
+	0,0,370,368,1,0,0,0,371,372,5,11,0,0,372,57,1,0,0,0,373,379,5,17,0,0,374,
+	379,5,46,0,0,375,376,5,6,0,0,376,377,5,46,0,0,377,379,5,6,0,0,378,373,1,
+	0,0,0,378,374,1,0,0,0,378,375,1,0,0,0,379,380,1,0,0,0,380,386,5,42,0,0,
+	381,387,5,17,0,0,382,387,5,46,0,0,383,384,5,6,0,0,384,385,5,46,0,0,385,
+	387,5,6,0,0,386,381,1,0,0,0,386,382,1,0,0,0,386,383,1,0,0,0,387,59,1,0,
+	0,0,388,389,3,62,31,0,389,390,5,1,0,0,390,395,3,46,23,0,391,392,5,2,0,0,
+	392,394,3,46,23,0,393,391,1,0,0,0,394,397,1,0,0,0,395,393,1,0,0,0,395,396,
+	1,0,0,0,396,398,1,0,0,0,397,395,1,0,0,0,398,399,5,3,0,0,399,61,1,0,0,0,
+	400,401,7,2,0,0,401,63,1,0,0,0,402,403,5,5,0,0,403,404,5,47,0,0,404,412,
+	5,12,0,0,405,406,5,13,0,0,406,407,5,47,0,0,407,412,5,5,0,0,408,409,5,5,
+	0,0,409,410,5,47,0,0,410,412,5,5,0,0,411,402,1,0,0,0,411,405,1,0,0,0,411,
+	408,1,0,0,0,412,65,1,0,0,0,53,70,72,79,85,88,94,97,106,109,119,123,126,
+	133,139,146,149,158,162,165,169,179,186,193,197,202,205,212,216,220,225,
+	229,237,246,261,272,274,283,289,297,305,313,320,322,330,342,348,356,364,
+	368,378,386,395,411];
 
 	private static __ATN: ATN;
 	public static get _ATN(): ATN {
@@ -2298,14 +2354,6 @@ export class PolicyContext extends ParserRuleContext {
 	 		listener.exitPolicy(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitPolicy) {
-			return visitor.visitPolicy(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -2358,14 +2406,6 @@ export class AllowExpressionContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitAllowExpression) {
 	 		listener.exitAllowExpression(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitAllowExpression) {
-			return visitor.visitAllowExpression(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -2434,14 +2474,6 @@ export class EndorseExpressionContext extends ParserRuleContext {
 	 		listener.exitEndorseExpression(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitEndorseExpression) {
-			return visitor.visitEndorseExpression(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -2476,14 +2508,6 @@ export class DefineExpressionContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitDefineExpression) {
 	 		listener.exitDefineExpression(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitDefineExpression) {
-			return visitor.visitDefineExpression(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -2558,14 +2582,6 @@ export class AdmitExpressionContext extends ParserRuleContext {
 	 		listener.exitAdmitExpression(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitAdmitExpression) {
-			return visitor.visitAdmitExpression(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -2591,14 +2607,6 @@ export class EndorseVerbContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitEndorseVerb) {
 	 		listener.exitEndorseVerb(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitEndorseVerb) {
-			return visitor.visitEndorseVerb(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -2634,14 +2642,6 @@ export class VerbContext extends ParserRuleContext {
 	 		listener.exitVerb(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitVerb) {
-			return visitor.visitVerb(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -2667,14 +2667,6 @@ export class PermissionListContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitPermissionList) {
 	 		listener.exitPermissionList(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitPermissionList) {
-			return visitor.visitPermissionList(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -2719,14 +2711,6 @@ export class ScopeContext extends ParserRuleContext {
 	 		listener.exitScope(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitScope) {
-			return visitor.visitScope(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -2744,6 +2728,12 @@ export class EndorseScopeContext extends ParserRuleContext {
 	public WORD(): TerminalNode {
 		return this.getToken(PolicyParser.WORD, 0);
 	}
+	public HCL_VAR(): TerminalNode {
+		return this.getToken(PolicyParser.HCL_VAR, 0);
+	}
+	public WS(): TerminalNode {
+		return this.getToken(PolicyParser.WS, 0);
+	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_endorseScope;
 	}
@@ -2755,14 +2745,6 @@ export class EndorseScopeContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitEndorseScope) {
 	 		listener.exitEndorseScope(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitEndorseScope) {
-			return visitor.visitEndorseScope(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -2801,14 +2783,6 @@ export class SubjectContext extends ParserRuleContext {
 	 		listener.exitSubject(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitSubject) {
-			return visitor.visitSubject(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -2832,6 +2806,9 @@ export class GroupSubjectContext extends ParserRuleContext {
 	public groupID(i: number): GroupIDContext {
 		return this.getTypedRuleContext(GroupIDContext, i) as GroupIDContext;
 	}
+	public WS(): TerminalNode {
+		return this.getToken(PolicyParser.WS, 0);
+	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_groupSubject;
 	}
@@ -2843,14 +2820,6 @@ export class GroupSubjectContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitGroupSubject) {
 	 		listener.exitGroupSubject(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitGroupSubject) {
-			return visitor.visitGroupSubject(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -2883,14 +2852,6 @@ export class ResourceSubjectContext extends ParserRuleContext {
 	 		listener.exitResourceSubject(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitResourceSubject) {
-			return visitor.visitResourceSubject(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -2919,14 +2880,6 @@ export class ServiceSubjectContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitServiceSubject) {
 	 		listener.exitServiceSubject(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitServiceSubject) {
-			return visitor.visitServiceSubject(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -2965,14 +2918,6 @@ export class GroupNameContext extends ParserRuleContext {
 	 		listener.exitGroupName(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitGroupName) {
-			return visitor.visitGroupName(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3006,14 +2951,6 @@ export class ResourceSubjectIdContext extends ParserRuleContext {
 	 		listener.exitResourceSubjectId(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitResourceSubjectId) {
-			return visitor.visitResourceSubjectId(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3039,14 +2976,6 @@ export class ServiceSubjectIdContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitServiceSubjectId) {
 	 		listener.exitServiceSubjectId(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitServiceSubjectId) {
-			return visitor.visitServiceSubjectId(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -3079,14 +3008,6 @@ export class GroupIDContext extends ParserRuleContext {
 	 		listener.exitGroupID(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitGroupID) {
-			return visitor.visitGroupID(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3117,14 +3038,6 @@ export class DynamicGroupSubjectContext extends ParserRuleContext {
 	 		listener.exitDynamicGroupSubject(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitDynamicGroupSubject) {
-			return visitor.visitDynamicGroupSubject(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3139,6 +3052,12 @@ export class TenancySubjectContext extends ParserRuleContext {
 	public WORD(): TerminalNode {
 		return this.getToken(PolicyParser.WORD, 0);
 	}
+	public HCL_VAR(): TerminalNode {
+		return this.getToken(PolicyParser.HCL_VAR, 0);
+	}
+	public WS(): TerminalNode {
+		return this.getToken(PolicyParser.WS, 0);
+	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_tenancySubject;
 	}
@@ -3150,14 +3069,6 @@ export class TenancySubjectContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitTenancySubject) {
 	 		listener.exitTenancySubject(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitTenancySubject) {
-			return visitor.visitTenancySubject(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -3193,14 +3104,6 @@ export class DefinedSubjectContext extends ParserRuleContext {
 	 		listener.exitDefinedSubject(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitDefinedSubject) {
-			return visitor.visitDefinedSubject(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3211,6 +3114,9 @@ export class DefinedContext extends ParserRuleContext {
 	}
 	public WORD(): TerminalNode {
 		return this.getToken(PolicyParser.WORD, 0);
+	}
+	public HCL_VAR(): TerminalNode {
+		return this.getToken(PolicyParser.HCL_VAR, 0);
 	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_defined;
@@ -3223,14 +3129,6 @@ export class DefinedContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitDefined) {
 	 		listener.exitDefined(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitDefined) {
-			return visitor.visitDefined(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -3260,14 +3158,6 @@ export class ResourceContext extends ParserRuleContext {
 	 		listener.exitResource(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitResource) {
-			return visitor.visitResource(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3293,14 +3183,6 @@ export class ConditionContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitCondition) {
 	 		listener.exitCondition(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitCondition) {
-			return visitor.visitCondition(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -3342,14 +3224,6 @@ export class ComparisonContext extends ParserRuleContext {
 	 		listener.exitComparison(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitComparison) {
-			return visitor.visitComparison(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3383,14 +3257,6 @@ export class VariableContext extends ParserRuleContext {
 	 		listener.exitVariable(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitVariable) {
-			return visitor.visitVariable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3419,14 +3285,6 @@ export class OperatorContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitOperator) {
 	 		listener.exitOperator(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitOperator) {
-			return visitor.visitOperator(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -3468,14 +3326,6 @@ export class ValueContext extends ParserRuleContext {
 	 		listener.exitValue(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitValue) {
-			return visitor.visitValue(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3507,14 +3357,6 @@ export class ValueListContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitValueList) {
 	 		listener.exitValueList(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitValueList) {
-			return visitor.visitValueList(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }
@@ -3553,14 +3395,6 @@ export class TimeWindowContext extends ParserRuleContext {
 	 		listener.exitTimeWindow(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitTimeWindow) {
-			return visitor.visitTimeWindow(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3591,14 +3425,6 @@ export class ComparisonListContext extends ParserRuleContext {
 	 		listener.exitComparisonList(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitComparisonList) {
-			return visitor.visitComparisonList(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3626,14 +3452,6 @@ export class LogicalCombineContext extends ParserRuleContext {
 	 		listener.exitLogicalCombine(this);
 		}
 	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitLogicalCombine) {
-			return visitor.visitLogicalCombine(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -3656,14 +3474,6 @@ export class PatternMatchContext extends ParserRuleContext {
 	public exitRule(listener: PolicyListener): void {
 	    if(listener.exitPatternMatch) {
 	 		listener.exitPatternMatch(this);
-		}
-	}
-	// @Override
-	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
-		if (visitor.visitPatternMatch) {
-			return visitor.visitPatternMatch(this);
-		} else {
-			return visitor.visitChildren(this);
 		}
 	}
 }

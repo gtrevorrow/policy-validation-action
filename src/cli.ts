@@ -1,58 +1,73 @@
 #!/usr/bin/env node
-import * as path from 'path';
-import { program } from 'commander';
-import { findTerraformFiles, processFile, parsePolicy, formatPolicyStatements } from './Main';
-import chalk from 'chalk';
-import { Logger } from './types';
 
-const cliLogger: Logger = {
-    debug: (msg) => options.verbose && console.log(chalk.dim(msg)),
-    info: (msg) => console.log(msg),
-    warn: (msg) => console.warn(chalk.yellow(msg)),
-    error: (msg) => console.error(chalk.red(msg))
-};
+import { Command } from 'commander';
+import * as fs from 'fs';
+import * as path from 'path';
+import { findTerraformFiles, processFile, parsePolicy } from './Main';
+
+const pkg = require('../package.json');
+
+const program = new Command();
 
 program
     .name('policy-validator')
     .description('Validates OCI policy statements in Terraform files')
+    .version(pkg.version)
     .option('-p, --path <path>', 'Path to policy file or directory', '.')
     .option('-v, --verbose', 'Enable verbose output')
-    .parse(process.argv);
+    .option('--pattern <pattern>', 'Custom regex pattern for policy extraction');
+
+program.parse();
 
 const options = program.opts();
 
-async function main() {
-    const path = process.argv[2] || '.';
-    
+const logger = {
+    debug: (msg: string) => options.verbose && console.log(msg),
+    info: (msg: string) => console.log(msg),
+    warn: (msg: string) => console.warn(msg),
+    error: (msg: string) => console.error(msg)
+};
+
+async function run() {
     try {
-        const files = await findTerraformFiles(path);
+        const inputPath = path.resolve(options.path);
+        
+        // Get all terraform files
+        const files = await findTerraformFiles(inputPath, logger);
+        
         if (files.length === 0) {
-            console.warn('No .tf files found');
-            return;
+            logger.error('No .tf files found');
+            process.exit(1);
         }
 
-        let allSegments: string[] = [];
+        let allExpressions: string[] = [];
+        
+        // Process each file
         for (const file of files) {
-            const segments = await processFile(file);
-            allSegments.push(...segments);
+            const expressions = await processFile(file, logger);
+            if (expressions.length > 0) {
+                allExpressions.push(...expressions);
+            }
         }
 
-        if (allSegments.length > 0) {
-            const policyText = formatPolicyStatements(allSegments);
-            console.log('Validating policy statements...');
-            
-            if (!parsePolicy(policyText)) {
-                process.exit(1);
-            }
-            
-            console.log('Policy validation successful');
-            console.log('Found and validated allow segments:');
-            allSegments.forEach(segment => console.log(segment));
+        if (allExpressions.length === 0) {
+            logger.warn('No policy statements found');
+            process.exit(1);
         }
+
+        // Validate all found expressions
+        logger.info('Validating policy statements...');
+        const isValid = parsePolicy(allExpressions.join('\n'), logger);
+
+        if (!isValid) {
+            process.exit(1);
+        }
+
+        logger.info('Policy validation successful');
     } catch (error) {
-        console.error(`Error: ${error}`);
+        logger.error(`Error: ${error}`);
         process.exit(1);
     }
 }
 
-main();
+run();

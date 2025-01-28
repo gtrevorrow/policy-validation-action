@@ -24,7 +24,22 @@ A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements 
 
 ## Installation
 
-For local usage:
+```bash
+# Install globally from npm registry
+npm install -g policy-validation-action
+
+# Or install locally in your project
+npm install --save-dev policy-validation-action
+```
+
+### Publishing to npm
+
+```bash
+# Login to npm
+npm login
+
+# Publish package
+npm publish
 ```
 
 ## Usage
@@ -258,6 +273,23 @@ The test suite aims for:
 - Function coverage: >90%
 
 View coverage reports in the `coverage/` directory after running `npm run test:coverage`.
+
+## Development
+
+### Testing Local Installation
+
+Before publishing to npm, test the CLI installation locally:
+
+```bash
+# Test CLI installation
+npm run test:cli
+
+# This will:
+# 1. Link the package globally
+# 2. Create test policy files
+# 3. Run CLI commands
+# 4. Clean up test files
+```
 
 ## License
 

@@ -1,12 +1,29 @@
 {
   "name": "policy-validation-action",
   "version": "1.0.0",
+  "description": "OCI Policy Validation Tool for Terraform files",
+  "keywords": [
+    "oci",
+    "policy",
+    "terraform",
+    "validation",
+    "cli"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/policy-validation-action.git"
+  },
   "main": "lib/Main.js",
   "bin": {
-    "policy-validator": "lib/cli.js"
+    "policy-validator": "./lib/cli.js"
   },
   "files": [
-    "lib"
+    "lib",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "prebuild": "rm -rf lib",
@@ -14,7 +31,10 @@
     "test": "jest",
     "start": "node lib/cli.js",
     "test:watch": "jest --watch --verbose",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test",
+    "test:cli": "chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh"
   },
   "author": "Gordon Trevorrow",
   "license": "UPL-1.0",
@@ -29,11 +49,11 @@
   "devDependencies": {
     "@types/chalk": "^0.4.31",
     "@types/commander": "^2.12.0",
+    "@types/jest": "^29.5.0",
     "@types/node": "^16.18.0",
     "@vercel/ncc": "^0.36.1",
-    "typescript": "^5.0.0",
-    "@types/jest": "^29.5.0",
     "jest": "^29.5.0",
-    "ts-jest": "^29.1.0"
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
   }
 }
