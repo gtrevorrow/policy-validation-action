@@ -13,7 +13,6 @@ A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements 
 - Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines)
 - Handles HCL variable interpolation (${var.name}) in policy statements
 - Colored CLI output with verbose mode
-- Automatic workspace detection
 - Recursive directory scanning
 
 ## Prerequisites
@@ -224,7 +223,7 @@ policy-validator --help
 
 ## Testing
 
-The project includes a comprehensive test suite using Jest.
+The project includes a comprehensive test suite using Jest and CLI installation testing.
 
 ### Running Tests
 
@@ -237,6 +236,47 @@ npm run test:watch
 
 # Generate coverage report
 npm run test:coverage
+
+# Test CLI installation and functionality
+npm run test:cli
+```
+
+### CLI Installation Testing
+
+The `test-cli-install.sh` script performs comprehensive CLI testing:
+
+1. Installation Verification
+   - Builds and links package locally
+   - Verifies global command availability
+
+2. Command Testing
+   - `--help`: Verifies help documentation
+   - `--version`: Checks version output
+   - File validation: Tests single file processing
+   - Directory scanning: Tests recursive directory processing
+   - Verbose mode: Tests detailed output
+   - Custom pattern: Tests pattern matching
+
+3. Policy Validation Testing
+   - Valid policy statements
+   - Variable interpolation
+   - All expression types (Allow, Define, Endorse, Admit)
+   - Conditional statements
+   - Error handling for invalid syntax
+
+Example test policy types:
+```hcl
+# Valid basic statements
+Allow group Administrators to manage all-resources in tenancy
+
+# Variable interpolation
+Allow group ${var.admin_group} to manage all-resources in tenancy
+
+# Conditional statements
+Allow any-user to use instances where request.time BETWEEN ${var.start_time} AND ${var.end_time}
+
+# Invalid spacing (fails validation)
+AllowBadSyntax manage
 ```
 
 ### Test Structure
