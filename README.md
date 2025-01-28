@@ -5,13 +5,13 @@ A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements 
 ## Features
 
 - Validates OCI policy statements in Terraform files
-- Supports multiple policy expression types:
+- Supports multiple OCI policy expression types:
   - Allow statements
   - Define statements
   - Endorse statements
   - Admit statements
 - Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines)
-- Handles HCL variable interpolation (${var.name})
+- Handles HCL variable interpolation (${var.name}) in policy statements
 - Colored CLI output with verbose mode
 - Automatic workspace detection
 - Recursive directory scanning
@@ -177,6 +177,87 @@ Failed to parse policy statement:
 Statement: "Allow BadSyntax manage"
 Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
 ```
+
+## CLI Usage
+
+The tool can be used directly from the command line:
+
+```bash
+# Install globally
+npm install -g policy-validation-action
+
+# Validate a single file
+policy-validator ./path/to/policy.tf
+
+# Validate all .tf files in a directory (recursive)
+policy-validator ./path/to/policies/
+
+# Run with verbose output
+policy-validator --verbose ./path/to/policies/
+
+# Show help
+policy-validator --help
+```
+
+### CLI Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--verbose, -v` | Enable verbose output | `false` |
+| `--path, -p` | Path to policy file or directory | `.` |
+| `--pattern` | Custom regex pattern for policy extraction | System default |
+
+## Testing
+
+The project includes a comprehensive test suite using Jest.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Test Structure
+
+- `__tests__/policy-validation.test.ts`: Core validation tests
+  - Policy statement extraction
+  - Variable interpolation
+  - Expression type validation
+  - Error handling
+
+### Test Fixtures
+
+Test fixtures are located in `src/__tests__/fixtures/` and include:
+- `valid.tf`: Valid policy statements
+- `invalid.tf`: Invalid policy syntax
+- `valid_vars.tf`: Policies with variable interpolation
+- `valid_conditions.tf`: Policies with conditional statements
+- `all_expressions.tf`: All supported expression types
+
+### CI Test Workflow
+
+The GitHub Actions workflow (`test.yml`) performs:
+1. Policy validation tests
+2. Expression type checks
+3. Variable interpolation validation
+4. Error handling verification
+5. Cross-platform compatibility tests
+
+### Coverage Requirements
+
+The test suite aims for:
+- Statement coverage: >80%
+- Branch coverage: >75%
+- Function coverage: >90%
+
+View coverage reports in the `coverage/` directory after running `npm run test:coverage`.
 
 ## License
 
