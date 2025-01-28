@@ -257,5 +257,6 @@ export {
     findTerraformFiles,
     processFile,
     parsePolicy,
-    formatPolicyStatements
+    formatPolicyStatements,
+    extractPolicyExpressions
 };
