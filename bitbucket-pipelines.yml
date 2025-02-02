@@ -59,8 +59,8 @@ definitions:
             }
             EOL
           # Run tests
-          - node dist/cli.js --path test/policies/valid.tf
-          - node dist/cli.js --path test/policies/valid_vars.tf
+          - node dist/index.js --path test/policies/valid.tf
+          - node dist/index.js --path test/policies/valid_vars.tf
 
 pipelines:
   default:
