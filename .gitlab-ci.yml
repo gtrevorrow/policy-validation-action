@@ -1,4 +1,4 @@
-image: node:16
+image: node:latest
 
 variables:
   GIT_DEPTH: 0  # Fetch all history for proper access
@@ -60,7 +60,7 @@ test:
       }
       EOL
     # Run validation
-    - node dist/cli.js --path test/policies/valid.tf  # Fix entry point name
+    - node lib/cli.js --path test/policies/valid.tf  # Fix entry point name
   artifacts:
     reports:
       junit: test-results.xml
