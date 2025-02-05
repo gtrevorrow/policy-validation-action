@@ -41,14 +41,6 @@ npm login
 npm publish
 ```
 
-## Usage
-
-```yaml
-- uses: policy-validation-action@v1.0.0
-  with:
-    path: './path/to/policies'  # Directory containing .tf files or path to single .tf file
-```
-
 ## Usage in CI Platforms
 
 ### GitHub Actions
