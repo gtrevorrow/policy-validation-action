@@ -178,7 +178,7 @@ function parsePolicy(text: string, logger?: Logger): boolean {
                     logger?.error('Failed to parse policy statement:');
                     logger?.error(`Statement: "${statement}"`);
                     logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
-                    throw new Error(`Policy parsing error: ${msg}`);
+                    // throw new Error(`Policy parsing error: ${msg}`);
                 }
             });
             

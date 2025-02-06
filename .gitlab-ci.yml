@@ -65,5 +65,7 @@ test:
     - node lib/cli.js --path test/policies/variables.tf || true
   artifacts:
     reports:
-      junit: test-results.xml
+      junit: test-results/test-results.xml
+    paths:
+      - test-results/
     when: always  # Always upload test results, even on failure

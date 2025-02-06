@@ -39,6 +39,17 @@ mkdir -p "${TEST_POLICIES_DIR}"
 npm install
 npm run build
 npm link
+# Make CLI executable - check multiple possible locations
+for cli_path in \
+    "./lib/cli.js" \
+    "./dist/index.js" \
+    "$(npm bin)/policy-validator" \
+    "$(npm prefix)/lib/cli.js"
+do
+    if [ -f "$cli_path" ]; then
+        chmod +x "$cli_path"
+    fi
+done
 
 # Create test policies
 cat > "${TEST_POLICIES_DIR}/valid.tf" << 'EOL'
@@ -53,8 +64,6 @@ resource "oci_identity_policy" "test_policy" {
   ]
 }
 EOL
-
-
 
 cat > "${TEST_POLICIES_DIR}/variables.tf" << 'EOL'
 resource "oci_identity_policy" "test_policy_vars" {

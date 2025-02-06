@@ -10,7 +10,7 @@ A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements 
   - Define statements
   - Endorse statements
   - Admit statements
-- Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines)
+- Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines, CLI)
 - Handles HCL variable interpolation (${var.name}) in policy statements
 - Colored CLI output with verbose mode
 - Recursive directory scanning
