@@ -17,18 +17,6 @@ import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
 
 // Add custom error listener implementation
-class PolicyErrorListener implements ErrorListener<Token> {
-    syntaxError(
-        recognizer: Recognizer<Token>,
-        offendingSymbol: Token | undefined,
-        line: number,
-        charPositionInLine: number,
-        msg: string,
-        e: RecognitionException | undefined
-    ): void {
-        throw new Error(`Line ${line}:${charPositionInLine} - ${msg}`);
-    }
-}
 
 function extractPolicyExpressions(text: string): string[] {
     const statementsMatch = text.match(POLICY_STATEMENTS_REGEX);
@@ -159,12 +147,12 @@ function parsePolicy(text: string, logger?: Logger): boolean {
         // Process each statement separately
         const statements = text.split('\n').filter(s => s.trim());
         
+        var isValidationErrors: boolean = false;
         for (const statement of statements) {
             const inputStream = CharStreams.fromString(statement);
             const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
             const tokenStream = new CommonTokenStream(lexer);
             const parser = new PolicyParser(tokenStream);
-            
             parser.removeErrorListeners();
             parser.addErrorListener({
                 syntaxError(
@@ -178,11 +166,15 @@ function parsePolicy(text: string, logger?: Logger): boolean {
                     logger?.error('Failed to parse policy statement:');
                     logger?.error(`Statement: "${statement}"`);
                     logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
+                    isValidationErrors = true;
                     // throw new Error(`Policy parsing error: ${msg}`);
                 }
             });
-            
             parser.policy();
+        }
+        if ( isValidationErrors){
+            logger?.error(`Policy validation failed`);
+            return false;
         }
         return true;
     } catch (error) {
