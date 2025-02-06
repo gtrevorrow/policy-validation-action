@@ -11,6 +11,17 @@ export interface ValidationResult {
     errors?: string[];
 }
 
+export interface PolicyError {
+    statement: string;
+    position: number;
+    message: string;
+}
+
+export interface ParseResult {
+    isValid: boolean;
+    errors: PolicyError[];
+}
+
 export enum ExpressionType {
     Allow = 'Allow',
     Define = 'Define',

@@ -58,14 +58,21 @@ describe('Policy Validation', () => {
                 Allow group Administrators to manage all-resources in tenancy
                 Allow group Developers to use instances in compartment dev
             `;
-            expect(parsePolicy(input)).toBe(true);
+            const result = parsePolicy(input);
+            expect(result.isValid).toBe(true);
+expect(result.errors).toHaveLength(0);
         });
 
         it('should reject invalid policy statements', () => {
             const input = `
             Allow BadSyntax manage
             `;
-            expect(parsePolicy(input)).toBe(false);
+            const result = parsePolicy(input);
+            expect(result.isValid).toBe(false);
+expect(result.errors).toHaveLength(1);
+            expect(result.errors[0]).toHaveProperty('statement');
+            expect(result.errors[0]).toHaveProperty('position');
+            expect(result.errors[0]).toHaveProperty('message');
         });
 
         it('should validate tenancy subject with HCL variables', () => {
@@ -79,7 +86,9 @@ describe('Policy Validation', () => {
                 'Admit group Admins of tenancy ${var.acceptor_tenant} to manage instances in tenancy',
                 'Endorse group foo to manage virtual-network-family in tenancy ${var.acceptor_tenant}',
             ].join('\n');
-            expect(parsePolicy(input)).toBe(true);
+            const result = parsePolicy(input);
+            expect(result.isValid).toBe(true);
+expect(result.errors).toHaveLength(0);
         });
 
         it('should reject policy statements without proper spacing', () => {
@@ -91,10 +100,14 @@ describe('Policy Validation', () => {
                 'Endorsegroup NetworkAdmins to manage something in tenancy'
             ];
             
-            invalidInputs.forEach(input => {
-                expect(parsePolicy(input)).toBe(false);
+            const result = parsePolicy(invalidInputs.join('\n'));
+            expect(result.isValid).toBe(false);
+expect(result.errors.length).toBeGreaterThan(0);
+            expect(result.errors[0]).toMatchObject({
+                statement: expect.any(String),
+                position: expect.any(Number),
+                message: expect.any(String)
             });
-            expect(parsePolicy(invalidInputs.join('\n'))).toBe(false);
         });
     });
 });

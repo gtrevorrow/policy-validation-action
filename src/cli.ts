@@ -57,12 +57,25 @@ async function run() {
 
         // Validate all found expressions
         logger.info('Validating policy statements...');
-        const isValid = parsePolicy(allExpressions.join('\n'), logger);
+        const result = parsePolicy(allExpressions.join('\n'), logger);
 
-        if (!isValid) {
+        if (!result.isValid) {
+            result.errors.forEach(error => {
+                logger.error('Failed to parse policy statement:');
+                logger.error(`Statement: "${error.statement}"`);
+                logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+            });
             process.exit(1);
         }
 
+        // Output validation results
+        const output = {
+            isValid: result.isValid,
+            statements: allExpressions,
+            errors: result.errors
+        };
+        console.log(JSON.stringify(output, null, 2));
+        
         logger.info('Policy validation successful');
     } catch (error) {
         logger.error(`Error: ${error}`);

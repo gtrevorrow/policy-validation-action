@@ -117,9 +117,16 @@ EOL
 
 # Test invalid file (should fail)
 echo "Testing invalid file handling..."
-if policy-validator --path "${TEST_POLICIES_DIR}/invalid.tf" 2>/dev/null; then
+if OUTPUT=$(policy-validator --path "${TEST_POLICIES_DIR}/invalid.tf" 2>&1); then
     echo -e "${RED}Error: Invalid policy validation should have failed${NC}"
     exit 1
+else
+    if echo "$OUTPUT" | grep -q "Failed to parse policy statement:"; then
+        echo -e "${GREEN}Successfully detected invalid policy${NC}"
+    else
+        echo -e "${RED}Error: Expected policy parsing error message${NC}"
+        exit 1
+    fi
 fi
 
 echo -e "${GREEN}All tests completed successfully!${NC}"

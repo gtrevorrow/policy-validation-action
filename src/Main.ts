@@ -12,7 +12,7 @@ import {
     Parser,
     Lexer
 } from 'antlr4';
-import { Logger, ValidationResult, POLICY_STATEMENTS_REGEX } from './types';
+import { Logger, ValidationResult, POLICY_STATEMENTS_REGEX, ParseResult, PolicyError } from './types';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
 
@@ -138,21 +138,20 @@ async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[
     }
 }
 
-function parsePolicy(text: string, logger?: Logger): boolean {
+function parsePolicy(text: string, logger?: Logger): ParseResult {
     try {
-        // Debug the input text to see what's being parsed
         logger?.debug('Parsing policy text:');
         logger?.debug(text);
         
-        // Process each statement separately
         const statements = text.split('\n').filter(s => s.trim());
+        const errors: PolicyError[] = [];
         
-        var isValidationErrors: boolean = false;
         for (const statement of statements) {
             const inputStream = CharStreams.fromString(statement);
             const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
             const tokenStream = new CommonTokenStream(lexer);
             const parser = new PolicyParser(tokenStream);
+            
             parser.removeErrorListeners();
             parser.addErrorListener({
                 syntaxError(
@@ -166,22 +165,32 @@ function parsePolicy(text: string, logger?: Logger): boolean {
                     logger?.error('Failed to parse policy statement:');
                     logger?.error(`Statement: "${statement}"`);
                     logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
-                    isValidationErrors = true;
-                    // throw new Error(`Policy parsing error: ${msg}`);
+                    errors.push({
+                        statement,
+                        position: charPositionInLine,
+                        message: msg
+                    });
                 }
             });
+            
             parser.policy();
         }
-        if ( isValidationErrors){
-            logger?.error(`Policy validation failed`);
-            return false;
-        }
-        return true;
+        
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
     } catch (error) {
-        if (error instanceof Error) {
-            logger?.error(`Policy validation failed`);
-        }
-        return false;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger?.error(`Policy validation failed: ${errorMsg}`);
+        return {
+            isValid: false,
+            errors: [{
+                statement: text,
+                position: 0,
+                message: errorMsg
+            }]
+        };
     }
 }
 
@@ -219,7 +228,9 @@ async function runAction(): Promise<void> {
             const policyText = formatPolicyStatements(allExpressions);
             core.info('Validating policy statements...');
             
-            if (!parsePolicy(policyText, actionLogger)) {
+            const result = parsePolicy(policyText, actionLogger);
+            if (!result.isValid) {
+                result.errors.forEach(error => core.error(error.message));
                 core.setFailed('Policy validation failed - check error messages above');
                 return;
             }

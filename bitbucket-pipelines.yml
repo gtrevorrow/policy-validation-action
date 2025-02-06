@@ -59,9 +59,16 @@ definitions:
             }
             EOL
           # Run tests with failure allowed
-          - node dist/index.js --path test/policies/valid.tf || true
-          - node dist/index.js --path test/policies/invalid.tf || true
-          - node dist/index.js --path test/policies/variable_interpolation.tf || true
+          - |
+            for file in valid.tf invalid.tf variables.tf; do
+              echo "Testing $file..."
+              OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1 || true)
+              echo "$OUTPUT"
+              if [[ "$file" == "invalid.tf" && ! "$OUTPUT" =~ "Failed to parse policy statement:" ]]; then
+                echo "Error: Invalid policy should have failed validation"
+                exit 1
+              fi
+            done
         artifacts:
           reports:
             junit: test-results/test-results.xml

@@ -60,7 +60,12 @@ test:
       }
       EOL
     # Run validation (using || true to prevent script failure)
-    - node lib/cli.js --path test/policies/ || true
+    - |
+      VALIDATION_OUTPUT=$(node lib/cli.js --path test/policies/ 2>&1 || true)
+      echo "$VALIDATION_OUTPUT"
+      if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
+        echo "Found expected policy validation errors"
+      fi
   artifacts:
     reports:
       junit: test-results/test-results.xml

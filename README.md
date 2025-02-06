@@ -70,7 +70,7 @@ pipelines:
         name: Validate Policies
         image: node:14
         script:
-          - npx policy-validation-action --path './path/to/policies'
+          - node lib/cli.js --path ./path/to/policies
 ```
 
 ### GitLab CI
@@ -80,7 +80,7 @@ Add this to your `.gitlab-ci.yml`:
 validate_policies:
   image: node:14
   script:
-    - npx policy-validation-action --path './path/to/policies'
+    - node lib/cli.js --path ./path/to/policies
 ```
 
 ## Inputs
