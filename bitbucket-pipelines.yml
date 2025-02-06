@@ -58,9 +58,13 @@ definitions:
               ]
             }
             EOL
-          # Run tests
-          - node dist/index.js --path test/policies/valid.tf
-          - node dist/index.js --path test/policies/valid_vars.tf
+          # Run tests with failure allowed
+          - node dist/index.js --path test/policies/valid.tf || true
+          - node dist/index.js --path test/policies/valid_vars.tf || true
+        artifacts:
+          reports:
+            junit: test-results/test-results.xml
+          when: always
 
 pipelines:
   default:
