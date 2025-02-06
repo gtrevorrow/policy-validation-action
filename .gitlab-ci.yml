@@ -41,9 +41,9 @@ test:
       cat > test/policies/invalid.tf << 'EOL'
       resource "oci_identity_policy" "invalid_policy" {
         statements = [
-          "AllowBadSyntax manage",
+          "Allow BadSyntax manage",
           "Allow groupDevelopers to use instances in compartment dev",
-          "Admitgroup ServiceAdmins of tenancy 123 to manage instances in tenancy"
+          "Admit group {ServiceAdmins} of tenancy 123 to manage instances in tenancy"
         ]
       }
       EOL
@@ -60,9 +60,7 @@ test:
       }
       EOL
     # Run validation (using || true to prevent script failure)
-    - node lib/cli.js --path test/policies/valid.tf || true
-    - node lib/cli.js --path test/policies/invalid.tf || true  # Add invalid test case
-    - node lib/cli.js --path test/policies/variables.tf || true
+    - node lib/cli.js --path test/policies/ || true
   artifacts:
     reports:
       junit: test-results/test-results.xml

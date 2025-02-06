@@ -17,7 +17,7 @@ A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements 
 
 ## Prerequisites
 
-- Node.js 14 or higher
+- Node.js 16 or higher
 - For CI/CD usage: Access to GitHub Actions, GitLab CI, or BitBucket Pipelines
 - Terraform files containing OCI policy statements
 

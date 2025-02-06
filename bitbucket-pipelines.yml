@@ -40,14 +40,14 @@ definitions:
             cat > test/policies/invalid.tf << 'EOL'
             resource "oci_identity_policy" "invalid_policy" {
               statements = [
-                "AllowBadSyntax manage",
+                "Allow BadSyntax manage",
                 "Allow groupDevelopers to use instances in compartment dev",
-                "Admitgroup ServiceAdmins of tenancy 123 to manage instances in tenancy"
+                "Admit group of tenancy 123 to manage instances in foo"
               ]
             }
             EOL
 
-            cat > test/policies/variables.tf << 'EOL'
+            cat > test/policies/variable_interpolation.tf << 'EOL'
             resource "oci_identity_policy" "test_policy_vars" {
               statements = [
                 "Allow group ${var.admin_group} to manage all-resources in tenancy",
@@ -61,7 +61,7 @@ definitions:
           # Run tests with failure allowed
           - node dist/index.js --path test/policies/valid.tf || true
           - node dist/index.js --path test/policies/invalid.tf || true
-          - node dist/index.js --path test/policies/variables.tf || true
+          - node dist/index.js --path test/policies/variable_interpolation.tf || true
         artifacts:
           reports:
             junit: test-results/test-results.xml

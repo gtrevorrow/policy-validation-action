@@ -127,7 +127,7 @@ jobs:
         with:
           path: './test/fixtures'
 
-      - name: Run policy validation tests
+      - name: Run cli policy validation tests
         id: validate
         continue-on-error: true
         run: |
