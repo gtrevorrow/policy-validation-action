@@ -10,3 +10,4 @@ npm-debug.log*
 Thumbs.db
 package-lock.json
 *.js.cache
+test-results/test-results.xml

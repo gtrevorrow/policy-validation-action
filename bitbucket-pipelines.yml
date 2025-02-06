@@ -60,7 +60,8 @@ definitions:
             EOL
           # Run tests with failure allowed
           - node dist/index.js --path test/policies/valid.tf || true
-          - node dist/index.js --path test/policies/valid_vars.tf || true
+          - node dist/index.js --path test/policies/invalid.tf || true
+          - node dist/index.js --path test/policies/variables.tf || true
         artifacts:
           reports:
             junit: test-results/test-results.xml
