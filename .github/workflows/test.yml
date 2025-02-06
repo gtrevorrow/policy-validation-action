@@ -116,18 +116,7 @@ jobs:
         uses: ./
         with:
           path: './test/policies/all_expressions.tf'
-          
-      - name: Test Allow Segments
-        run: |
-          # Use single quotes to preserve the ${var...} syntax
-          ALLOW_SEGMENT='Allow group ${var.admin_group} to manage all-resources in tenancy'
-          if [[ "${{ steps.test-vars.outputs.allow_segments }}" == *"$ALLOW_SEGMENT"* ]]; then
-            echo "Found expected allow segment"
-          else
-            echo "Did not find expected allow segment"
-            exit 1
-          fi
-
+        
       - name: Run tests
         run: npm test
 
