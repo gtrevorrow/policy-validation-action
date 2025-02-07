@@ -1,5 +1,4 @@
 import { parsePolicy, extractPolicyExpressions } from '../Main';
-import { POLICY_STATEMENTS_REGEX } from '../types';
 
 describe('Policy Validation', () => {
     describe('extractPolicyExpressions', () => {
@@ -69,7 +68,7 @@ expect(result.errors).toHaveLength(0);
             `;
             const result = parsePolicy(input);
             expect(result.isValid).toBe(false);
-expect(result.errors).toHaveLength(1);
+expect(result.errors).toHaveLength(2);
             expect(result.errors[0]).toHaveProperty('statement');
             expect(result.errors[0]).toHaveProperty('position');
             expect(result.errors[0]).toHaveProperty('message');

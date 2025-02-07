@@ -19,7 +19,8 @@ module.exports = {
     // Test file patterns to look for
     testMatch: [
         "**/__tests__/**/*.[jt]s?(x)",
-        "**/?(*.)+(spec|test).[jt]s?(x)"
+        "**/?(*.)+(spec|test).[jt]s?(x)",
+        "**/*.test.ts"
     ],
     
     // Coverage reporting configuration
@@ -28,5 +29,24 @@ module.exports = {
     coverageReporters: ["text", "lcov"],
     
     // Setup files to run before tests
-    setupFiles: ["./jest.setup.js"]
+    setupFiles: ["./jest.setup.js"],
+
+    clearMocks: true,
+    moduleFileExtensions: ['js', 'ts'],
+    transform: {
+        '^.+\\.ts$': 'ts-jest'
+    },
+    roots: ['<rootDir>/src'],
+    reporters: [
+        'default',
+        ['jest-junit', {
+            outputDirectory: 'test-results',
+            outputName: 'test-results.xml',
+            ancestorSeparator: ' › ',
+            uniqueOutputName: false,
+            suiteNameTemplate: '{filepath}',
+            classNameTemplate: '{classname}',
+            titleTemplate: '{title}'
+        }]
+    ]
 };

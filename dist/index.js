@@ -57,11 +57,6 @@ const types_1 = __nccwpck_require__(8164);
 const PolicyLexer_1 = __importDefault(__nccwpck_require__(5612));
 const PolicyParser_1 = __importDefault(__nccwpck_require__(2597));
 // Add custom error listener implementation
-class PolicyErrorListener {
-    syntaxError(recognizer, offendingSymbol, line, charPositionInLine, msg, e) {
-        throw new Error(`Line ${line}:${charPositionInLine} - ${msg}`);
-    }
-}
 function extractPolicyExpressions(text) {
     const statementsMatch = text.match(types_1.POLICY_STATEMENTS_REGEX);
     if (!statementsMatch || !statementsMatch[1]) {
@@ -178,11 +173,10 @@ async function findTerraformFiles(dir, logger) {
 }
 function parsePolicy(text, logger) {
     try {
-        // Debug the input text to see what's being parsed
         logger === null || logger === void 0 ? void 0 : logger.debug('Parsing policy text:');
         logger === null || logger === void 0 ? void 0 : logger.debug(text);
-        // Process each statement separately
         const statements = text.split('\n').filter(s => s.trim());
+        const errors = [];
         for (const statement of statements) {
             const inputStream = antlr4_1.CharStreams.fromString(statement);
             const lexer = new PolicyLexer_1.default(inputStream);
@@ -194,18 +188,31 @@ function parsePolicy(text, logger) {
                     logger === null || logger === void 0 ? void 0 : logger.error('Failed to parse policy statement:');
                     logger === null || logger === void 0 ? void 0 : logger.error(`Statement: "${statement}"`);
                     logger === null || logger === void 0 ? void 0 : logger.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
-                    throw new Error(`Policy parsing error: ${msg}`);
+                    errors.push({
+                        statement,
+                        position: charPositionInLine,
+                        message: msg
+                    });
                 }
             });
             parser.policy();
         }
-        return true;
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
     }
     catch (error) {
-        if (error instanceof Error) {
-            logger === null || logger === void 0 ? void 0 : logger.error(`Policy validation failed`);
-        }
-        return false;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger === null || logger === void 0 ? void 0 : logger.error(`Policy validation failed: ${errorMsg}`);
+        return {
+            isValid: false,
+            errors: [{
+                    statement: text,
+                    position: 0,
+                    message: errorMsg
+                }]
+        };
     }
 }
 // GitHub Action specific wrapper
@@ -236,15 +243,14 @@ async function runAction() {
         if (allExpressions.length > 0) {
             const policyText = formatPolicyStatements(allExpressions);
             core.info('Validating policy statements...');
-            if (!parsePolicy(policyText, actionLogger)) {
+            const result = parsePolicy(policyText, actionLogger);
+            if (!result.isValid) {
+                result.errors.forEach(error => core.error(error.message));
                 core.setFailed('Policy validation failed - check error messages above');
                 return;
             }
             core.info('Policy validation successful');
             core.setOutput('policy_expressions', allExpressions);
-            // For backward compatibility
-            const allowStatements = allExpressions.filter(expr => expr.toLowerCase().startsWith('allow'));
-            core.setOutput('allow_segments', allowStatements);
             core.info('Found and validated policy expressions:');
             allExpressions.forEach(expr => core.info(expr));
         }
@@ -343,10 +349,22 @@ async function run() {
         }
         // Validate all found expressions
         logger.info('Validating policy statements...');
-        const isValid = (0, Main_1.parsePolicy)(allExpressions.join('\n'), logger);
-        if (!isValid) {
+        const result = (0, Main_1.parsePolicy)(allExpressions.join('\n'), logger);
+        if (!result.isValid) {
+            result.errors.forEach(error => {
+                logger.error('Failed to parse policy statement:');
+                logger.error(`Statement: "${error.statement}"`);
+                logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+            });
             process.exit(1);
         }
+        // Output validation results
+        const output = {
+            isValid: result.isValid,
+            statements: allExpressions,
+            errors: result.errors
+        };
+        console.log(JSON.stringify(output, null, 2));
         logger.info('Policy validation successful');
     }
     catch (error) {

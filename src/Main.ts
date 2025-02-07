@@ -4,15 +4,12 @@ import * as path from 'path';
 import { 
     CharStreams, 
     CommonTokenStream,
-    ErrorListener,
     RecognitionException,
     Recognizer,
-    CharStream,
     Token,
-    Parser,
     Lexer
 } from 'antlr4';
-import { Logger, ValidationResult, POLICY_STATEMENTS_REGEX, ParseResult, PolicyError } from './types';
+import { Logger, POLICY_STATEMENTS_REGEX, ParseResult, PolicyError } from './types';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
 
@@ -237,10 +234,6 @@ async function runAction(): Promise<void> {
             
             core.info('Policy validation successful');
             core.setOutput('policy_expressions', allExpressions);
-            
-            // For backward compatibility
-            const allowStatements = allExpressions.filter(expr => expr.toLowerCase().startsWith('allow'));
-            core.setOutput('allow_segments', allowStatements);
             
             core.info('Found and validated policy expressions:');
             allExpressions.forEach(expr => core.info(expr));

@@ -45,42 +45,60 @@ npm publish
 
 ### GitHub Actions
 
-Add this to your `.github/workflows/validate-policies.yml`:
 ```yaml
-name: Validate Policies
+name: Validate OCI Policies
 on: [push, pull_request]
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
       - name: Validate policies
-        uses: policy-validation-action@v1.0.0
+        uses: policy-validation-action@v1
         with:
-          path: './path/to/policies'
+          path: './terraform'
+        continue-on-error: true # Optional: continue pipeline if validation fails
+
+      - name: Check validation results  
+        if: ${{ steps.validate.outcome == 'failure' }}
+        run: |
+          echo "Policy validation failed"
+          exit 1
 ```
 
 ### BitBucket Pipelines
 
-Add this to your `bitbucket-pipelines.yml`:
 ```yaml
+image: node:16
+
 pipelines:
   default:
     - step:
         name: Validate Policies
-        image: node:14
         script:
-          - node lib/cli.js --path ./path/to/policies
+          - npm ci
+          - npm run build
+          - chmod +x ./lib/cli.js
+          - ./lib/cli.js --path ./terraform
+        artifacts:
+          - dist/**
 ```
 
 ### GitLab CI
 
-Add this to your `.gitlab-ci.yml`:
 ```yaml
 validate_policies:
-  image: node:14
+  image: node:16
   script:
-    - node lib/cli.js --path ./path/to/policies
+    - npm ci
+    - npm run build
+    - chmod +x ./lib/cli.js
+    - ./lib/cli.js --path ./terraform
+  artifacts:
+    reports:
+      junit: test-results/test-results.xml
 ```
 
 ## Inputs
@@ -94,7 +112,6 @@ validate_policies:
 | Name | Description |
 |------|-------------|
 | `policy_expressions` | List of all validated policy expressions (Allow, Define, Endorse, Admit) |
-| `allow_segments` | List of validated allow statements (backward compatibility) |
 
 ## Example
 
@@ -186,20 +203,20 @@ Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYN
 
 ## CLI Usage
 
-The tool can be used directly from the command line:
+The CLI tool now supports more options and improved validation reporting:
 
 ```bash
-# Install globally
-npm install -g policy-validation-action
+# Basic usage
+policy-validator --path ./policies
 
-# Validate a single file
-policy-validator ./path/to/policy.tf
+# Validate with detailed output
+policy-validator --path ./policies --verbose
 
-# Validate all .tf files in a directory (recursive)
-policy-validator ./path/to/policies/
+# Use custom pattern for policy extraction
+policy-validator --path ./policies --pattern "statements\s*=\s*\[(.*?)\]"
 
-# Run with verbose output
-policy-validator --verbose ./path/to/policies/
+# Validate single file
+policy-validator --path ./policies/main.tf
 
 # Show help
 policy-validator --help
@@ -209,9 +226,17 @@ policy-validator --help
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--verbose, -v` | Enable verbose output | `false` |
 | `--path, -p` | Path to policy file or directory | `.` |
+| `--verbose, -v` | Enable verbose output | `false` |
 | `--pattern` | Custom regex pattern for policy extraction | System default |
+| `--version` | Show version number | n/a |
+| `--help` | Show help | n/a |
+
+### CLI Exit Codes
+
+- 0: All policies valid
+- 1: Invalid policies found
+- 2: CLI error (invalid arguments, file not found, etc)
 
 ## Testing
 
