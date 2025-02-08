@@ -21,6 +21,9 @@ definitions:
         script:
           - npm ci
           - npm run build
+          # Run security audit
+          - npm audit
+          
           # Create test policies
           - |
             mkdir -p test/policies

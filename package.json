@@ -33,9 +33,13 @@
     "test:watch": "jest --watch --verbose",
     "test:coverage": "jest --coverage",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test",
+    "prepublishOnly": "npm run security:audit && npm test",
     "test:cli": "chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh",
-    "release": "standard-version"
+    "release": "standard-version",
+    "security:audit": "npm audit",
+    "security:audit:fix": "npm audit fix",
+    "security:report": "npm audit --json > security-report.json",
+    "pretest": "npm run security:audit"
   },
   "author": "Gordon Trevorrow",
   "license": "UPL-1.0",
