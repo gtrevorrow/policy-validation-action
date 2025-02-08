@@ -348,6 +348,66 @@ npm run test:cli
 # 4. Clean up test files
 ```
 
+## Semantic Versioning & Release Process
+
+This project adheres to [Semantic Versioning](https://semver.org/). To bump the version and generate a changelog, run:
+```bash
+npm run release
+```
+Ensure that commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format so that the release tool can automatically determine the version bump level.
+
+### Conventional Commit Format
+
+Commit messages should be structured as follows:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Type:** Must be one of the following:
+
+- `feat`: A new feature.
+- `fix`: A bug fix.
+- `docs`: Documentation only changes.
+- `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc).
+- `refactor`: A code change that neither fixes a bug nor adds a feature.
+- `perf`: A code change that improves performance.
+- `test`: Adding missing tests or correcting existing tests.
+- `build`: Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm).
+- `ci`: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs).
+- `chore`: Other changes that don't modify src or test files.
+- `revert`: Reverts a previous commit.
+
+**Scope (optional):** A scope can be provided to a commit’s type, to provide additional contextual information.
+
+**Description:** A brief description of the change.
+
+**Body (optional):** More detailed explanation of the commit, if necessary.
+
+**Footer (optional):** Can contain information about breaking changes or issue references.  A breaking change should be indicated with `BREAKING CHANGE:` followed by a description.
+
+### Examples
+
+```
+feat: Add policy validation feature
+
+This commit introduces the core policy validation logic.
+
+BREAKING CHANGE: The policy validation API has changed.
+```
+
+```
+fix(cli): Resolve CLI installation issue
+
+Fixes the "No such file or directory" error during CLI installation.
+```
+
+By adhering to this format, `standard-version` can automatically generate a changelog and bump the version number appropriately.
+
 ## License
 
 This project is licensed under the Universal Permissive License (UPL) v1.0 - see the [LICENSE](LICENSE) file for details.
