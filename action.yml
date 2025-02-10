@@ -15,8 +15,6 @@ inputs:
 outputs:
   policy_expressions:
     description: 'List of validated policy expressions (Allow, Define, Endorse, Admit) found in policies'
-  allow_segments:
-    description: 'List of validated allow statements found in policies'
 runs:
   using: 'node20'
   main: 'lib/Main.js'

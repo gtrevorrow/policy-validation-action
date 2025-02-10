@@ -2,16 +2,16 @@
 
 import { Command } from 'commander';
 import * as path from 'path';
-import { findTerraformFiles, processFile, parsePolicy } from './Main';
-
-const pkg = require('../package.json');
+import { findTerraformFiles, processFile, parsePolicy, formatPolicyStatements } from './Main';
+// Fix package.json import
+import { version } from '../package.json';
 
 const program = new Command();
 
 program
     .name('policy-validator')
     .description('Validates OCI policy statements in Terraform files')
-    .version(pkg.version)
+    .version(version)
     .option('-p, --path <path>', 'Path to policy file or directory', '.')
     .option('-v, --verbose', 'Enable verbose output')
     .option('--pattern <pattern>', 'Custom regex pattern for policy extraction');
@@ -56,7 +56,7 @@ async function run() {
 
         // Validate all found expressions
         logger.info('Validating policy statements...');
-        const result = parsePolicy(allExpressions.join('\n'), logger);
+        const result = parsePolicy(formatPolicyStatements(allExpressions), logger);
 
         if (!result.isValid) {
             result.errors.forEach(error => {

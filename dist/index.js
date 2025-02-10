@@ -84,35 +84,30 @@ function getWorkspacePath() {
         process.cwd(); // Fallback to current directory
 }
 async function findTerraformFiles(dir, logger) {
-    // Resolve path relative to CI platform's workspace
-    const workspacePath = getWorkspacePath();
-    const normalizedPath = path.resolve(workspacePath, dir);
-    logger === null || logger === void 0 ? void 0 : logger.debug(`CI workspace: ${workspacePath}`);
-    logger === null || logger === void 0 ? void 0 : logger.debug(`Resolved path: ${normalizedPath}`);
     try {
         // First check if path exists and is accessible
         try {
-            await fs.promises.access(normalizedPath, fs.constants.R_OK);
+            await fs.promises.access(dir, fs.constants.R_OK);
         }
         catch (error) {
-            logger === null || logger === void 0 ? void 0 : logger.error(`Path ${normalizedPath} is not accessible: ${error}`);
+            logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is not accessible: ${error}`);
             return [];
         }
-        const stats = await fs.promises.stat(normalizedPath);
+        const stats = await fs.promises.stat(dir);
         if (stats.isFile()) {
-            logger === null || logger === void 0 ? void 0 : logger.debug(`Processing single file: ${normalizedPath}`);
-            return normalizedPath.endsWith('.tf') ? [normalizedPath] : [];
+            logger === null || logger === void 0 ? void 0 : logger.debug(`Processing single file: ${dir}`);
+            return dir.endsWith('.tf') ? [dir] : [];
         }
         if (!stats.isDirectory()) {
-            logger === null || logger === void 0 ? void 0 : logger.error(`Path ${normalizedPath} is neither a file nor a directory`);
+            logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is neither a file nor a directory`);
             return [];
         }
         const files = [];
         try {
-            const entries = await fs.promises.readdir(normalizedPath, { withFileTypes: true });
+            const entries = await fs.promises.readdir(dir, { withFileTypes: true });
             logger === null || logger === void 0 ? void 0 : logger.debug(`Scanning directory with ${entries.length} entries`);
             for (const entry of entries) {
-                const fullPath = path.join(normalizedPath, entry.name);
+                const fullPath = path.join(dir, entry.name);
                 try {
                     if (entry.isDirectory()) {
                         logger === null || logger === void 0 ? void 0 : logger.debug(`Recursing into directory: ${fullPath}`);
@@ -133,9 +128,9 @@ async function findTerraformFiles(dir, logger) {
         catch (error) {
             // Fallback to older readdir method if withFileTypes fails
             logger === null || logger === void 0 ? void 0 : logger.warn(`Advanced directory reading failed, falling back to basic mode: ${error}`);
-            const names = await fs.promises.readdir(normalizedPath);
+            const names = await fs.promises.readdir(dir);
             for (const name of names) {
-                const fullPath = path.join(normalizedPath, name);
+                const fullPath = path.join(dir, name);
                 try {
                     const entryStats = await fs.promises.stat(fullPath);
                     if (entryStats.isDirectory()) {
@@ -154,7 +149,7 @@ async function findTerraformFiles(dir, logger) {
         return files;
     }
     catch (error) {
-        logger === null || logger === void 0 ? void 0 : logger.error(`Error processing path ${normalizedPath}: ${error}`);
+        logger === null || logger === void 0 ? void 0 : logger.error(`Error processing path ${dir}: ${error}`);
         return [];
     }
 }
@@ -212,11 +207,6 @@ async function runAction() {
     };
     try {
         const inputPath = core.getInput('path');
-        const extractorType = core.getInput('extractor') || 'regex';
-        const extractorPattern = core.getInput('extractorPattern');
-        const extractor = ExtractorFactory_1.ExtractorFactory.create(extractorType, {
-            pattern: extractorPattern || process.env.POLICY_STATEMENTS_PATTERN
-        });
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
@@ -243,9 +233,6 @@ async function runAction() {
             }
             core.info('Policy validation successful');
             core.setOutput('policy_expressions', allExpressions);
-            // For backward compatibility
-            const allowStatements = allExpressions.filter(expr => expr.toLowerCase().startsWith('allow'));
-            core.setOutput('allow_segments', allowStatements);
             core.info('Found and validated policy expressions:');
             allExpressions.forEach(expr => core.info(expr));
         }
@@ -304,12 +291,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const commander_1 = __nccwpck_require__(4379);
 const path = __importStar(__nccwpck_require__(1017));
 const Main_1 = __nccwpck_require__(1024);
-const pkg = __nccwpck_require__(4147);
+// Fix package.json import
+const package_json_1 = __nccwpck_require__(4147);
 const program = new commander_1.Command();
 program
     .name('policy-validator')
     .description('Validates OCI policy statements in Terraform files')
-    .version(pkg.version)
+    .version(package_json_1.version)
     .option('-p, --path <path>', 'Path to policy file or directory', '.')
     .option('-v, --verbose', 'Enable verbose output')
     .option('--pattern <pattern>', 'Custom regex pattern for policy extraction');
@@ -344,7 +332,7 @@ async function run() {
         }
         // Validate all found expressions
         logger.info('Validating policy statements...');
-        const result = (0, Main_1.parsePolicy)(allExpressions.join('\n'), logger);
+        const result = (0, Main_1.parsePolicy)((0, Main_1.formatPolicyStatements)(allExpressions), logger);
         if (!result.isValid) {
             result.errors.forEach(error => {
                 logger.error('Failed to parse policy statement:');

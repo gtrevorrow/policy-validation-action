@@ -150,7 +150,6 @@ function parsePolicy(text: string, logger?: Logger): ParseResult {
                     });
                 }
             });
-            
             parser.policy();
         }
         
@@ -215,10 +214,6 @@ async function runAction(): Promise<void> {
             
             core.info('Policy validation successful');
             core.setOutput('policy_expressions', allExpressions);
-            
-            // For backward compatibility
-            const allowStatements = allExpressions.filter(expr => expr.toLowerCase().startsWith('allow'));
-            core.setOutput('allow_segments', allowStatements);
             
             core.info('Found and validated policy expressions:');
             allExpressions.forEach(expr => core.info(expr));
