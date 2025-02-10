@@ -2,7 +2,7 @@ import { findTerraformFiles, processFile } from '../Main';
 import * as fs from 'fs';
 import * as path from 'path';
 
-describe('File Operations', () => {
+describe('Integration Tests', () => {
     const testDir = path.join(__dirname, 'test-files');
     
     beforeAll(() => {
@@ -50,5 +50,15 @@ describe('File Operations', () => {
         });
 
         // ...other file processing tests...
+    });
+});
+
+describe('Unit Tests', () => {
+    // Add unit tests that don't require file system
+    it('should handle empty directory', async () => {
+        const mockLogger = { debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn() };
+        const files = await findTerraformFiles('nonexistent', mockLogger);
+        expect(files).toEqual([]);
+        expect(mockLogger.error).toHaveBeenCalled();
     });
 });
