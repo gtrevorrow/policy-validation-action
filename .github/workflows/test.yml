@@ -117,6 +117,22 @@ jobs:
         with:
           path: './test/policies/all_expressions.tf'
           
+      - name: Test custom extractor pattern
+        id: test-custom-pattern
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './test/policies/valid.tf'
+          extractor: 'regex'
+          extractorPattern: 'statements\s*=\s*\[(.*?)\]'
+
+      - name: Verify custom extractor
+        run: |
+          if [ -z "${{ steps.test-custom-pattern.outputs.policy_expressions }}" ]; then
+            echo "Custom extractor pattern failed to extract policies"
+            exit 1
+          fi
+
       - name: Verify test results
         shell: bash
         run: |

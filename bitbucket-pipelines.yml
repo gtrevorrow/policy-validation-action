@@ -72,6 +72,13 @@ definitions:
                 exit 1
               fi
             done
+          # Test with different extractors
+          - |
+            echo "Testing with default extractor..."
+            node dist/index.js --path test/policies/valid.tf
+            
+            echo "Testing with custom pattern..."
+            node dist/index.js --path test/policies/valid.tf --extractor regex --pattern "statements\\s*=\\s*\\[(.*?)\\]"
         artifacts:
           reports:
             junit: test-results/test-results.xml

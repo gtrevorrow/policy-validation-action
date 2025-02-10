@@ -48,30 +48,14 @@ exports.findTerraformFiles = findTerraformFiles;
 exports.processFile = processFile;
 exports.parsePolicy = parsePolicy;
 exports.formatPolicyStatements = formatPolicyStatements;
-exports.extractPolicyExpressions = extractPolicyExpressions;
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const antlr4_1 = __nccwpck_require__(9370);
-const types_1 = __nccwpck_require__(8164);
 const PolicyLexer_1 = __importDefault(__nccwpck_require__(5612));
 const PolicyParser_1 = __importDefault(__nccwpck_require__(2597));
-// Add custom error listener implementation
-function extractPolicyExpressions(text) {
-    const statementsMatch = text.match(types_1.POLICY_STATEMENTS_REGEX);
-    if (!statementsMatch || !statementsMatch[1]) {
-        core.debug('No statements array found in Terraform file');
-        return [];
-    }
-    // Split statements handling nested structures and comments
-    return statementsMatch[1]
-        .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/) // Split on commas outside quotes
-        .map(s => s.trim())
-        .filter(s => s && !s.startsWith('#')) // Remove empty and comment lines
-        .map(s => s.replace(/^["'](.*)["']$/, '$1')) // Remove outer quotes
-        .map(s => s.replace(/\\(["'])/, '$1')) // Unescape quotes
-        .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s));
-}
+const ExtractorFactory_1 = __nccwpck_require__(9727);
+// Remove the redundant extractPolicyExpressions function since we now have PolicyExtractor
 function formatPolicyStatements(expressions) {
     // Ensure each statement is on its own line with proper separation
     return expressions.map(expr => expr.trim()).join('\n');
@@ -79,7 +63,10 @@ function formatPolicyStatements(expressions) {
 async function processFile(filePath, logger) {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
-        const expressions = extractPolicyExpressions(data);
+        const policyExtractor = ExtractorFactory_1.ExtractorFactory.create('regex', {
+            pattern: process.env.POLICY_STATEMENTS_PATTERN
+        });
+        const expressions = policyExtractor.extract(data);
         logger === null || logger === void 0 ? void 0 : logger.debug(`Found ${expressions.length} policy expressions in ${filePath}`);
         return expressions;
     }
@@ -225,6 +212,11 @@ async function runAction() {
     };
     try {
         const inputPath = core.getInput('path');
+        const extractorType = core.getInput('extractor') || 'regex';
+        const extractorPattern = core.getInput('extractorPattern');
+        const extractor = ExtractorFactory_1.ExtractorFactory.create(extractorType, {
+            pattern: extractorPattern || process.env.POLICY_STATEMENTS_PATTERN
+        });
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
@@ -251,6 +243,9 @@ async function runAction() {
             }
             core.info('Policy validation successful');
             core.setOutput('policy_expressions', allExpressions);
+            // For backward compatibility
+            const allowStatements = allExpressions.filter(expr => expr.toLowerCase().startsWith('allow'));
+            core.setOutput('allow_segments', allowStatements);
             core.info('Found and validated policy expressions:');
             allExpressions.forEach(expr => core.info(expr));
         }
@@ -373,6 +368,63 @@ async function run() {
     }
 }
 run();
+
+
+/***/ }),
+
+/***/ 9727:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExtractorFactory = void 0;
+const RegexPolicyExtractor_1 = __nccwpck_require__(7307);
+class ExtractorFactory {
+    static create(type = 'regex', options) {
+        switch (type) {
+            case 'regex':
+                return new RegexPolicyExtractor_1.RegexPolicyExtractor(options === null || options === void 0 ? void 0 : options.pattern);
+            default:
+                throw new Error(`Unsupported extractor type: ${type}`);
+        }
+    }
+}
+exports.ExtractorFactory = ExtractorFactory;
+
+
+/***/ }),
+
+/***/ 7307:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RegexPolicyExtractor = void 0;
+class RegexPolicyExtractor {
+    constructor(pattern) {
+        this.pattern = new RegExp(pattern ||
+            'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]', 's');
+    }
+    extract(text) {
+        const statementsMatch = text.match(this.pattern);
+        if (!statementsMatch || !statementsMatch[1]) {
+            return [];
+        }
+        return statementsMatch[1]
+            .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)
+            .map(s => s.trim())
+            .filter(s => s && !s.startsWith('#'))
+            .map(s => s.replace(/^["'](.*)["']$/, '$1'))
+            .map(s => s.replace(/\\(["'])/, '$1'))
+            .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s));
+    }
+    name() {
+        return 'regex';
+    }
+}
+exports.RegexPolicyExtractor = RegexPolicyExtractor;
 
 
 /***/ }),
@@ -4098,30 +4150,6 @@ class PatternMatchContext extends antlr4_1.ParserRuleContext {
     }
 }
 exports.PatternMatchContext = PatternMatchContext;
-
-
-/***/ }),
-
-/***/ 8164:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.POLICY_STATEMENTS_REGEX = exports.ExpressionType = void 0;
-var ExpressionType;
-(function (ExpressionType) {
-    ExpressionType["Allow"] = "Allow";
-    ExpressionType["Define"] = "Define";
-    ExpressionType["Endorse"] = "Endorse";
-    ExpressionType["Admit"] = "Admit";
-})(ExpressionType || (exports.ExpressionType = ExpressionType = {}));
-/**
- * Get policy statements regex pattern from environment or use default
- * This allows different CI platforms to configure their own pattern if needed
- */
-exports.POLICY_STATEMENTS_REGEX = new RegExp(process.env.POLICY_STATEMENTS_PATTERN ||
-    'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]', 's');
 
 
 /***/ }),
@@ -34995,7 +35023,7 @@ exports.suggestSimilar = suggestSimilar;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.1.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/username/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./lib/cli.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit"},"author":"Gordon Trevorrow","license":"UPL-1.0","dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0","standard-version":"^9.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"}}');
+module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.1.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/username/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./lib/cli.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=16"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"}}');
 
 /***/ })
 

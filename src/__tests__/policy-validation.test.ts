@@ -1,6 +1,25 @@
-import { parsePolicy, extractPolicyExpressions } from '../Main';
+import { parsePolicy } from '../Main';
+import { ExtractorFactory } from '../extractors/ExtractorFactory';
 
 describe('Policy Validation', () => {
+    const extractor = ExtractorFactory.create('regex');
+
+    it('should extract and validate policy statements', () => {
+        const text = `
+            resource "oci_identity_policy" "test" {
+                statements = [
+                    "Allow group Administrators to manage all-resources in tenancy",
+                    "Allow group Developers to use instances in compartment dev"
+                ]
+            }
+        `;
+        const statements = extractor.extract(text);
+        expect(statements).toHaveLength(2);
+        
+        const result = parsePolicy(statements.join('\n'));
+        expect(result.isValid).toBe(true);
+    });
+
     describe('extractPolicyExpressions', () => {
         it('should extract valid policy statements with all types', () => {
             const input = `
@@ -15,7 +34,7 @@ describe('Policy Validation', () => {
                     ]
                 }
             `;
-            const result = extractPolicyExpressions(input);
+            const result = extractor.extract(input);
             expect(result).toHaveLength(6);
             expect(result).toEqual(expect.arrayContaining([
                 expect.stringMatching(/^Allow group Administrators/),
@@ -39,7 +58,7 @@ describe('Policy Validation', () => {
                     ]
                 }
             `;
-            const result = extractPolicyExpressions(input);
+            const result = extractor.extract(input);
             expect(result).toHaveLength(5);
             expect(result).toEqual(expect.arrayContaining([
                 expect.stringMatching(/\${var\.admin_group}/),

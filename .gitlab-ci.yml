@@ -63,7 +63,12 @@ test:
       EOL
     # Run validation (using || true to prevent script failure)
     - |
+      # Test with default extractor
       VALIDATION_OUTPUT=$(node lib/cli.js --path test/policies/ 2>&1 || true)
+      echo "$VALIDATION_OUTPUT"
+      
+      # Test with custom pattern
+      VALIDATION_OUTPUT=$(node lib/cli.js --path test/policies/ --extractor regex --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
         echo "Found expected policy validation errors"

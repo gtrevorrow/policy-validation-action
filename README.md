@@ -187,6 +187,31 @@ If no pattern is specified, the action will use a default pattern that handles:
 - Nested structures
 - Comments
 
+## Policy Extractors
+
+The tool supports pluggable policy extractors for different file formats:
+
+### Available Extractors
+
+- `regex` (default): Uses regular expressions to extract policies from HCL
+- `json`: (coming soon) Extracts policies from JSON format
+
+### Configuring Extractors
+
+In GitHub Actions:
+```yaml
+- uses: policy-validation-action@v1
+  with:
+    path: './terraform'
+    extractor: 'regex'
+    extractorPattern: 'your-custom-pattern'  # Optional
+```
+
+In CLI:
+```bash
+policy-validator --path ./policies --extractor regex --pattern "your-custom-pattern"
+```
+
 ## Error Messages
 
 When a policy statement is invalid, the action provides detailed error messages including:

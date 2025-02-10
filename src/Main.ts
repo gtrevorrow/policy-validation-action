@@ -4,33 +4,21 @@ import * as path from 'path';
 import { 
     CharStreams, 
     CommonTokenStream,
+    ErrorListener,
     RecognitionException,
     Recognizer,
+    CharStream,
     Token,
+    Parser,
     Lexer
 } from 'antlr4';
-import { Logger, POLICY_STATEMENTS_REGEX, ParseResult, PolicyError } from './types';
+import { Logger, ValidationResult, POLICY_STATEMENTS_REGEX, ParseResult, PolicyError } from './types';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
+import { ExtractorFactory } from './extractors/ExtractorFactory';
+import { PolicyExtractor } from './extractors/PolicyExtractor';
 
-// Add custom error listener implementation
-
-function extractPolicyExpressions(text: string): string[] {
-    const statementsMatch = text.match(POLICY_STATEMENTS_REGEX);
-    if (!statementsMatch || !statementsMatch[1]) {
-        core.debug('No statements array found in Terraform file');
-        return [];
-    }
-
-    // Split statements handling nested structures and comments
-    return statementsMatch[1]
-        .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)  // Split on commas outside quotes
-        .map(s => s.trim())
-        .filter(s => s && !s.startsWith('#'))  // Remove empty and comment lines
-        .map(s => s.replace(/^["'](.*)["']$/, '$1'))  // Remove outer quotes
-        .map(s => s.replace(/\\(["'])/, '$1'))  // Unescape quotes
-        .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s));
-}
+// Remove the redundant extractPolicyExpressions function since we now have PolicyExtractor
 
 function formatPolicyStatements(expressions: string[]): string {
     // Ensure each statement is on its own line with proper separation
@@ -40,7 +28,10 @@ function formatPolicyStatements(expressions: string[]): string {
 async function processFile(filePath: string, logger?: Logger): Promise<string[]> {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
-        const expressions = extractPolicyExpressions(data);
+        const policyExtractor = ExtractorFactory.create('regex', {
+            pattern: process.env.POLICY_STATEMENTS_PATTERN
+        });
+        const expressions = policyExtractor.extract(data);
         logger?.debug(`Found ${expressions.length} policy expressions in ${filePath}`);
         return expressions;
     } catch (error) {
@@ -202,6 +193,13 @@ async function runAction(): Promise<void> {
 
     try {
         const inputPath = core.getInput('path');
+        const extractorType = core.getInput('extractor') || 'regex';
+        const extractorPattern = core.getInput('extractorPattern');
+        
+        const extractor = ExtractorFactory.create(extractorType as any, {
+            pattern: extractorPattern || process.env.POLICY_STATEMENTS_PATTERN
+        });
+
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
@@ -235,6 +233,10 @@ async function runAction(): Promise<void> {
             core.info('Policy validation successful');
             core.setOutput('policy_expressions', allExpressions);
             
+            // For backward compatibility
+            const allowStatements = allExpressions.filter(expr => expr.toLowerCase().startsWith('allow'));
+            core.setOutput('allow_segments', allowStatements);
+            
             core.info('Found and validated policy expressions:');
             allExpressions.forEach(expr => core.info(expr));
         }
@@ -253,6 +255,5 @@ export {
     findTerraformFiles,
     processFile,
     parsePolicy,
-    formatPolicyStatements,
-    extractPolicyExpressions
+    formatPolicyStatements
 };
