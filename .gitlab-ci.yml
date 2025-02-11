@@ -73,13 +73,9 @@ test:
           exit 1
         fi
       done
-    # Test with custom pattern  
-    -
-      echo "Testing pipeline with custom pattern..."
-      node dist/index.js --path test/policies/valid.tf --pattern "statements\\s*=\\s*\\[(.*?)\\]"
     # Test fixtures
     - |
-      echo "Testing pileline with fixtures..."
+      echo "Testing pileline with fixtures and custom pattern..."
       node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]"  
  
   artifacts:

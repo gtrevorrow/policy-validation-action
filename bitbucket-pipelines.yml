@@ -21,14 +21,28 @@ definitions:
         script:
           - npm ci
           - npm run build
-          # Run Jest tests with detailed output
+          
+          # Run Jest tests with detailed reporting
           - |
             echo "Running Jest Tests..."
+            mkdir -p test-results
             npm test || {
-              echo "Jest Tests Failed!"
-              cat test-results/test-results.xml
+              echo "==== TEST FAILURES ===="
+              if [ -f "test-results/test-results.xml" ]; then
+                echo "Test Report Contents:"
+                cat test-results/test-results.xml
+              else
+                echo "No test report found!"
+              fi
+              echo "======================="
               exit 1
-            }          
+            }
+            
+            if [ -f "test-results/test-results.xml" ]; then
+              echo "Test Report Summary:"
+              grep -A 1 "testsuites" test-results/test-results.xml
+            fi
+          
           # Create test policies
           - |
             mkdir -p test/policies
@@ -77,6 +91,9 @@ definitions:
                 exit 1
               fi
             done
+          - |
+            echo "Testing pipeline with fixtures and custom pattern..."
+            node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]"
         artifacts:
           reports:
             junit: test-results/test-results.xml
