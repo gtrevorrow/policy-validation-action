@@ -1,6 +1,6 @@
 {
   "name": "policy-validation-action",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OCI Policy Validation Tool for Terraform files",
   "keywords": [
     "oci",
@@ -87,14 +87,38 @@
     "verify": false,
     "infile": "CHANGELOG.md",
     "types": [
-      {"type": "feat", "section": "Features"},
-      {"type": "fix", "section": "Bug Fixes"},
-      {"type": "chore", "section": "Maintenance"},
-      {"type": "docs", "section": "Documentation"},
-      {"type": "style", "section": "Styling"},
-      {"type": "refactor", "section": "Refactors"},
-      {"type": "perf", "section": "Performance"},
-      {"type": "test", "section": "Tests"}
+      {
+        "type": "feat",
+        "section": "Features"
+      },
+      {
+        "type": "fix",
+        "section": "Bug Fixes"
+      },
+      {
+        "type": "chore",
+        "section": "Maintenance"
+      },
+      {
+        "type": "docs",
+        "section": "Documentation"
+      },
+      {
+        "type": "style",
+        "section": "Styling"
+      },
+      {
+        "type": "refactor",
+        "section": "Refactors"
+      },
+      {
+        "type": "perf",
+        "section": "Performance"
+      },
+      {
+        "type": "test",
+        "section": "Tests"
+      }
     ]
   }
 }
