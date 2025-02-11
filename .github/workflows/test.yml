@@ -133,6 +133,22 @@ jobs:
             exit 1
           fi
 
+      - name: Test action with fixtures
+        id: test-fixtures
+        continue-on-error: true
+        uses: ./
+        env:
+          POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+        with:
+          path: './src/__tests__/fixtures'
+
+      - name: Verify fixtures test
+        run: |
+          if [ -z "${{ steps.test-fixtures.outputs.policy_expressions }}" ]; then
+            echo "Failed to extract policies from fixtures"
+            exit 1
+          fi
+
       - name: Verify test results
         shell: bash
         run: |
@@ -186,6 +202,7 @@ jobs:
       - name: Test action
         uses: ./
         env:
-          POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+          POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
         with:
-          path: './src/_tests_/fixtures/'
+          path: './src/__tests__/fixtures'  # Fix: Use correct path to fixtures directory
+          extractor: 'regex'
