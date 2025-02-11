@@ -316,9 +316,9 @@ program
 program.parse();
 const options = program.opts();
 const logger = {
-    debug: (msg) => options.verbose && console.log(msg),
-    info: (msg) => console.log(msg),
-    warn: (msg) => console.warn(msg),
+    debug: (msg) => options.verbose && console.error(msg),
+    info: (msg) => console.error(msg),
+    warn: (msg) => console.error(msg),
     error: (msg) => console.error(msg)
 };
 async function run() {
@@ -346,6 +346,14 @@ async function run() {
         // Validate all found expressions
         logger.info('Validating policy statements...');
         const result = (0, Main_1.parsePolicy)((0, Main_1.formatPolicyStatements)(allExpressions), logger);
+        // Output validation results to stdout (JSON only)
+        const output = {
+            isValid: result.isValid,
+            statements: allExpressions,
+            errors: result.errors
+        };
+        process.stdout.write(JSON.stringify(output, null, 2) + '\n');
+        // Status messages to stderr
         if (!result.isValid) {
             result.errors.forEach(error => {
                 logger.error('Failed to parse policy statement:');
@@ -354,13 +362,6 @@ async function run() {
             });
             process.exit(1);
         }
-        // Output validation results
-        const output = {
-            isValid: result.isValid,
-            statements: allExpressions,
-            errors: result.errors
-        };
-        console.log(JSON.stringify(output, null, 2));
         logger.info('Policy validation successful');
     }
     catch (error) {

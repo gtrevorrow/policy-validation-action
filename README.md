@@ -188,7 +188,7 @@ Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYN
 
 ## CLI Usage
 
-The CLI tool now supports more options and improved validation reporting:
+The CLI tool provides validation for OCI policy statements:
 
 ```bash
 # Install globally
@@ -200,8 +200,8 @@ policy-validator --path ./policies --verbose
 # Use custom pattern for policy extraction
 policy-validator --path ./policies --pattern "statements\s*=\s*\[(.*?)\]"
 
-# Validate single file
-policy-validator --path ./policies/main.tf
+# Specify extractor type
+policy-validator --path ./policies --extractor regex
 
 # Show help
 policy-validator --help
@@ -209,19 +209,64 @@ policy-validator --help
 
 ### CLI Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--path, -p` | Path to policy file or directory | `.` |
-| `--verbose, -v` | Enable verbose output | `false` |
-| `--pattern` | Custom regex pattern for policy extraction | System default |
-| `--version` | Show version number | n/a |
-| `--help` | Show help | n/a |
+| Option | Alias | Description | Default |
+|--------|-------|-------------|---------|
+| `--path` | `-p` | Path to policy file or directory | `.` |
+| `--verbose` | `-v` | Enable verbose output | `false` |
+| `--extractor` | None | Policy extractor type (regex) | `regex` |
+| `--pattern` | None | Custom regex pattern for policy extraction | System default |
+| `--version` | None | Show version number | n/a |
+| `--help` | None | Show help | n/a |
+
+### CLI Output Format
+
+The CLI produces JSON-formatted output containing:
+```json
+{
+  "isValid": boolean,
+  "statements": string[],
+  "errors": [
+    {
+      "statement": string,
+      "position": number,
+      "message": string
+    }
+  ]
+}
+```
+
+Example successful output:
+```json
+{
+  "isValid": true,
+  "statements": [
+    "Allow group Administrators to manage all-resources in tenancy"
+  ],
+  "errors": []
+}
+```
+
+Example error output:
+```json
+{
+  "isValid": false,
+  "statements": [
+    "Allow BadSyntax manage"
+  ],
+  "errors": [
+    {
+      "statement": "Allow BadSyntax manage",
+      "position": 6,
+      "message": "mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}"
+    }
+  ]
+}
+```
 
 ### CLI Exit Codes
 
 - 0: All policies valid
-- 1: Invalid policies found
-- 2: CLI error (invalid arguments, file not found, etc)
+- 1: Validation failed (no files found, no policies found, invalid policies, or general errors)
 
 ## Testing
 

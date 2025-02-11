@@ -23,9 +23,9 @@ program.parse();
 const options = program.opts();
 
 const logger = {
-    debug: (msg: string) => options.verbose && console.log(msg),
-    info: (msg: string) => console.log(msg),
-    warn: (msg: string) => console.warn(msg),
+    debug: (msg: string) => options.verbose && console.error(msg),
+    info: (msg: string) => console.error(msg),
+    warn: (msg: string) => console.error(msg),
     error: (msg: string) => console.error(msg)
 };
 
@@ -61,6 +61,15 @@ async function run() {
         logger.info('Validating policy statements...');
         const result = parsePolicy(formatPolicyStatements(allExpressions), logger);
 
+        // Output validation results to stdout (JSON only)
+        const output = {
+            isValid: result.isValid,
+            statements: allExpressions,
+            errors: result.errors
+        };
+        process.stdout.write(JSON.stringify(output, null, 2) + '\n');
+
+        // Status messages to stderr
         if (!result.isValid) {
             result.errors.forEach(error => {
                 logger.error('Failed to parse policy statement:');
@@ -69,14 +78,6 @@ async function run() {
             });
             process.exit(1);
         }
-
-        // Output validation results
-        const output = {
-            isValid: result.isValid,
-            statements: allExpressions,
-            errors: result.errors
-        };
-        console.log(JSON.stringify(output, null, 2));
         
         logger.info('Policy validation successful');
     } catch (error) {
