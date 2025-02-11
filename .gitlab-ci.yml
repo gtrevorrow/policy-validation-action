@@ -66,12 +66,12 @@ test:
     - |
       # Test with default extractor
       echo "Testing pipeline use with default extractor..."
-      VALIDATION_OUTPUT=$(npx policy-validator --path test/policies/ 2>&1 || true)
+      VALIDATION_OUTPUT=$(node dist/index.js --path test/policies/ 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       
       # Test with custom pattern
       echo "Testing pipeline with custom pattern..."
-      VALIDATION_OUTPUT=$(npx policy-validator --path test/policies/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
+      VALIDATION_OUTPUT=$(node dist/index.js --path test/policies/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
         echo "Found expected policy validation errors"
@@ -79,7 +79,7 @@ test:
 
       # Test fixtures 
       echo "Testing pipeline fixtures..."
-      VALIDATION_OUTPUT=$(npx policy-validator --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
+      VALIDATION_OUTPUT=$(node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
         echo "Found expected policy validation errors"
