@@ -51,7 +51,7 @@ test:
       }
       EOL
 
-      cat > test/policies/variables.tf << 'EOL'
+      cat > test/policies/variable_interpolation.tf << 'EOL'
       resource "oci_identity_policy" "test_policy_vars" {
         statements = [
           "Allow group ${var.admin_group} to manage all-resources in tenancy",
@@ -62,29 +62,26 @@ test:
         ]
       }
       EOL
-    # Run validation (using || true to prevent script failure)
+    # Run tests with failure allowed
     - |
-      # Test with default extractor
-      echo "Testing pipeline use with default extractor..."
-      VALIDATION_OUTPUT=$(node dist/index.js --path test/policies/ 2>&1 || true)
-      echo "$VALIDATION_OUTPUT"
-      
-      # Test with custom pattern
+      for file in valid.tf invalid.tf variable_interpolation.tf; do
+        echo "Testing $file..."
+        OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1 || true)
+        echo "$OUTPUT"
+        if [[ "$file" == "invalid.tf" && ! "$OUTPUT" =~ "Failed to parse policy statement:" ]]; then
+          echo "Error: Invalid policy should have failed validation"
+          exit 1
+        fi
+      done
+    # Test with custom pattern  
+    -
       echo "Testing pipeline with custom pattern..."
-      VALIDATION_OUTPUT=$(node dist/index.js --path test/policies/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
-      echo "$VALIDATION_OUTPUT"
-      if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
-        echo "Found expected policy validation errors"
-      fi
-
-      # Test fixtures 
-      echo "Testing pipeline fixtures..."
-      VALIDATION_OUTPUT=$(node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
-      echo "$VALIDATION_OUTPUT"
-      if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
-        echo "Found expected policy validation errors"
-      fi
-
+      node dist/index.js --path test/policies/valid.tf --pattern "statements\\s*=\\s*\\[(.*?)\\]"
+    # Test fixtures
+    - |
+      echo "Testing pileline with fixtures..."
+      node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]"  
+ 
   artifacts:
     reports:
       junit: test-results/test-results.xml
