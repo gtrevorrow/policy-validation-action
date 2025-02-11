@@ -65,10 +65,12 @@ test:
     # Run validation (using || true to prevent script failure)
     - |
       # Test with default extractor
+      echo "Testing pipeline use with default extractor..."
       VALIDATION_OUTPUT=$(npx policy-validator --path test/policies/ 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       
       # Test with custom pattern
+      echo "Testing pipeline with custom pattern..."
       VALIDATION_OUTPUT=$(npx policy-validator --path test/policies/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
@@ -76,6 +78,7 @@ test:
       fi
 
       # Test fixtures 
+      echo "Testing pipeline fixtures..."
       VALIDATION_OUTPUT=$(npx policy-validator --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then

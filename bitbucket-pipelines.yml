@@ -24,7 +24,7 @@ definitions:
           
           # Run Jest tests first
           - npm test
-          
+
           # Create test policies
           - |
             mkdir -p test/policies
@@ -66,7 +66,7 @@ definitions:
           - |
             for file in valid.tf invalid.tf variable_interpolation.tf; do
               echo "Testing $file..."
-              OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1 || true)
+              OUTPUT=$(npx policy-validator --path test/policies/$file 2>&1 || true)
               echo "$OUTPUT"
               if [[ "$file" == "invalid.tf" && ! "$OUTPUT" =~ "Failed to parse policy statement:" ]]; then
                 echo "Error: Invalid policy should have failed validation"
@@ -76,11 +76,11 @@ definitions:
             
           -
             echo "Testing with custom pattern..."
-            node dist/index.js --path test/policies/valid.tf --pattern "statements\\s*=\\s*\\[(.*?)\\]"
+            npx policy-validator --path test/policies/valid.tf --pattern "statements\\s*=\\s*\\[(.*?)\\]"
           # Test fixtures
           - |
             echo "Testing fixtures..."
-            node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]"
+            npx policy-validator --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]"
         artifacts:
           reports:
             junit: test-results/test-results.xml
