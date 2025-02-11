@@ -68,19 +68,19 @@ test:
       echo "$VALIDATION_OUTPUT"
       
       # Test with custom pattern
-      VALIDATION_OUTPUT=$(node lib/cli.js --path test/policies/ --extractor regex --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
+      VALIDATION_OUTPUT=$(node lib/cli.js --path test/policies/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
         echo "Found expected policy validation errors"
       fi
 
       # Test fixtures 
-      VALIDATION_OUTPUT=$(node lib/cli.js --path __tests__/fixtures/ --extractor regex --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
+      VALIDATION_OUTPUT=$(node lib/cli.js --path __tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
         echo "Found expected policy validation errors"
       fi
-      
+
   artifacts:
     reports:
       junit: test-results/test-results.xml
