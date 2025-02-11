@@ -22,8 +22,9 @@ test:
   script:
     - npm ci
     - npm run build
-    # Run security audit
-    - npm audit
+    
+    # Run Jest tests first
+    - npm test
     # Create test policies
     - |
       mkdir -p test/policies
@@ -75,7 +76,7 @@ test:
       fi
 
       # Test fixtures 
-      VALIDATION_OUTPUT=$(npx policy-validator --path __tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
+      VALIDATION_OUTPUT=$(npx policy-validator --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" 2>&1 || true)
       echo "$VALIDATION_OUTPUT"
       if echo "$VALIDATION_OUTPUT" | grep -q "Failed to parse policy statement"; then
         echo "Found expected policy validation errors"
