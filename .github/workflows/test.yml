@@ -188,4 +188,4 @@ jobs:
         env:
           POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
         with:
-          path: '/_test_/fixtures'
+          path: '/src/_tests_/fixtures'
