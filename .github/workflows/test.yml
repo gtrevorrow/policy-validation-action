@@ -137,10 +137,10 @@ jobs:
         id: test-fixtures
         continue-on-error: true
         uses: ./
-        env:
-          POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
         with:
           path: './src/__tests__/fixtures'
+          extractor: 'regex'
+          extractorPattern: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
 
       - name: Verify fixtures test
         run: |
@@ -181,6 +181,11 @@ jobs:
 
           check_outcome "${{ steps.test-conditions.outcome }}" "success" || {
             echo "Conditions with variables test failed unexpectedly"
+            exit 1
+          }
+
+          check_outcome "${{ steps.test-fixtures.outcome }}" "success" || {
+            echo "All expressions test failed unexpectedly"
             exit 1
           }
 

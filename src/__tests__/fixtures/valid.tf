@@ -5,7 +5,7 @@ resource "oci_identity_policy" "test_policy" {
         "Define tenancy Acceptor as ocid1.tenancy.oc1..aaaaaa",
         "Endorse group NetworkAdmins to manage virtual-network-family in tenancy foo",
         "Admit group ServiceAdmins of tenancy accountFoo to manage instances in tenancy",
-        "Allow group SecurityAdmins to manage all-resources in tenancy where request.user.groups contains 'SecurityAdmins'"
+        "Allow group SecurityAdmins to manage all-resources in tenancy where request.user.groups in ('SecurityAdmins')"
     ]
 }
 
