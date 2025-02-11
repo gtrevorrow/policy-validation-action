@@ -204,7 +204,6 @@ async function runAction(): Promise<void> {
         if (allExpressions.length > 0) {
             const policyText = formatPolicyStatements(allExpressions);
             core.info('Validating policy statements...');
-            
             const result = parsePolicy(policyText, actionLogger);
             if (!result.isValid) {
                 result.errors.forEach(error => core.error(error.message));
@@ -214,7 +213,6 @@ async function runAction(): Promise<void> {
             
             core.info('Policy validation successful');
             core.setOutput('policy_expressions', allExpressions);
-            
             core.info('Found and validated policy expressions:');
             allExpressions.forEach(expr => core.info(expr));
         }

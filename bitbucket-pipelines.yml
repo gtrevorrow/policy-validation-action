@@ -63,7 +63,7 @@ definitions:
             EOL
           # Run tests with failure allowed
           - |
-            for file in valid.tf invalid.tf variables.tf; do
+            for file in valid.tf invalid.tf variable_interpolation.tf; do
               echo "Testing $file..."
               OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1 || true)
               echo "$OUTPUT"

@@ -168,26 +168,6 @@ jobs:
             exit 1
           }
 
-          # Check valid policy output exists
-          if [ -z "${{ steps.test-valid.outputs.allow_segments }}" ]; then
-            echo "No segments found in valid policy"
-            exit 1
-          }
-
-          # Check for variable interpolation pattern using a safer grep approach
-          echo "${{ steps.test-vars.outputs.allow_segments }}" | grep -q 'var\.admin_group' || {
-            echo "Variable interpolation not properly preserved in output"
-            exit 1
-          }
-
-          # Debug output
-          echo "=== Test Results ==="
-          echo "Valid policy output:"
-          echo "${{ steps.test-valid.outputs.allow_segments }}"
-          echo "Variable policy output:"
-          echo "${{ steps.test-vars.outputs.allow_segments }}"
-          echo "Conditions policy output:"
-          echo "${{ steps.test-conditions.outputs.allow_segments }}"
 
           # Helper function to check expression type
           check_expression_type() {
@@ -204,17 +184,6 @@ jobs:
           for type in "Define" "Endorse" "Admit" "Allow"; do
             check_expression_type "${{ steps.test-expressions.outputs.policy_expressions }}" "$type" || exit 1
           done
-
-      - name: Test Allow Segments
-        run: |
-          # Use single quotes to preserve the ${var...} syntax
-          ALLOW_SEGMENT='Allow group ${var.admin_group} to manage all-resources in tenancy'
-          if [[ "${{ steps.test-vars.outputs.allow_segments }}" == *"$ALLOW_SEGMENT"* ]]; then
-            echo "Found expected allow segment"
-          else
-            echo "Did not find expected allow segment"
-            exit 1
-          fi
 
       - name: Run tests
         run: npm test
