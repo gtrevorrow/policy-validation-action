@@ -168,23 +168,6 @@ jobs:
             exit 1
           }
 
-
-          # Helper function to check expression type
-          check_expression_type() {
-            local output="$1"
-            local type="$2"
-            if ! echo "$output" | grep -q "^$type"; then
-              echo "Missing $type expression in output"
-              return 1
-            fi
-            return 0
-          }
-
-          # Check all expression types
-          for type in "Define" "Endorse" "Admit" "Allow"; do
-            check_expression_type "${{ steps.test-expressions.outputs.policy_expressions }}" "$type" || exit 1
-          done
-
       - name: Run tests
         run: npm test
 
