@@ -168,6 +168,8 @@ jobs:
             exit 1
           }
 
+          echo "All tests passed successfully"
+
       - name: Run tests
         run: npm test
 
@@ -186,4 +188,4 @@ jobs:
         env:
           POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
         with:
-          path: './test/fixtures'
+          path: './_test_/fixtures'
