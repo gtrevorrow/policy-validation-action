@@ -60,14 +60,18 @@ function formatPolicyStatements(expressions) {
     // Ensure each statement is on its own line with proper separation
     return expressions.map(expr => expr.trim()).join('\n');
 }
-async function processFile(filePath, logger) {
+async function processFile(filePath, pattern, extractor = 'regex', logger) {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
-        const policyExtractor = ExtractorFactory_1.ExtractorFactory.create('regex', {
-            pattern: process.env.POLICY_STATEMENTS_PATTERN
+        const extractorPattern = pattern || process.env.POLICY_STATEMENTS_PATTERN;
+        const policyExtractor = ExtractorFactory_1.ExtractorFactory.create(extractor, {
+            pattern: extractorPattern
         });
         const expressions = policyExtractor.extract(data);
         logger === null || logger === void 0 ? void 0 : logger.debug(`Found ${expressions.length} policy expressions in ${filePath}`);
+        if (extractorPattern) {
+            logger === null || logger === void 0 ? void 0 : logger.debug(`Using custom pattern: ${extractorPattern}`);
+        }
         return expressions;
     }
     catch (error) {
@@ -208,8 +212,13 @@ async function runAction() {
     try {
         const inputPath = core.getInput('path');
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
+        // Fix: Make extractor optional with default value
+        // Fix: Make extractor optional with default value
+        const extractorType = (core.getInput('extractor') || 'regex');
+        const pattern = core.getInput('extractorPattern');
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
+        actionLogger.debug(`Using extractor: ${extractorType}`);
         const tfFiles = await findTerraformFiles(scanPath, actionLogger);
         core.debug(`Found ${tfFiles.length} Terraform files`);
         if (tfFiles.length === 0) {
@@ -218,7 +227,7 @@ async function runAction() {
         }
         let allExpressions = [];
         for (const file of tfFiles) {
-            const expressions = await processFile(file, actionLogger);
+            const expressions = await processFile(file, pattern, extractorType, actionLogger);
             core.debug(`Extracted expressions from ${file}: ${JSON.stringify(expressions)}`);
             allExpressions.push(...expressions);
         }
@@ -287,19 +296,22 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const commander_1 = __nccwpck_require__(4379);
 const path = __importStar(__nccwpck_require__(1017));
 const Main_1 = __nccwpck_require__(1024);
-// Fix package.json import
-const package_json_1 = __nccwpck_require__(4147);
+const package_json_1 = __importDefault(__nccwpck_require__(4147));
 const program = new commander_1.Command();
 program
     .name('policy-validator')
     .description('Validates OCI policy statements in Terraform files')
-    .version(package_json_1.version)
+    .version(package_json_1.default.version)
     .option('-p, --path <path>', 'Path to policy file or directory', '.')
     .option('-v, --verbose', 'Enable verbose output')
+    .option('--extractor <extractor>', 'Policy extractor type (regex)', 'regex')
     .option('--pattern <pattern>', 'Custom regex pattern for policy extraction');
 program.parse();
 const options = program.opts();
@@ -312,6 +324,7 @@ const logger = {
 async function run() {
     try {
         const inputPath = path.resolve(options.path);
+        const extractorType = options.extractor;
         // Get all terraform files
         const files = await (0, Main_1.findTerraformFiles)(inputPath, logger);
         if (files.length === 0) {
@@ -319,9 +332,9 @@ async function run() {
             process.exit(1);
         }
         let allExpressions = [];
-        // Process each file
+        // Process each file with extractor type and pattern
         for (const file of files) {
-            const expressions = await (0, Main_1.processFile)(file, logger);
+            const expressions = await (0, Main_1.processFile)(file, options.pattern, extractorType, logger);
             if (expressions.length > 0) {
                 allExpressions.push(...expressions);
             }
@@ -35011,7 +35024,7 @@ exports.suggestSimilar = suggestSimilar;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.1.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/username/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=16"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"}}');
+module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.1.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/username/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit","release:minor":"standard-version --release-as minor","release:major":"standard-version --release-as major","release:patch":"standard-version --release-as patch"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=16"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"},"standard-version":{"tag-prefix":"v","sign":false,"verify":false,"infile":"CHANGELOG.md","types":[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"chore","section":"Maintenance"},{"type":"docs","section":"Documentation"},{"type":"style","section":"Styling"},{"type":"refactor","section":"Refactors"},{"type":"perf","section":"Performance"},{"type":"test","section":"Tests"}]}}');
 
 /***/ })
 

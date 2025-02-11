@@ -12,7 +12,7 @@ import {
 import { Logger, ParseResult, PolicyError } from './types';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
-import { ExtractorFactory } from './extractors/ExtractorFactory';
+import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
 
 // Remove the redundant extractPolicyExpressions function since we now have PolicyExtractor
 
@@ -21,14 +21,25 @@ function formatPolicyStatements(expressions: string[]): string {
     return expressions.map(expr => expr.trim()).join('\n');
 }
 
-async function processFile(filePath: string, logger?: Logger): Promise<string[]> {
+async function processFile(
+    filePath: string,
+    pattern: string | undefined,
+    extractor: ExtractorType = 'regex',
+    logger?: Logger
+): Promise<string[]> {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
-        const policyExtractor = ExtractorFactory.create('regex', {
-            pattern: process.env.POLICY_STATEMENTS_PATTERN
+        const extractorPattern = pattern || process.env.POLICY_STATEMENTS_PATTERN;
+        
+        const policyExtractor = ExtractorFactory.create(extractor, {
+            pattern: extractorPattern
         });
+        
         const expressions = policyExtractor.extract(data);
         logger?.debug(`Found ${expressions.length} policy expressions in ${filePath}`);
+        if (extractorPattern) {
+            logger?.debug(`Using custom pattern: ${extractorPattern}`);
+        }
         return expressions;
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -183,8 +194,13 @@ async function runAction(): Promise<void> {
     try {
         const inputPath = core.getInput('path');
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
+// Fix: Make extractor optional with default value
+        // Fix: Make extractor optional with default value
+        const extractorType = (core.getInput('extractor') || 'regex') as ExtractorType;
+        const pattern = core.getInput('extractorPattern');
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
+        actionLogger.debug(`Using extractor: ${extractorType}`);
         
         const tfFiles = await findTerraformFiles(scanPath, actionLogger);
         core.debug(`Found ${tfFiles.length} Terraform files`);
@@ -196,7 +212,7 @@ async function runAction(): Promise<void> {
 
         let allExpressions: string[] = [];
         for (const file of tfFiles) {
-            const expressions = await processFile(file, actionLogger);
+            const expressions = await processFile(file, pattern, extractorType, actionLogger);
             core.debug(`Extracted expressions from ${file}: ${JSON.stringify(expressions)}`);
             allExpressions.push(...expressions);
         }

@@ -3,17 +3,19 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import { findTerraformFiles, processFile, parsePolicy, formatPolicyStatements } from './Main';
-// Fix package.json import
-import { version } from '../package.json';
+import { ExtractorType } from './extractors/ExtractorFactory';
+
+import pkg from '../package.json';
 
 const program = new Command();
 
 program
     .name('policy-validator')
     .description('Validates OCI policy statements in Terraform files')
-    .version(version)
+    .version(pkg.version)
     .option('-p, --path <path>', 'Path to policy file or directory', '.')
     .option('-v, --verbose', 'Enable verbose output')
+    .option('--extractor <extractor>', 'Policy extractor type (regex)', 'regex')
     .option('--pattern <pattern>', 'Custom regex pattern for policy extraction');
 
 program.parse();
@@ -30,6 +32,7 @@ const logger = {
 async function run() {
     try {
         const inputPath = path.resolve(options.path);
+        const extractorType = options.extractor as ExtractorType;
         
         // Get all terraform files
         const files = await findTerraformFiles(inputPath, logger);
@@ -41,9 +44,9 @@ async function run() {
 
         let allExpressions: string[] = [];
         
-        // Process each file
+        // Process each file with extractor type and pattern
         for (const file of files) {
-            const expressions = await processFile(file, logger);
+            const expressions = await processFile(file, options.pattern, extractorType, logger);
             if (expressions.length > 0) {
                 allExpressions.push(...expressions);
             }

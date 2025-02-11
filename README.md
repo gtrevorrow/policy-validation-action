@@ -54,18 +54,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
       - name: Validate policies
         uses: policy-validation-action@v1
         with:
           path: './terraform'
-        continue-on-error: true # Optional: continue pipeline if validation fails
+          extractor: 'regex'  # Optional: defaults to regex
+          extractorPattern: 'your-custom-pattern'  # Optional
+```
 
-      - name: Check validation results  
-        if: ${{ steps.validate.outcome == 'failure' }}
-        run: |
-          echo "Policy validation failed"
-          exit 1
+### GitLab CI
+
+```yaml
+validate_policies:
+  image: node:latest
+  script:
+    - npm ci
+    - npm run build
+    # Run Jest tests with reporting
+    - npm test
+    # Run policy validation
+    - node dist/index.js --path ./terraform
+  artifacts:
+    reports:
+      junit: test-results/test-results.xml
+    paths:
+      - test-results/
+    when: always
 ```
 
 ### BitBucket Pipelines
@@ -73,63 +87,41 @@ jobs:
 ```yaml
 image: node:16
 
-pipelines:
-  default:
-    - step:
-        name: Validate Policies
+definitions:
+  steps:
+    - step: &validate
+        name: Validate
         script:
           - npm ci
           - npm run build
-          - chmod +x ./lib/cli.js
-          - ./lib/cli.js --path ./terraform
+          # Run tests with detailed reporting
+          - npm test
+          # Validate policies
+          - node dist/index.js --path ./terraform
         artifacts:
-          - dist/**
+          reports:
+            junit: test-results/test-results.xml
+          when: always
+
+pipelines:
+  default:
+    - step: *validate
 ```
 
-### GitLab CI
-
-```yaml
-validate_policies:
-  image: node:16
-  script:
-    - npm ci
-    - npm run build
-    - chmod +x ./lib/cli.js
-    - ./lib/cli.js --path ./terraform
-  artifacts:
-    reports:
-      junit: test-results/test-results.xml
-```
-
-## Inputs
+## Github Action Inputs
 
 | Name | Description | Required | Default |
 |------|-------------|----------|---------|
 | `path` | Path to policy file or directory | No | `.` |
+| `extractor` | Type of policy extractor to use (regex, json) | No | `regex` |
+| `extractorPattern` | Custom pattern for the policy extractor | No | - |
 
-## Outputs
+## Github Action Outputs
 
 | Name | Description |
 |------|-------------|
 | `policy_expressions` | List of all validated policy expressions (Allow, Define, Endorse, Admit) |
 
-## Example
-
-```yaml
-name: Validate OCI Policies
-on: [push, pull_request]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Validate policies
-        uses: policy-validation-action@v1.0.0
-        with:
-          path: './terraform'
-```
 
 ## Example Policy Format
 
@@ -147,38 +139,6 @@ resource "oci_identity_policy" "example" {
 ### Policy Statement Pattern
 
 The action uses a regular expression to extract policy statements from Terraform files. This pattern can be customized for each supported CI platform using environment variables:
-
-#### GitHub Actions
-
-```yaml
-- uses: ./policy-validation-action
-  env:
-    POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
-  with:
-    path: './policies'
-```
-
-#### GitLab CI
-
-```yaml
-validate_policies:
-  script:
-    - export POLICY_STATEMENTS_PATTERN='statements\s*=\s*\[\s*((?:[^[\]]*?(?:"(?:[^"\\]|\\.)*"|'"'"'(?:[^'"'"'\\]|\\.)*'"'"'|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]'
-    - npm ci
-    - npm run validate
-```
-
-#### BitBucket Pipelines
-
-```yaml
-pipelines:
-  default:
-    - step:
-        script:
-          - export POLICY_STATEMENTS_PATTERN='statements\s*=\s*\[\s*((?:[^[\]]*?(?:"(?:[^"\\]|\\.)*"|'"'"'(?:[^'"'"'\\]|\\.)*'"'"'|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]'
-          - npm ci
-          - npm run validate
-```
 
 If no pattern is specified, the action will use a default pattern that handles:
 - Multiline statements
@@ -231,8 +191,8 @@ Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYN
 The CLI tool now supports more options and improved validation reporting:
 
 ```bash
-# Basic usage
-policy-validator --path ./policies
+# Install globally
+npm install -g policy-validation-action
 
 # Validate with detailed output
 policy-validator --path ./policies --verbose
@@ -373,65 +333,53 @@ npm run test:cli
 # 4. Clean up test files
 ```
 
-## Semantic Versioning & Release Process
+## Release Process & Versioning
 
-This project adheres to [Semantic Versioning](https://semver.org/). To bump the version and generate a changelog, run:
+This project follows [Semantic Versioning](https://semver.org/) with automated version management:
+
+### Version Bumping
+
+Versions are automatically determined from commit messages:
+- `feat:` commits trigger MINOR version bump
+- `fix:` commits trigger PATCH version bump
+- Commits with `BREAKING CHANGE:` in footer trigger MAJOR version bump
+
+### Creating a Release
+
+1. Ensure all changes are committed
+2. Run the release command:
+   ```bash
+   npm run release
+   ```
+3. This will:
+   - Analyze commit messages
+   - Bump version accordingly
+   - Generate/update CHANGELOG.md
+   - Create a git tag
+   - Push changes and tag
+
+### Release Workflow
+
+The release process is integrated into CI pipelines:
+
+- GitHub Actions: Automated tests and npm publishing on tags
+- GitLab CI: Version validation and artifact generation
+- BitBucket Pipelines: Automated npm publishing via pipe
+
+Example workflow:
 ```bash
+# Make your changes
+git add .
+git commit -m "feat: add new extractor feature
+
+BREAKING CHANGE: new extractor API"
+
+# Create release
 npm run release
+
+# Push changes and tags
+git push --follow-tags origin main
 ```
-Ensure that commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format so that the release tool can automatically determine the version bump level.
-
-### Conventional Commit Format
-
-Commit messages should be structured as follows:
-
-```
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-**Type:** Must be one of the following:
-
-- `feat`: A new feature.
-- `fix`: A bug fix.
-- `docs`: Documentation only changes.
-- `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc).
-- `refactor`: A code change that neither fixes a bug nor adds a feature.
-- `perf`: A code change that improves performance.
-- `test`: Adding missing tests or correcting existing tests.
-- `build`: Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm).
-- `ci`: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs).
-- `chore`: Other changes that don't modify src or test files.
-- `revert`: Reverts a previous commit.
-
-**Scope (optional):** A scope can be provided to a commit’s type, to provide additional contextual information.
-
-**Description:** A brief description of the change.
-
-**Body (optional):** More detailed explanation of the commit, if necessary.
-
-**Footer (optional):** Can contain information about breaking changes or issue references.  A breaking change should be indicated with `BREAKING CHANGE:` followed by a description.
-
-### Examples
-
-```
-feat: Add policy validation feature
-
-This commit introduces the core policy validation logic.
-
-BREAKING CHANGE: The policy validation API has changed.
-```
-
-```
-fix(cli): Resolve CLI installation issue
-
-Fixes the "No such file or directory" error during CLI installation.
-```
-
-By adhering to this format, `standard-version` can automatically generate a changelog and bump the version number appropriately.
 
 ## License
 

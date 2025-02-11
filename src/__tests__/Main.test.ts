@@ -1,9 +1,11 @@
 import { findTerraformFiles, processFile } from '../Main';
+import { ExtractorType } from '../extractors/ExtractorFactory';
 import * as fs from 'fs';
 import * as path from 'path';
 
 describe('Integration Tests', () => {
     const testDir = path.join(__dirname, 'test-files');
+    const mockLogger = { debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn() };
     
     beforeAll(() => {
         // Create test directory and files
@@ -44,12 +46,26 @@ describe('Integration Tests', () => {
     describe('processFile', () => {
         it('should process terraform file and extract policies', async () => {
             const files = await findTerraformFiles(testDir);
-            const expressions = await processFile(files[0]);
+            const expressions = await processFile(
+                files[0],
+                "statements\\s*=\\s*\\[(.*?)\\]",
+                'regex' as ExtractorType,
+                mockLogger
+            );
             expect(expressions).toHaveLength(1);
             expect(expressions[0]).toContain('Allow group');
         });
 
-        // ...other file processing tests...
+        it('should handle missing pattern', async () => {
+            const files = await findTerraformFiles(testDir);
+            const expressions = await processFile(
+                files[0],
+                undefined,
+                'regex' as ExtractorType,
+                mockLogger
+            );
+            expect(expressions).toBeDefined();
+        });
     });
 });
 
