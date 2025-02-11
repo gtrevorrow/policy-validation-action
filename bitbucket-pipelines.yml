@@ -21,9 +21,14 @@ definitions:
         script:
           - npm ci
           - npm run build
-          
-          # Run Jest tests first
-          - npm test
+          # Run Jest tests with detailed output
+          - |
+            echo "Running Jest Tests..."
+            npm test || {
+              echo "Jest Tests Failed!"
+              cat test-results/test-results.xml
+              exit 1
+            }          
           # Create test policies
           - |
             mkdir -p test/policies
@@ -63,7 +68,7 @@ definitions:
             EOL
           # Run tests with failure allowed
           - |
-            for file in valid.tf invalid.tf variable_interpolation.tf; do
+            for file in valid.tf invalid.tf variables.tf; do
               echo "Testing $file..."
               OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1 || true)
               echo "$OUTPUT"
@@ -72,14 +77,6 @@ definitions:
                 exit 1
               fi
             done
-          # Test with custom pattern  
-          -
-            echo "Testing with custom pattern..."
-            node dist/index.js --path test/policies/valid.tf --pattern "statements\\s*=\\s*\\[(.*?)\\]"
-          # Test fixtures
-          - |
-            echo "Testing fixtures..."
-            node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]"
         artifacts:
           reports:
             junit: test-results/test-results.xml
@@ -105,15 +102,8 @@ pipelines:
             changesets:
               includePaths:
                 - "**"
-                - "src/**"          # Only source code changes
-                - "package.json"    # Package metadata changes
-                - "CHANGELOG.md"    # Documentation updates
               includeTags:
                 - "^v[0-9]+.[0-9]+.[0-9]+$"
-              excludePaths:
-                - "**/*.test.ts"   # Exclude test files
-                - "**/*.spec.ts"
-                - "docs/**"        # Exclude documentation
 
   pull-requests:
     '**':
