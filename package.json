@@ -18,7 +18,7 @@
   },
   "main": "lib/Main.js",
   "bin": {
-    "policy-validator": "./lib/cli.js"
+    "policy-validator": "./dist/index.js"
   },
   "files": [
     "lib",
