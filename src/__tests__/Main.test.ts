@@ -47,7 +47,7 @@ describe('Integration Tests', () => {
             console.log('Found expressions:', expressions); // Debugging
 
             expect(expressions).toBeDefined();
-            expect(expressions.length).toBeGreaterThan(10);
+            expect(expressions).toHaveLength(17);
             
             // Test for presence of statements from locals.polcies
             expect(expressions).toContain("Allow group Administrators_locals to manage all-resources in tenancy");
