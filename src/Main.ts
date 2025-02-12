@@ -21,7 +21,7 @@ function formatPolicyStatements(expressions: string[]): string {
     return expressions.map(expr => expr.trim()).join('\n');
 }
 
-async function processFile(
+ async function processFile(
     filePath: string,
     pattern: string | undefined,
     extractor: ExtractorType = 'regex',
