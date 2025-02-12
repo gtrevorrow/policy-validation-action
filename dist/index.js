@@ -331,37 +331,36 @@ async function run() {
             logger.error('No .tf files found');
             process.exit(1);
         }
-        let allExpressions = [];
+        let allOutputs = [];
         // Process each file with extractor type and pattern
         for (const file of files) {
+            logger.info('Validating policy statements for file ${file}');
             const expressions = await (0, Main_1.processFile)(file, options.pattern, extractorType, logger);
             if (expressions.length > 0) {
-                allExpressions.push(...expressions);
+                const result = (0, Main_1.parsePolicy)((0, Main_1.formatPolicyStatements)(expressions), logger);
+                // Status messages to stderr
+                if (!result.isValid) {
+                    result.errors.forEach(error => {
+                        logger.error('Failed to parse policy statement:');
+                        logger.error(`Statement: "${error.statement}"`);
+                        logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+                    });
+                    process.exit(1);
+                }
+                allOutputs.push({
+                    file: file,
+                    isValid: result.isValid,
+                    statements: expressions,
+                    errors: result.errors
+                });
             }
         }
-        if (allExpressions.length === 0) {
+        if (allOutputs.length === 0) {
             logger.warn('No policy statements found');
             process.exit(1);
         }
-        // Validate all found expressions
-        logger.info('Validating policy statements...');
-        const result = (0, Main_1.parsePolicy)((0, Main_1.formatPolicyStatements)(allExpressions), logger);
         // Output validation results to stdout (JSON only)
-        const output = {
-            isValid: result.isValid,
-            statements: allExpressions,
-            errors: result.errors
-        };
-        process.stdout.write(JSON.stringify(output, null, 2) + '\n');
-        // Status messages to stderr
-        if (!result.isValid) {
-            result.errors.forEach(error => {
-                logger.error('Failed to parse policy statement:');
-                logger.error(`Statement: "${error.statement}"`);
-                logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
-            });
-            process.exit(1);
-        }
+        process.stdout.write(JSON.stringify(allOutputs, null, 2) + '\n');
         logger.info('Policy validation successful');
     }
     catch (error) {
@@ -407,20 +406,26 @@ exports.RegexPolicyExtractor = void 0;
 class RegexPolicyExtractor {
     constructor(pattern) {
         this.pattern = new RegExp(pattern ||
-            'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]', 's');
+            'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]', 'sg');
     }
     extract(text) {
-        const statementsMatch = text.match(this.pattern);
-        if (!statementsMatch || !statementsMatch[1]) {
+        // With global flag, matchAll returns an iterator of all matches
+        const matches = Array.from(text.matchAll(this.pattern));
+        if (!matches || matches.length === 0) {
             return [];
         }
-        return statementsMatch[1]
+        // Process each match and flatten the results
+        return matches
+            .map(match => match[1]) // Get capturing group from each match
+            .filter(Boolean) // Remove any undefined/null matches
+            .flatMap(statement => // Process each statement block
+         statement
             .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)
             .map(s => s.trim())
             .filter(s => s && !s.startsWith('#'))
             .map(s => s.replace(/^["'](.*)["']$/, '$1'))
             .map(s => s.replace(/\\(["'])/, '$1'))
-            .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s));
+            .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s)));
     }
     name() {
         return 'regex';

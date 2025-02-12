@@ -33,52 +33,54 @@ async function run() {
     try {
         const inputPath = path.resolve(options.path);
         const extractorType = options.extractor as ExtractorType;
-        
+
         // Get all terraform files
         const files = await findTerraformFiles(inputPath, logger);
-        
+
         if (files.length === 0) {
             logger.error('No .tf files found');
             process.exit(1);
         }
 
-        let allExpressions: string[] = [];
-        
-        // Process each file with extractor type and pattern
-        for (const file of files) {
-            const expressions = await processFile(file, options.pattern, extractorType, logger);
-            if (expressions.length > 0) {
-                allExpressions.push(...expressions);
-            }
+        interface ValidationOutput {
+            file: string;
+            isValid: boolean;
+            statements: string[];
+            errors: any[];
         }
 
-        if (allExpressions.length === 0) {
+        let allOutputs: ValidationOutput[] = [];
+
+        // Process each file with extractor type and pattern
+        for (const file of files) {
+            logger.info('Validating policy statements for file ${file}');
+            const expressions = await processFile(file, options.pattern, extractorType, logger);
+            if (expressions.length > 0) {
+                const result = parsePolicy(formatPolicyStatements(expressions), logger);
+                // Status messages to stderr
+                if (!result.isValid) {
+                    result.errors.forEach(error => {
+                        logger.error('Failed to parse policy statement:');
+                        logger.error(`Statement: "${error.statement}"`);
+                        logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+                    });
+                    process.exit(1);
+                }
+                allOutputs.push({
+                    file: file,
+                    isValid: result.isValid,
+                    statements: expressions,
+                    errors: result.errors
+                });
+
+            }
+        }
+        if (allOutputs.length === 0) {
             logger.warn('No policy statements found');
             process.exit(1);
         }
-
-        // Validate all found expressions
-        logger.info('Validating policy statements...');
-        const result = parsePolicy(formatPolicyStatements(allExpressions), logger);
-
         // Output validation results to stdout (JSON only)
-        const output = {
-            isValid: result.isValid,
-            statements: allExpressions,
-            errors: result.errors
-        };
-        process.stdout.write(JSON.stringify(output, null, 2) + '\n');
-
-        // Status messages to stderr
-        if (!result.isValid) {
-            result.errors.forEach(error => {
-                logger.error('Failed to parse policy statement:');
-                logger.error(`Statement: "${error.statement}"`);
-                logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
-            });
-            process.exit(1);
-        }
-        
+        process.stdout.write(JSON.stringify(allOutputs, null, 2) + '\n');
         logger.info('Policy validation successful');
     } catch (error) {
         logger.error(`Error: ${error}`);
