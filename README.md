@@ -1,25 +1,37 @@
 # OCI Policy Validation Tool
 
-A CI/CD tool for validating Oracle Cloud Infrastructure (OCI) policy statements in Terraform configurations. Supports GitHub Actions, GitLab CI, and BitBucket Pipelines.
+<!-- Consider adding a Table of Contents for easier navigation -->
+## Table of Contents
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage in CI Platforms](#usage-in-ci-platforms)
+- [CLI](#cli)
+- [Configuration](#configuration)
+- [Policy Extractors](#policy-extractors)
+- [Error Messages](#error-messages)
+- [Testing](#testing)
+- [Development](#development)
+- [Release Process & Versioning](#release-process--versioning)
+- [License](#license)
 
 ## Features
 
-- Validates OCI policy statements in Terraform files
+- Validates OCI policy statements in Terraform files.
 - Supports multiple OCI policy expression types:
-  - Allow statements
-  - Define statements
-  - Endorse statements
-  - Admit statements
-- Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines, CLI)
-- Handles HCL variable interpolation (${var.name}) in policy statements
-- Colored CLI output with verbose mode
-- Recursive directory scanning
+  - Allow, Define, Endorse, and Admit statements.
+- Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines, CLI).
+- Handles HCL variable interpolation (${var.name}) in policy statements.
+- Colored CLI output with verbose mode.
+- Recursive directory scanning.
+- Configurable policy extractors for extracting IAM policies from various file types.
+- Although Terraform is the primary focus, the tool works with any text-based file.
 
 ## Prerequisites
 
-- Node.js 16 or higher
-- For CI/CD usage: Access to GitHub Actions, GitLab CI, or BitBucket Pipelines
-- Terraform files containing OCI policy statements
+- Node.js 16 or higher.
+- For CI/CD usage, access to GitHub Actions, GitLab CI, or BitBucket Pipelines.
+- Terraform files containing OCI policy statements.
 
 ## Installation
 
@@ -61,6 +73,20 @@ jobs:
           extractor: 'regex'  # Optional: defaults to regex
           extractorPattern: 'your-custom-pattern'  # Optional
 ```
+
+#### Github Action Inputs
+
+| Name | Description | Required | Default |
+|------|-------------|----------|---------|
+| `path` | Path to policy file or directory | No | `.` |
+| `extractor` | Type of policy extractor to use (regex, json) | No | `regex` |
+| `extractorPattern` | Custom pattern for the policy extractor | No | - |
+
+#### Github Action Outputs
+
+| Name | Description |
+|------|-------------|
+| `policy_expressions` | List of all validated policy expressions (Allow, Define, Endorse, Admit) |
 
 ### GitLab CI
 
@@ -108,85 +134,7 @@ pipelines:
     - step: *validate
 ```
 
-## Github Action Inputs
-
-| Name | Description | Required | Default |
-|------|-------------|----------|---------|
-| `path` | Path to policy file or directory | No | `.` |
-| `extractor` | Type of policy extractor to use (regex, json) | No | `regex` |
-| `extractorPattern` | Custom pattern for the policy extractor | No | - |
-
-## Github Action Outputs
-
-| Name | Description |
-|------|-------------|
-| `policy_expressions` | List of all validated policy expressions (Allow, Define, Endorse, Admit) |
-
-
-## Example Policy Format
-
-```hcl
-resource "oci_identity_policy" "example" {
-  statements = [
-    "Allow group Administrators to manage all-resources in tenancy",
-    "Allow group Developers to use instances in compartment dev"
-  ]
-}
-```
-
-## Configuration
-
-### Policy Statement Pattern
-
-The action uses a regular expression to extract policy statements from Terraform files. This pattern can be customized for each supported CI platform using environment variables:
-
-If no pattern is specified, the action will use a default pattern that handles:
-- Multiline statements
-- Quoted strings (both single and double quotes)
-- Variable interpolation ${var.name}
-- Nested structures
-- Comments
-
-## Policy Extractors
-
-The tool supports pluggable policy extractors for different file formats:
-
-### Available Extractors
-
-- `regex` (default): Uses regular expressions to extract policies from HCL
-- `json`: (coming soon) Extracts policies from JSON format
-
-### Configuring Extractors
-
-In GitHub Actions:
-```yaml
-- uses: policy-validation-action@v1
-  with:
-    path: './terraform'
-    extractor: 'regex'
-    extractorPattern: 'your-custom-pattern'  # Optional
-```
-
-In CLI:
-```bash
-policy-validator --path ./policies --extractor regex --pattern "your-custom-pattern"
-```
-
-## Error Messages
-
-When a policy statement is invalid, the action provides detailed error messages including:
-- The invalid statement
-- The position of the error
-- Expected syntax
-
-Example error output:
-```
-Failed to parse policy statement:
-Statement: "Allow BadSyntax manage"
-Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
-```
-
-## CLI Usage
+## CLI 
 
 The CLI tool provides validation for OCI policy statements:
 
@@ -268,6 +216,42 @@ Example error output:
 - 0: All policies valid
 - 1: Validation failed (no files found, no policies found, invalid policies, or general errors)
 
+## Configuration
+
+### Policy Statement Pattern
+
+The tool uses a regular expression to extract policy statements from Terraform files. This pattern can be customized for each supported CI platform using environment variables:
+
+If no pattern is specified, the action will use a default pattern that handles:
+- Multiline statements
+- Quoted strings (both single and double quotes)
+- Variable interpolation ${var.name}
+- Nested structures
+- Comments
+
+## Policy Extractors
+
+The tool supports pluggable policy extractors for different file formats:
+
+### Available Extractors
+
+- `regex` (default): Uses regular expressions to extract policies from HCL
+- `json`: (coming soon) Extracts policies from JSON format
+
+## Error Messages
+
+When a policy statement is invalid, the action provides detailed error messages including:
+- The invalid statement
+- The position of the error
+- Expected syntax
+
+Example error output:
+```
+Failed to parse policy statement:
+Statement: "Allow BadSyntax manage"
+Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
+```
+
 ## Testing
 
 The project includes a comprehensive test suite using Jest and CLI installation testing.
@@ -290,40 +274,28 @@ npm run test:cli
 
 ### CLI Installation Testing
 
-The `test-cli-install.sh` script performs comprehensive CLI testing:
+The `test-cli-install.sh` script verifies the CLI functionality by:
 
-1. Installation Verification
-   - Builds and links package locally
-   - Verifies global command availability
+1. Building and Installing
+   - Builds the package from source
+   - Links package globally
+   - Verifies command availability
 
-2. Command Testing
-   - `--help`: Verifies help documentation
-   - `--version`: Checks version output
-   - File validation: Tests single file processing
-   - Directory scanning: Tests recursive directory processing
-   - Verbose mode: Tests detailed output
-   - Custom pattern: Tests pattern matching
+2. Basic Validation Tests
+   - Creates test policy files
+   - Validates policy syntax
+   - Tests command line parameters
+   - Verifies JSON output
+   - Checks error handling
 
-3. Policy Validation Testing
-   - Valid policy statements
-   - Variable interpolation
-   - All expression types (Allow, Define, Endorse, Admit)
-   - Conditional statements
-   - Error handling for invalid syntax
 
-Example test policy types:
+Example test policy:
 ```hcl
-# Valid basic statements
-Allow group Administrators to manage all-resources in tenancy
-
-# Variable interpolation
-Allow group ${var.admin_group} to manage all-resources in tenancy
-
-# Conditional statements
-Allow any-user to use instances where request.time BETWEEN ${var.start_time} AND ${var.end_time}
-
-# Invalid spacing (fails validation)
-AllowBadSyntax manage
+resource "oci_identity_policy" "test" {
+    statements = [
+        "Allow group Administrators to manage all-resources in tenancy"
+    ]
+}
 ```
 
 ### Test Structure
@@ -338,10 +310,7 @@ AllowBadSyntax manage
 
 Test fixtures are located in `src/__tests__/fixtures/` and include:
 - `valid.tf`: Valid policy statements
-- `invalid.tf`: Invalid policy syntax
-- `valid_vars.tf`: Policies with variable interpolation
-- `valid_conditions.tf`: Policies with conditional statements
-- `all_expressions.tf`: All supported expression types
+
 
 ### CI Test Workflow
 
@@ -371,11 +340,11 @@ Before publishing to npm, test the CLI installation locally:
 # Test CLI installation
 npm run test:cli
 
-# This will:
-# 1. Link the package globally
-# 2. Create test policy files
-# 3. Run CLI commands
-# 4. Clean up test files
+#This will:
+#1. Link the package globally
+#2. Create test policy files
+#3. Run CLI commands
+#4. Clean up test files
 ```
 
 ## Release Process & Versioning
@@ -384,24 +353,67 @@ This project follows [Semantic Versioning](https://semver.org/) with automated v
 
 ### Version Bumping
 
-Versions are automatically determined from commit messages:
-- `feat:` commits trigger MINOR version bump
-- `fix:` commits trigger PATCH version bump
-- Commits with `BREAKING CHANGE:` in footer trigger MAJOR version bump
+Versions are automatically determined from commit messages using conventional commits:
+
+| Commit Type | Description | Version Bump |
+|------------|-------------|--------------|
+| `feat:` | A new feature | MINOR |
+| `fix:` | A bug fix | PATCH |
+| `docs:` | Documentation only changes | No bump |
+| `chore:` | Maintenance tasks | No bump |
+| `BREAKING CHANGE:` | Breaking API changes (in commit body) | MAJOR |
+
+Example commit messages:
+```bash
+# Patch bump
+fix: correct policy parsing error
+
+# Minor bump
+feat: add new JSON extractor
+
+# Major bump
+feat: migrate to new parser API
+
+BREAKING CHANGE: new parser API is not backwards compatible
+```
 
 ### Creating a Release
 
-1. Ensure all changes are committed
-2. Run the release command:
+1. Ensure tests pass:
+   ```bash
+   npm test
+   npm run test:cli
+   ```
+
+2. Create release:
    ```bash
    npm run release
    ```
-3. This will:
-   - Analyze commit messages
-   - Bump version accordingly
-   - Generate/update CHANGELOG.md
-   - Create a git tag
-   - Push changes and tag
+
+3. Push the release:
+   ```bash
+   git push --follow-tags origin main
+   ```
+
+4. After successful release:
+   ```bash
+   git checkout main
+   git merge --no-ff development
+   git push origin main
+   ```
+
+5. Return to development:
+   ```bash
+   git checkout development
+   ```
+
+The release workflow will automatically:
+- Update CHANGELOG.md based on commit messages
+- Bump version in package.json based on conventional commits
+- Create git tag
+- Build distribution files
+- Create GitHub release
+- Publish to npm - (not yet implemented )
 
 ### Release Workflow
 
@@ -410,21 +422,6 @@ The release process is integrated into CI pipelines:
 - GitHub Actions: Automated tests and npm publishing on tags
 - GitLab CI: Version validation and artifact generation
 - BitBucket Pipelines: Automated npm publishing via pipe
-
-Example workflow:
-```bash
-# Make your changes
-git add .
-git commit -m "feat: add new extractor feature
-
-BREAKING CHANGE: new extractor API"
-
-# Create release
-npm run release
-
-# Push changes and tags
-git push --follow-tags origin main
-```
 
 ## License
 
