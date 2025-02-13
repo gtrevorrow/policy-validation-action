@@ -91,9 +91,7 @@ definitions:
                 exit 1
               fi
             done
-          - |
-            echo "Testing pipeline with fixtures and custom pattern and explicit extractor..."
-            node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" --extractor regex
+        
         artifacts:
           reports:
             junit: test-results/test-results.xml

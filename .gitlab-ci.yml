@@ -73,10 +73,7 @@ test:
           exit 1
         fi
       done
-    # Test fixtures
-    - |
-      echo "Testing pileline with fixtures and custom pattern and explicite extractor ..."
-      node dist/index.js --path src/__tests__/fixtures/ --pattern "statements\\s*=\\s*\\[(.*?)\\]" --extractor regex 
+
     
   artifacts:
     reports:

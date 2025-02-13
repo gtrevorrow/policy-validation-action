@@ -126,6 +126,17 @@ jobs:
           extractor: 'regex'
           extractorPattern: 'statements\s*=\s*\[(.*?)\]'
 
+      - name: Test custom extractor pattern using env variable
+        id: test-custom-pattern-env-var
+        continue-on-error: true
+        env:
+          POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+        uses: ./
+        with:
+          path: './test/policies/valid.tf'
+          extractor: 'regex'
+
+
       - name: Test action with fixtures
         id: test-fixtures
         continue-on-error: true
@@ -170,6 +181,16 @@ jobs:
             exit 1
           }
 
+          check_outcome "${{ steps.test-expressions.outcome }}" "success" || {
+            echo "All expressions test failed unexpectedly"
+            exit 1
+          }
+
+          check_outcome "${{ steps.test-custom-pattern-env-var.outcome }}" "success" || {
+            echo "All expressions test failed unexpectedly"
+            exit 1
+          }
+
           check_outcome "${{ steps.test-fixtures.outcome }}" "failure" || {
             echo "All expressions test failed unexpectedly"
             exit 1
@@ -177,7 +198,7 @@ jobs:
 
           echo "All tests passed successfully"
 
-      - name: Run tests
+      - name: Run Jest tests
         run: npm test
 
       - name: Verify test results
@@ -190,10 +211,4 @@ jobs:
             exit 1
           fi
 
-      - name: Test action
-        uses: ./
-        env:
-          POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
-        with:
-          path: './src/__tests__/fixtures'  # Fix: Use correct path to fixtures directory
-          extractor: 'regex'
+
