@@ -170,7 +170,7 @@ jobs:
             exit 1
           }
 
-          check_outcome "${{ steps.test-fixtures.outcome }}" "success" || {
+          check_outcome "${{ steps.test-fixtures.outcome }}" "failure" || {
             echo "All expressions test failed unexpectedly"
             exit 1
           }
