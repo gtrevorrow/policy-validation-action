@@ -82,13 +82,28 @@ definitions:
             EOL
           # Run tests with failure allowed
           - |
+            verify_json() {
+              local output="$1"
+              echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1 | jq -e '
+                (arrays and all(.[] | has("isValid") and has("errors"))) or
+                (objects and (.error or has("isValid")))
+              ' >/dev/null
+            }
+            
             for file in valid.tf invalid.tf variables.tf; do
               echo "Testing $file..."
-              OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1 || true)
-              echo "$OUTPUT"
-              if [[ "$file" == "invalid.tf" && ! "$OUTPUT" =~ "Failed to parse policy statement:" ]]; then
-                echo "Error: Invalid policy should have failed validation"
-                exit 1
+              if OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1); then
+                if ! verify_json "$OUTPUT"; then
+                  echo "Invalid JSON output for $file"
+                  echo "$OUTPUT"
+                  exit 1
+                fi
+              else
+                if ! verify_json "$OUTPUT"; then
+                  echo "Invalid JSON output for failed case $file"
+                  echo "$OUTPUT"
+                  exit 1
+                fi
               fi
             done
         

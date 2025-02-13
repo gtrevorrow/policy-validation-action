@@ -48,6 +48,7 @@ exports.findTerraformFiles = findTerraformFiles;
 exports.processFile = processFile;
 exports.parsePolicy = parsePolicy;
 exports.formatPolicyStatements = formatPolicyStatements;
+exports.validatePolicies = validatePolicies;
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
@@ -201,6 +202,41 @@ function parsePolicy(text, logger) {
         };
     }
 }
+async function validatePolicies(inputPath, options = {}) {
+    const { pattern, extractorType = 'regex', exitOnError = true, logger } = options;
+    const files = await findTerraformFiles(inputPath, logger);
+    if (files.length === 0) {
+        throw new Error('No .tf files found');
+    }
+    const allOutputs = [];
+    for (const file of files) {
+        logger === null || logger === void 0 ? void 0 : logger.info(`Validating policy statements for file ${file}`);
+        const expressions = await processFile(file, pattern, extractorType, logger);
+        if (expressions.length > 0) {
+            const result = parsePolicy(formatPolicyStatements(expressions), logger);
+            if (!result.isValid) {
+                result.errors.forEach(error => {
+                    logger === null || logger === void 0 ? void 0 : logger.error('Failed to parse policy statement:');
+                    logger === null || logger === void 0 ? void 0 : logger.error(`Statement: "${error.statement}"`);
+                    logger === null || logger === void 0 ? void 0 : logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+                });
+                if (exitOnError) {
+                    throw new Error(`Policy validation failed for file ${file}`);
+                }
+            }
+            allOutputs.push({
+                file,
+                isValid: result.isValid,
+                statements: expressions,
+                errors: result.errors
+            });
+        }
+    }
+    if (allOutputs.length === 0) {
+        throw new Error('No policy statements found');
+    }
+    return allOutputs;
+}
 // GitHub Action specific wrapper
 async function runAction() {
     const actionLogger = {
@@ -215,47 +251,14 @@ async function runAction() {
         const extractorType = (core.getInput('extractor') || 'regex');
         const pattern = core.getInput('extractorPattern');
         const exitOnError = core.getBooleanInput('exitOnError');
-        actionLogger.debug(`Input path: ${inputPath}`);
-        actionLogger.debug(`Resolved scan path: ${scanPath}`);
-        actionLogger.debug(`Using extractor: ${extractorType}`);
-        const tfFiles = await findTerraformFiles(scanPath, actionLogger);
-        core.debug(`Found ${tfFiles.length} Terraform files`);
-        if (tfFiles.length === 0) {
-            core.warning('No .tf files found');
-            return;
-        }
-        let allOutputs = [];
-        for (const file of tfFiles) {
-            actionLogger.info(`Validating policy statements for file ${file}`);
-            const expressions = await processFile(file, pattern, extractorType, actionLogger);
-            if (expressions.length > 0) {
-                const result = parsePolicy(formatPolicyStatements(expressions), actionLogger);
-                if (!result.isValid) {
-                    result.errors.forEach(error => {
-                        actionLogger.error('Failed to parse policy statement:');
-                        actionLogger.error(`Statement: "${error.statement}"`);
-                        actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
-                    });
-                    core.setFailed(`Policy validation failed for file ${file}`);
-                    if (exitOnError) {
-                        core.setFailed('Exiting due to policy validation errors');
-                        return;
-                    }
-                }
-                allOutputs.push({
-                    file,
-                    isValid: result.isValid,
-                    statements: expressions,
-                    errors: result.errors
-                });
-            }
-        }
-        if (allOutputs.length === 0) {
-            core.warning('No policy statements found');
-            return;
-        }
+        const outputs = await validatePolicies(scanPath, {
+            pattern,
+            extractorType,
+            exitOnError,
+            logger: actionLogger
+        });
         core.info('Policy validation successful');
-        core.setOutput('policy_validation', allOutputs);
+        core.setOutput('policy_validation', outputs);
     }
     catch (error) {
         core.setFailed(`Action failed: ${error}`);
@@ -338,30 +341,24 @@ async function run() {
         const inputPath = path.resolve(options.path);
         const extractorType = options.extractor;
         const exitOnError = options.exitOnError;
-        // Get all terraform files
         const files = await (0, Main_1.findTerraformFiles)(inputPath, logger);
         if (files.length === 0) {
-            logger.error('No .tf files found');
+            const output = { error: 'No .tf files found' };
+            console.log(JSON.stringify(output)); // Use console.log for JSON output
             process.exit(1);
         }
         let allOutputs = [];
-        // Process each file with extractor type and pattern
         for (const file of files) {
             logger.info('Validating policy statements for file ' + file);
             const expressions = await (0, Main_1.processFile)(file, options.pattern, extractorType, logger);
             if (expressions.length > 0) {
                 const result = (0, Main_1.parsePolicy)((0, Main_1.formatPolicyStatements)(expressions), logger);
-                // Status messages to stderr
                 if (!result.isValid) {
                     result.errors.forEach(error => {
                         logger.error('Failed to parse policy statement:');
                         logger.error(`Statement: "${error.statement}"`);
                         logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
                     });
-                    if (exitOnError) {
-                        logger.error(`Policy validation failed for file ${file}`);
-                        process.exit(1);
-                    }
                 }
                 allOutputs.push({
                     file: file,
@@ -369,18 +366,32 @@ async function run() {
                     statements: expressions,
                     errors: result.errors
                 });
+                if (exitOnError && !result.isValid) {
+                    // Always output JSON before exiting
+                    console.log(JSON.stringify(allOutputs)); // Use console.log
+                    process.exit(1);
+                }
             }
         }
         if (allOutputs.length === 0) {
-            logger.warn('No policy statements found');
+            const output = { error: 'No policy statements found' };
+            console.log(JSON.stringify(output)); // Use console.log
             process.exit(1);
         }
-        // Output validation results to stdout (JSON only)
-        process.stdout.write(JSON.stringify(allOutputs, null, 2) + '\n');
+        // Output validation results
+        console.log(JSON.stringify(allOutputs)); // Use console.log
         logger.info('Policy validation successful');
+        // Exit with error if any validation failed
+        if (allOutputs.some(output => !output.isValid)) {
+            process.exit(1);
+        }
     }
     catch (error) {
-        logger.error(`Error: ${error}`);
+        // Ensure error output is also JSON formatted
+        const errorOutput = {
+            error: error instanceof Error ? error.message : String(error)
+        };
+        console.log(JSON.stringify(errorOutput)); // Use console.log
         process.exit(1);
     }
 }
@@ -35047,7 +35058,7 @@ exports.suggestSimilar = suggestSimilar;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.2.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/username/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit","release:minor":"standard-version --release-as minor","release:major":"standard-version --release-as major","release:patch":"standard-version --release-as patch"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=16"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"},"standard-version":{"tag-prefix":"v","sign":false,"verify":false,"infile":"CHANGELOG.md","types":[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"chore","section":"Maintenance"},{"type":"docs","section":"Documentation"},{"type":"style","section":"Styling"},{"type":"refactor","section":"Refactors"},{"type":"perf","section":"Performance"},{"type":"test","section":"Tests"}]}}');
+module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.2.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/username/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","test:cli:validator":"chmod +x ./scripts/test-validator.sh && ./scripts/test-validator.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit","release:minor":"standard-version --release-as minor","release:major":"standard-version --release-as major","release:patch":"standard-version --release-as patch"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=16"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"},"standard-version":{"tag-prefix":"v","sign":false,"verify":false,"infile":"CHANGELOG.md","types":[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"chore","section":"Maintenance"},{"type":"docs","section":"Documentation"},{"type":"style","section":"Styling"},{"type":"refactor","section":"Refactors"},{"type":"perf","section":"Performance"},{"type":"test","section":"Tests"}]}}');
 
 /***/ })
 

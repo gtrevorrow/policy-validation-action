@@ -36,33 +36,27 @@ async function run() {
         const inputPath = path.resolve(options.path);
         const extractorType = options.extractor as ExtractorType;
         const exitOnError = options.exitOnError;
-        // Get all terraform files
         const files = await findTerraformFiles(inputPath, logger);
 
         if (files.length === 0) {
-            logger.error('No .tf files found');
+            const output = { error: 'No .tf files found' };
+            console.log(JSON.stringify(output));  // Use console.log for JSON output
             process.exit(1);
         }
 
         let allOutputs: ValidationOutput[] = [];
 
-        // Process each file with extractor type and pattern
         for (const file of files) {
             logger.info('Validating policy statements for file ' + file);
             const expressions = await processFile(file, options.pattern, extractorType, logger);
             if (expressions.length > 0) {
                 const result = parsePolicy(formatPolicyStatements(expressions), logger);
-                // Status messages to stderr
                 if (!result.isValid) {
                     result.errors.forEach(error => {
                         logger.error('Failed to parse policy statement:');
                         logger.error(`Statement: "${error.statement}"`);
                         logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
                     });
-                    if (exitOnError) {
-                        logger.error(`Policy validation failed for file ${file}`);
-                        process.exit(1);
-                    }
                 }
                 allOutputs.push({
                     file: file,
@@ -70,18 +64,35 @@ async function run() {
                     statements: expressions,
                     errors: result.errors
                 });
-
+                
+                if (exitOnError && !result.isValid) {
+                    // Always output JSON before exiting
+                    console.log(JSON.stringify(allOutputs));  // Use console.log
+                    process.exit(1);
+                }
             }
         }
+
         if (allOutputs.length === 0) {
-            logger.warn('No policy statements found');
+            const output = { error: 'No policy statements found' };
+            console.log(JSON.stringify(output));  // Use console.log
             process.exit(1);
         }
-        // Output validation results to stdout (JSON only)
-        process.stdout.write(JSON.stringify(allOutputs, null, 2) + '\n');
+
+        // Output validation results
+        console.log(JSON.stringify(allOutputs));  // Use console.log
         logger.info('Policy validation successful');
+        
+        // Exit with error if any validation failed
+        if (allOutputs.some(output => !output.isValid)) {
+            process.exit(1);
+        }
     } catch (error) {
-        logger.error(`Error: ${error}`);
+        // Ensure error output is also JSON formatted
+        const errorOutput = {
+            error: error instanceof Error ? error.message : String(error)
+        };
+        console.log(JSON.stringify(errorOutput));  // Use console.log
         process.exit(1);
     }
 }

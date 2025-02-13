@@ -35,6 +35,7 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm run security:audit && npm test",
     "test:cli": "chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh",
+    "test:cli:validator": "chmod +x ./scripts/test-validator.sh && ./scripts/test-validator.sh",  
     "release": "standard-version",
     "security:audit": "npm audit",
     "security:audit:fix": "npm audit fix",

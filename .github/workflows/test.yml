@@ -149,7 +149,34 @@ jobs:
       - name: Verify test results
         shell: bash
         run: |
-          # Helper function to check step outcome
+          verify_output() {
+            local output="$1"
+            local json_line
+            
+            # Extract JSON from output
+            json_line=$(echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1)
+            
+            if [ -z "$json_line" ]; then
+              echo "No JSON output found in:"
+              echo "$output"
+              return 1
+            fi
+            
+            if ! echo "$json_line" | jq -e '
+              (arrays and all(.[] | has("isValid") and has("errors"))) or
+              (objects and (.error or has("isValid")))
+            ' >/dev/null; then
+              echo "Invalid JSON structure:"
+              echo "$json_line" | jq '.'
+              return 1
+            fi
+            return 0
+          }
+          
+          INVALID_OUTPUT="${{ steps.test-invalid.outputs.policy_validation }}"
+          verify_output "$INVALID_OUTPUT"
+          
+          # Continue with other verifications
           check_outcome() {
             local step=$1
             local expected=$2
