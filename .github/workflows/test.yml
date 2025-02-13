@@ -69,7 +69,7 @@ jobs:
           cat > test/policies/all_expressions.tf << 'EOL'
           resource "oci_identity_policy" "all_expressions" {
             statements = [
-              "efine tenancy Acceptor as ocid1.tenancy.oc1..aaaaaaaanneylhk3ibv2dmorxqgklcloydwnror5b3fs4ag7dlrbsiwkjdea",
+              "define tenancy Acceptor as ocid1.tenancy.oc1..aaaaaaaanneylhk3ibv2dmorxqgklcloydwnror5b3fs4ag7dlrbsiwkjdea",
               "endorse group Administrators to manage drg-attachment in tenancy VCN",
               "Admit group Administrators of tenancy Requestor to manage remote-peering-to in tenancy",
               "Allow group ${var.admin_group} to manage all-resources in tenancy"
