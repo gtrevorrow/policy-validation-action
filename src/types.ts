@@ -29,6 +29,13 @@ export enum ExpressionType {
     Admit = 'Admit'
 }
 
+export interface ValidationOutput {
+    file: string;
+    isValid: boolean;
+    statements: string[];
+    errors: any[];
+}
+
 /**
  * Get policy statements regex pattern from environment or use default
  * This allows different CI platforms to configure their own pattern if needed

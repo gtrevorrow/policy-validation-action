@@ -29,7 +29,7 @@ export class RegexPolicyExtractor implements PolicyExtractor {
                     .filter(s => s && !s.startsWith('#'))
                     .map(s => s.replace(/^["'](.*)["']$/, '$1'))
                     .map(s => s.replace(/\\(["'])/, '$1'))
-                    .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s))
+                    // .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s))
             );
     }
 

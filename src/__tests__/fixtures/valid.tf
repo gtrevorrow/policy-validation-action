@@ -16,6 +16,11 @@ locals {
         "Admit group ServiceAdmins_locals of tenancy accountFoo to manage instances in tenancy",
         "Allow group SecurityAdmins_locals to manage all-resources in tenancy where request.user.groups in ('SecurityAdmins')"
     ]
+    more_policies=[
+        "Allow group ${admin_group} to manage all-resources in tenancy",
+        "Define tenancy ${tenant_name} as ${tenant_ocid}"
+    ]
+        
 
 }
 

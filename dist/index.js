@@ -212,10 +212,9 @@ async function runAction() {
     try {
         const inputPath = core.getInput('path');
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
-        // Fix: Make extractor optional with default value
-        // Fix: Make extractor optional with default value
         const extractorType = (core.getInput('extractor') || 'regex');
         const pattern = core.getInput('extractorPattern');
+        const exitOnError = core.getBooleanInput('exitOnError');
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
         actionLogger.debug(`Using extractor: ${extractorType}`);
@@ -225,26 +224,38 @@ async function runAction() {
             core.warning('No .tf files found');
             return;
         }
-        let allExpressions = [];
+        let allOutputs = [];
         for (const file of tfFiles) {
+            actionLogger.info(`Validating policy statements for file ${file}`);
             const expressions = await processFile(file, pattern, extractorType, actionLogger);
-            core.debug(`Extracted expressions from ${file}: ${JSON.stringify(expressions)}`);
-            allExpressions.push(...expressions);
-        }
-        if (allExpressions.length > 0) {
-            const policyText = formatPolicyStatements(allExpressions);
-            core.info('Validating policy statements...');
-            const result = parsePolicy(policyText, actionLogger);
-            if (!result.isValid) {
-                result.errors.forEach(error => core.error(error.message));
-                core.setFailed('Policy validation failed - check error messages above');
-                return;
+            if (expressions.length > 0) {
+                const result = parsePolicy(formatPolicyStatements(expressions), actionLogger);
+                if (!result.isValid) {
+                    result.errors.forEach(error => {
+                        actionLogger.error('Failed to parse policy statement:');
+                        actionLogger.error(`Statement: "${error.statement}"`);
+                        actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+                    });
+                    core.setFailed(`Policy validation failed for file ${file}`);
+                    if (exitOnError) {
+                        core.setFailed('Exiting due to policy validation errors');
+                        return;
+                    }
+                }
+                allOutputs.push({
+                    file,
+                    isValid: result.isValid,
+                    statements: expressions,
+                    errors: result.errors
+                });
             }
-            core.info('Policy validation successful');
-            core.setOutput('policy_expressions', allExpressions);
-            core.info('Found and validated policy expressions:');
-            allExpressions.forEach(expr => core.info(expr));
         }
+        if (allOutputs.length === 0) {
+            core.warning('No policy statements found');
+            return;
+        }
+        core.info('Policy validation successful');
+        core.setOutput('policy_validation', allOutputs);
     }
     catch (error) {
         core.setFailed(`Action failed: ${error}`);
@@ -312,7 +323,8 @@ program
     .option('-p, --path <path>', 'Path to policy file or directory', '.')
     .option('-v, --verbose', 'Enable verbose output')
     .option('--extractor <extractor>', 'Policy extractor type (regex)', 'regex')
-    .option('--pattern <pattern>', 'Custom regex pattern for policy extraction');
+    .option('--pattern <pattern>', 'Custom regex pattern for policy extraction')
+    .option('--exitOnError', 'Exit with non-zero status if validation fails', true);
 program.parse();
 const options = program.opts();
 const logger = {
@@ -325,6 +337,7 @@ async function run() {
     try {
         const inputPath = path.resolve(options.path);
         const extractorType = options.extractor;
+        const exitOnError = options.exitOnError;
         // Get all terraform files
         const files = await (0, Main_1.findTerraformFiles)(inputPath, logger);
         if (files.length === 0) {
@@ -334,7 +347,7 @@ async function run() {
         let allOutputs = [];
         // Process each file with extractor type and pattern
         for (const file of files) {
-            logger.info('Validating policy statements for file ${file}');
+            logger.info('Validating policy statements for file ' + file);
             const expressions = await (0, Main_1.processFile)(file, options.pattern, extractorType, logger);
             if (expressions.length > 0) {
                 const result = (0, Main_1.parsePolicy)((0, Main_1.formatPolicyStatements)(expressions), logger);
@@ -345,7 +358,10 @@ async function run() {
                         logger.error(`Statement: "${error.statement}"`);
                         logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
                     });
-                    process.exit(1);
+                    if (exitOnError) {
+                        logger.error(`Policy validation failed for file ${file}`);
+                        process.exit(1);
+                    }
                 }
                 allOutputs.push({
                     file: file,
@@ -425,7 +441,8 @@ class RegexPolicyExtractor {
             .filter(s => s && !s.startsWith('#'))
             .map(s => s.replace(/^["'](.*)["']$/, '$1'))
             .map(s => s.replace(/\\(["'])/, '$1'))
-            .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s)));
+        // .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s))
+        );
     }
     name() {
         return 'regex';

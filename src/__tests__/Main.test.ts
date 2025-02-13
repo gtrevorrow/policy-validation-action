@@ -1,4 +1,4 @@
-import { findTerraformFiles, processFile } from '../Main';
+import { findTerraformFiles, parsePolicy, processFile } from '../Main';
 import { ExtractorType } from '../extractors/ExtractorFactory';
 import * as path from 'path';
 
@@ -9,25 +9,33 @@ describe('Integration Tests', () => {
     const mockLogger = { debug: jest.fn(), error: jest.fn(), warn: jest.fn(), info: jest.fn() };
 
     describe('findTerraformFiles', () => {
-        it('should find terraform files in the fixtures directory', async () => {
+        it('should find all terraform files in the fixtures directory', async () => {
             const files = await findTerraformFiles(testDir, mockLogger);
-            expect(files.length).toBeGreaterThan(0);
+            expect(files.length).toEqual(2);
             expect(files[0]).toMatch(/\.tf$/);
+            expect(files[1]).toMatch(/\.tf$/);
         });
-        // ...other file finding tests...
     });
 
     describe('processFile', () => {
-        it('should process a terraform file and extract policies using default regex pattern', async () => {
+        it('should process multiple terraform files in folder and extract policies using default regex pattern', async () => {
             const files = await findTerraformFiles(testDir, mockLogger);
-            const expressions = await processFile(
+            var expressions1 = await processFile(
                 files[0],
                 undefined,
                 'regex' as ExtractorType,
                 mockLogger
             );
-            expect(expressions).toHaveLength(11);
-            expect(expressions).toEqual(expect.arrayContaining([
+            expect(expressions1).toHaveLength(2);
+
+            var expressions2 = await processFile(
+                files[1],
+                undefined,
+                'regex' as ExtractorType,
+                mockLogger
+            );
+            expect(expressions2).toHaveLength(11);
+            expect(expressions2).toEqual(expect.arrayContaining([
                 expect.stringContaining('Allow group'),
                 expect.stringContaining('Define tenancy'),
                 expect.stringContaining('Endorse group'),
@@ -35,9 +43,9 @@ describe('Integration Tests', () => {
             ]));
         });
 
-        it('should process a terraform file and extract policies from variable assignments', async () => {
+        it('should process terraform files and extract and parse policies from variable assignments using custom regex', async () => {
             const files = await findTerraformFiles(testDir, mockLogger);
-            const expressions = await processFile(
+            var expressions = await processFile(
                 files[0],
                 // Updated regex: use lazy quantifier to match policy statements until the closing quote
                 "\\s*=\\s*\\[([\\s\\S]*?)\\]",
@@ -45,10 +53,21 @@ describe('Integration Tests', () => {
                 mockLogger
             );
             console.log('Found expressions:', expressions); // Debugging
-
             expect(expressions).toBeDefined();
-            expect(expressions).toHaveLength(17);
-            
+            expect(expressions).toHaveLength(4);
+
+            var output = parsePolicy(expressions.join('\n') , mockLogger);
+            expect(output.errors).toHaveLength(6);
+            expect(output.isValid).toEqual(false);
+
+            expressions = await processFile(
+                files[1],
+                // Updated regex: use lazy quantifier to match policy statements until the closing quote
+                "\\s*=\\s*\\[([\\s\\S]*?)\\]",
+                'regex' as ExtractorType,
+                mockLogger
+            );
+            expect(expressions).toHaveLength(19);
             // Test for presence of statements from locals.polcies
             expect(expressions).toContain("Allow group Administrators_locals to manage all-resources in tenancy");
             expect(expressions).toContain("Allow group Developers_locals to use instances in compartment dev");
@@ -62,18 +81,11 @@ describe('Integration Tests', () => {
             // Verify we're getting statements with variables too (these won't have the variables interpolated)
             expect(expressions).toContain("Allow group ${var.admin_group} to manage all-resources in tenancy");
             expect(expressions).toContain("Define tenancy ${var.tenant_name} as ${var.tenant_ocid}");
-        });
 
-        // it('should handle missing pattern', async () => {
-        //     const files = await findTerraformFiles(testDir, mockLogger);
-        //     const expressions = await processFile(
-        //         files[0],
-        //         undefined,
-        //         'regex' as ExtractorType,
-        //         mockLogger
-        //     );
-        //     expect(expressions).toBeDefined();
-        // });
+            output = parsePolicy(expressions.join('\n') , mockLogger);
+            expect(output.errors).toHaveLength(0);
+            expect(output.isValid).toEqual(true);
+        });
     });
 });
 

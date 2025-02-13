@@ -76,11 +76,12 @@ jobs:
 
 #### Github Action Inputs
 
-| Name | Description | Required | Default |
-|------|-------------|----------|---------|
-| `path` | Path to policy file or directory | No | `.` |
-| `extractor` | Type of policy extractor to use (regex, json) | No | `regex` |
-| `extractorPattern` | Custom pattern for the policy extractor | No | - |
+| Name         | Description                                                   | Required | Default |
+|--------------|---------------------------------------------------------------|----------|---------|
+| `path`       | Path to policy file or directory                              | No       | `.`     |
+| `extractor`  | Type of policy extractor to use (regex, json)                 | No       | `regex` |
+| `extractorPattern` | Custom pattern for the policy extractor                 | No       | -       |
+| `exitOnError`| return imediatly if policy validation fails                   | No       | `true`  |
 
 #### Github Action Outputs
 
@@ -157,64 +158,71 @@ policy-validator --help
 
 ### CLI Options
 
-| Option | Alias | Description | Default |
-|--------|-------|-------------|---------|
-| `--path` | `-p` | Path to policy file or directory | `.` |
-| `--verbose` | `-v` | Enable verbose output | `false` |
-| `--extractor` | None | Policy extractor type (regex) | `regex` |
-| `--pattern` | None | Custom regex pattern for policy extraction | System default |
-| `--version` | None | Show version number | n/a |
-| `--help` | None | Show help | n/a |
+| Option         | Alias | Description                                                         | Default |
+|----------------|-------|---------------------------------------------------------------------|---------|
+| `--path`       | `-p`  | Path to policy file or directory                                    | `.`     |
+| `--verbose`    | `-v`  | Enable verbose output                                               | false   |
+| `--extractor`  |       | Policy extractor type (regex)                                       | `regex` |
+| `--pattern`    |       | Custom regex pattern for policy extraction                          | System default |
+| `--exitOnError`|       | Exit with non-zero status if validation fails                       | `true`  |
+| `--version`    |       | Show version number                                                 | n/a     |
+| `--help`       |       | Show help                                                           | n/a     |
 
 ### CLI Output Format
 
-The CLI produces JSON-formatted output containing:
+The CLI produces JSON-formatted output containing an array of validation results. Each result provides details for a specific file and has the following structure:
 ```json
-{
-  "isValid": boolean,
-  "statements": string[],
-  "errors": [
-    {
-      "statement": string,
-      "position": number,
-      "message": string
-    }
-  ]
-}
+[
+  {
+    "file": "path/to/file.tf",
+    "isValid": boolean,
+    "statements": [ "policy statement 1", "policy statement 2", ... ],
+    "errors": [
+      {
+        "statement": "failed statement",
+        "position": number,
+        "message": "error message"
+      }
+    ]
+  }
+]
+```
+- If all policies are valid, `isValid` will be `true` and the `errors` array will be empty.
+- If any policy fails validation, `isValid` will be `false` and the `errors` array will contain detailed error objects.
+
+#### Successful Output Example:
+```json
+[
+  {
+    "file": "./terraform/example.tf",
+    "isValid": true,
+    "statements": [
+      "Allow group Administrators to manage all-resources in tenancy"
+    ],
+    "errors": []
+  }
+]
 ```
 
-Example successful output:
+#### Unsuccessful Output Example:
 ```json
-{
-  "isValid": true,
-  "statements": [
-    "Allow group Administrators to manage all-resources in tenancy"
-  ],
-  "errors": []
-}
+[
+  {
+    "file": "./terraform/bad_example.tf",
+    "isValid": false,
+    "statements": [
+      "Allow BadSyntax manage"
+    ],
+    "errors": [
+      {
+        "statement": "Allow BadSyntax manage",
+        "position": 6,
+        "message": "mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}"
+      }
+    ]
+  }
+]
 ```
-
-Example error output:
-```json
-{
-  "isValid": false,
-  "statements": [
-    "Allow BadSyntax manage"
-  ],
-  "errors": [
-    {
-      "statement": "Allow BadSyntax manage",
-      "position": 6,
-      "message": "mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}"
-    }
-  ]
-}
-```
-
-### CLI Exit Codes
-
-- 0: All policies valid
-- 1: Validation failed (no files found, no policies found, invalid policies, or general errors)
 
 ## Configuration
 

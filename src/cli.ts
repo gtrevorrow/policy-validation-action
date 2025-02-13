@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import * as path from 'path';
 import { findTerraformFiles, processFile, parsePolicy, formatPolicyStatements } from './Main';
 import { ExtractorType } from './extractors/ExtractorFactory';
+import { ValidationOutput } from './types'; // added import
 
 import pkg from '../package.json';
 
@@ -16,7 +17,8 @@ program
     .option('-p, --path <path>', 'Path to policy file or directory', '.')
     .option('-v, --verbose', 'Enable verbose output')
     .option('--extractor <extractor>', 'Policy extractor type (regex)', 'regex')
-    .option('--pattern <pattern>', 'Custom regex pattern for policy extraction');
+    .option('--pattern <pattern>', 'Custom regex pattern for policy extraction')
+    .option('--exitOnError', 'Exit with non-zero status if validation fails', true);
 
 program.parse();
 
@@ -33,7 +35,7 @@ async function run() {
     try {
         const inputPath = path.resolve(options.path);
         const extractorType = options.extractor as ExtractorType;
-
+        const exitOnError = options.exitOnError;
         // Get all terraform files
         const files = await findTerraformFiles(inputPath, logger);
 
@@ -42,18 +44,11 @@ async function run() {
             process.exit(1);
         }
 
-        interface ValidationOutput {
-            file: string;
-            isValid: boolean;
-            statements: string[];
-            errors: any[];
-        }
-
         let allOutputs: ValidationOutput[] = [];
 
         // Process each file with extractor type and pattern
         for (const file of files) {
-            logger.info('Validating policy statements for file ${file}');
+            logger.info('Validating policy statements for file ' + file);
             const expressions = await processFile(file, options.pattern, extractorType, logger);
             if (expressions.length > 0) {
                 const result = parsePolicy(formatPolicyStatements(expressions), logger);
@@ -64,7 +59,10 @@ async function run() {
                         logger.error(`Statement: "${error.statement}"`);
                         logger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
                     });
-                    process.exit(1);
+                    if (exitOnError) {
+                        logger.error(`Policy validation failed for file ${file}`);
+                        process.exit(1);
+                    }
                 }
                 allOutputs.push({
                     file: file,

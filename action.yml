@@ -12,6 +12,10 @@ inputs:
   extractorPattern:
     description: 'Custom pattern for the policy extractor'
     required: false
+  exitOnError:
+    description: 'Exit with error code if any policy is invalid'
+    required: false
+    default: 'true'
 outputs:
   policy_expressions:
     description: 'List of validated policy expressions (Allow, Define, Endorse, Admit) found in policies'

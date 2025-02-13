@@ -9,7 +9,7 @@ import {
     Token,
     Lexer
 } from 'antlr4';
-import { Logger, ParseResult, PolicyError } from './types';
+import { Logger, ParseResult, PolicyError, ValidationOutput } from './types';
 import PolicyLexer from './generated/PolicyLexer';
 import PolicyParser from './generated/PolicyParser';
 import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
@@ -194,10 +194,10 @@ async function runAction(): Promise<void> {
     try {
         const inputPath = core.getInput('path');
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
-// Fix: Make extractor optional with default value
-        // Fix: Make extractor optional with default value
         const extractorType = (core.getInput('extractor') || 'regex') as ExtractorType;
         const pattern = core.getInput('extractorPattern');
+        const exitOnError = core.getBooleanInput('exitOnError');
+
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
         actionLogger.debug(`Using extractor: ${extractorType}`);
@@ -210,28 +210,41 @@ async function runAction(): Promise<void> {
             return;
         }
 
-        let allExpressions: string[] = [];
+        let allOutputs: ValidationOutput[] = [];
+
         for (const file of tfFiles) {
+            actionLogger.info(`Validating policy statements for file ${file}`);
             const expressions = await processFile(file, pattern, extractorType, actionLogger);
-            core.debug(`Extracted expressions from ${file}: ${JSON.stringify(expressions)}`);
-            allExpressions.push(...expressions);
+            if (expressions.length > 0) {
+                const result = parsePolicy(formatPolicyStatements(expressions), actionLogger);
+                if (!result.isValid) {
+                    result.errors.forEach(error => {
+                        actionLogger.error('Failed to parse policy statement:');
+                        actionLogger.error(`Statement: "${error.statement}"`);
+                        actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+                    });
+                    core.setFailed(`Policy validation failed for file ${file}`);
+                    if (exitOnError) {
+                        core.setFailed('Exiting due to policy validation errors');
+                        return;
+                    }
+                }
+                allOutputs.push({
+                    file,
+                    isValid: result.isValid,
+                    statements: expressions,
+                    errors: result.errors
+                });
+            }
         }
 
-        if (allExpressions.length > 0) {
-            const policyText = formatPolicyStatements(allExpressions);
-            core.info('Validating policy statements...');
-            const result = parsePolicy(policyText, actionLogger);
-            if (!result.isValid) {
-                result.errors.forEach(error => core.error(error.message));
-                core.setFailed('Policy validation failed - check error messages above');
-                return;
-            }
-            
-            core.info('Policy validation successful');
-            core.setOutput('policy_expressions', allExpressions);
-            core.info('Found and validated policy expressions:');
-            allExpressions.forEach(expr => core.info(expr));
+        if (allOutputs.length === 0) {
+            core.warning('No policy statements found');
+            return;
         }
+
+        core.info('Policy validation successful');
+        core.setOutput('policy_validation', allOutputs);
     } catch (error) {
         core.setFailed(`Action failed: ${error}`);
     }
