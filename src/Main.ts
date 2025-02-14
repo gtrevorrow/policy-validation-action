@@ -182,65 +182,6 @@ function parsePolicy(text: string, logger?: Logger): ParseResult {
     }
 }
 
-async function validatePolicies(
-    inputPath: string,
-    options: {
-        pattern?: string,
-        extractorType?: ExtractorType,
-        exitOnError?: boolean,
-        logger?: Logger
-    } = {}
-): Promise<ValidationOutput[]> {
-    const {
-        pattern,
-        extractorType = 'regex',
-        exitOnError = true,
-        logger
-    } = options;
-
-    const files = await findTerraformFiles(inputPath, logger);
-    
-    if (files.length === 0) {
-        throw new Error('No .tf files found');
-    }
-
-    const allOutputs: ValidationOutput[] = [];
-
-    for (const file of files) {
-        logger?.info(`Validating policy statements for file ${file}`);
-        const expressions = await processFile(file, pattern, extractorType, logger);
-        
-        if (expressions.length > 0) {
-            const result = parsePolicy(formatPolicyStatements(expressions), logger);
-            
-            if (!result.isValid) {
-                result.errors.forEach(error => {
-                    logger?.error('Failed to parse policy statement:');
-                    logger?.error(`Statement: "${error.statement}"`);
-                    logger?.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
-                });
-                
-                if (exitOnError) {
-                    throw new Error(`Policy validation failed for file ${file}`);
-                }
-            }
-            
-            allOutputs.push({
-                file,
-                isValid: result.isValid,
-                statements: expressions,
-                errors: result.errors
-            });
-        }
-    }
-
-    if (allOutputs.length === 0) {
-        throw new Error('No policy statements found');
-    }
-
-    return allOutputs;
-}
-
 // GitHub Action specific wrapper
 async function runAction(): Promise<void> {
     const actionLogger: Logger = {
@@ -250,28 +191,62 @@ async function runAction(): Promise<void> {
         error: (msg) => core.error(msg)
     };
 
+    let inputPath: string = 'unknown'; // Declare and initialize inputPath
+
     try {
-        const inputPath = core.getInput('path');
+        inputPath = core.getInput('path');
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
         const extractorType = (core.getInput('extractor') || 'regex') as ExtractorType;
         const pattern = core.getInput('extractorPattern');
         const exitOnError = core.getBooleanInput('exitOnError');
 
-        const outputs = await validatePolicies(scanPath, {
-            pattern,
-            extractorType,
-            exitOnError,
-            logger: actionLogger
-        });
-
-        // Always set output, even if validation fails
-        core.setOutput('policy_validation', JSON.stringify(outputs));
+        actionLogger.debug(`Input path: ${inputPath}`);
+        actionLogger.debug(`Resolved scan path: ${scanPath}`);
+        actionLogger.debug(`Using extractor: ${extractorType}`);
         
-        if (outputs.some(output => !output.isValid)) {
-            core.setFailed('Policy validation failed');
-        } else {
-            core.info('Policy validation successful');
+        const tfFiles = await findTerraformFiles(scanPath, actionLogger);
+        core.debug(`Found ${tfFiles.length} Terraform files`);
+        
+        if (tfFiles.length === 0) {
+            core.warning('No .tf files found');
+            return;
         }
+
+        let allOutputs: ValidationOutput[] = [];
+
+        for (const file of tfFiles) {
+            actionLogger.info(`Validating policy statements for file ${file}`);
+            const expressions = await processFile(file, pattern, extractorType, actionLogger);
+            if (expressions.length > 0) {
+                const result = parsePolicy(formatPolicyStatements(expressions), actionLogger);
+                if (!result.isValid) {
+                    result.errors.forEach(error => {
+                        actionLogger.error('Failed to parse policy statement:');
+                        actionLogger.error(`Statement: "${error.statement}"`);
+                        actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+                    });
+                    core.setFailed(`Policy validation failed for file ${file}`);
+                    if (exitOnError) {
+                        core.setFailed('Exiting due to policy validation errors');
+                        return;
+                    }
+                }
+                allOutputs.push({
+                    file,
+                    isValid: result.isValid,
+                    statements: expressions,
+                    errors: result.errors
+                });
+            }
+        }
+
+        if (allOutputs.length === 0) {
+            core.warning('No policy statements found');
+            return;
+        }
+
+        core.info('Policy validation successful');
+        core.setOutput('policy_validation', allOutputs);
     } catch (error) {
         const errorOutput = [{
             file: inputPath,
@@ -298,6 +273,5 @@ export {
     findTerraformFiles,
     processFile,
     parsePolicy,
-    formatPolicyStatements,
-    validatePolicies  // Add new export
+    formatPolicyStatements
 };
