@@ -264,9 +264,26 @@ async function runAction(): Promise<void> {
             logger: actionLogger
         });
 
-        core.info('Policy validation successful');
-        core.setOutput('policy_validation', outputs);
+        // Always set output, even if validation fails
+        core.setOutput('policy_validation', JSON.stringify(outputs));
+        
+        if (outputs.some(output => !output.isValid)) {
+            core.setFailed('Policy validation failed');
+        } else {
+            core.info('Policy validation successful');
+        }
     } catch (error) {
+        const errorOutput = [{
+            file: inputPath,
+            isValid: false,
+            statements: [],
+            errors: [{
+                statement: '',
+                position: 0,
+                message: error instanceof Error ? error.message : String(error)
+            }]
+        }];
+        core.setOutput('policy_validation', JSON.stringify(errorOutput));
         core.setFailed(`Action failed: ${error}`);
     }
 }

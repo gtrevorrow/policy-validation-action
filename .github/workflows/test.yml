@@ -151,50 +151,34 @@ jobs:
         run: |
           verify_output() {
             local step_name="$1"
+            local expect_failure="$2"
             
-            # Debug output
             echo "Verifying output from step: $step_name"
             
-            case "$step_name" in
-              "test-invalid")
-                output="${{ steps.test-invalid.outputs.policy_validation }}"
-                expect_failure=true
-                ;;
-              "test-valid")
-                output="${{ steps.test-valid.outputs.policy_validation }}"
-                expect_failure=false
-                ;;
-              # Add other cases as needed
-            esac
-            
+            # Get the raw output from the step
+            local raw_output="${{ steps[format('{0}.outputs.policy_validation', step_name)] }}"
             echo "Raw output value:"
-            echo "$output"
+            echo "$raw_output"
             
-            if [ -z "$output" ]; then
-              echo "No output found"
+            # Parse the output as JSON
+            if ! echo "$raw_output" | jq . >/dev/null 2>&1; then
+              echo "Invalid JSON in output"
               return 1
             fi
             
-            # Verify JSON structure (if output exists)
-            if ! echo "$output" | jq -e '
-              if type == "array" then
-                all(.[] | has("isValid") and has("errors"))
-              elif type == "object" then
-                has("error") or has("isValid")
-              else
-                false
-              end
-            ' >/dev/null 2>&1; then
-              echo "Invalid JSON structure in output:"
-              echo "$output"
-              return 1
+            # For invalid policy tests, verify isValid is false
+            if [[ "$expect_failure" == "true" ]]; then
+              if ! echo "$raw_output" | jq -e 'all(.[] | .isValid == false)' >/dev/null; then
+                echo "Expected all policies to be invalid"
+                return 1
+              fi
             fi
             
             return 0
           }
           
           echo "Checking invalid policy output..."
-          verify_output "test-invalid"
+          verify_output "test-invalid" "true"
           
           # Continue with other verifications
           check_outcome() {
