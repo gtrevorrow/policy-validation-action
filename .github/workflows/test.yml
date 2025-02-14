@@ -195,9 +195,9 @@ jobs:
             # Verify JSON structure (if output exists)
             if ! echo "$raw_output" | jq -e '
               if type == "array" then
-                all(.[] | .isValid == false and (.errors != null and (.errors | length) > 0))
+                all(.[] | (.isValid == false) and (.errors != null and (.errors | length) > 0))
               elif type == "object" then
-                (.error != null) or (.isValid == false and (.errors != null and (.errors | length) > 0))
+                (.error != null) or ((.isValid == false) and (.errors != null and (.errors | length) > 0))
               else
                 false
               end
