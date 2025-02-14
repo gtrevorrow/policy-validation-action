@@ -151,28 +151,36 @@ jobs:
         run: |
           verify_output() {
             local output="$1"
-            local json_line
             
-            # Extract JSON from output
-            json_line=$(echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1)
+            # GitHub Actions wraps outputs in ::set-output format
+            # Extract the actual JSON content
+            if [[ "$output" =~ ::set-output[^{]*(.*)$ ]]; then
+              output="${BASH_REMATCH[1]}"
+            fi
             
-            if [ -z "$json_line" ]; then
-              echo "No JSON output found in:"
-              echo "$output"
+            if [ -z "$output" ]; then
+              echo "No output found"
               return 1
             fi
             
-            if ! echo "$json_line" | jq -e '
-              (arrays and all(.[] | has("isValid") and has("errors"))) or
-              (objects and (.error or has("isValid")))
-            ' >/dev/null; then
-              echo "Invalid JSON structure:"
-              echo "$json_line" | jq '.'
+            # Verify JSON structure
+            if ! echo "$output" | jq -e '
+              if type == "array" then
+                all(.[] | has("isValid") and has("errors"))
+              elif type == "object" then
+                has("error") or has("isValid")
+              else
+                false
+              end
+            ' >/dev/null 2>&1; then
+              echo "Invalid JSON structure in output:"
+              echo "$output"
               return 1
             fi
             return 0
           }
           
+          echo "Checking invalid policy output..."
           INVALID_OUTPUT="${{ steps.test-invalid.outputs.policy_validation }}"
           verify_output "$INVALID_OUTPUT"
           
