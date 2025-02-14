@@ -148,35 +148,40 @@ jobs:
 
       - name: Verify test results
         shell: bash
+        env:
+          TEST_INVALID_OUTPUT: ${{ steps.test-invalid.outputs.policy_validation }}
+          TEST_VALID_OUTPUT: ${{ steps.test-valid.outputs.policy_validation }}
+          TEST_VARS_OUTPUT: ${{ steps.test-vars.outputs.policy_validation }}
+          TEST_CONDITIONS_OUTPUT: ${{ steps.test-conditions.outputs.policy_validation }}
+          TEST_EXPRESSIONS_OUTPUT: ${{ steps.test-expressions.outputs.policy_validation }}
+          TEST_CUSTOM_PATTERN_ENV_VAR_OUTPUT: ${{ steps.test-custom-pattern-env-var.outputs.policy_validation }}
+          TEST_FIXTURES_OUTPUT: ${{ steps.test-fixtures.outputs.policy_validation }}
         run: |
           verify_output() {
             local step_name="$1"
-            local expect_failure="$2"
             local raw_output=""
-
             echo "Verifying output from step: $step_name"
-            
             case "$step_name" in
               "test-invalid")
-                raw_output="${{ steps.test-invalid.outputs.policy_validation }}"
+                raw_output="$TEST_INVALID_OUTPUT"
                 ;;
               "test-valid")
-                raw_output="${{ steps.test-valid.outputs.policy_validation }}"
+                raw_output="$TEST_VALID_OUTPUT"
                 ;;
               "test-vars")
-                raw_output="${{ steps.test-vars.outputs.policy_validation }}"
+                raw_output="$TEST_VARS_OUTPUT"
                 ;;
               "test-conditions")
-                raw_output="${{ steps.test-conditions.outputs.policy_validation }}"
+                raw_output="$TEST_CONDITIONS_OUTPUT"
                 ;;
               "test-expressions")
-                raw_output="${{ steps.test-expressions.outputs.policy_validation }}"
+                raw_output="$TEST_EXPRESSIONS_OUTPUT"
                 ;;
               "test-custom-pattern-env-var")
-                raw_output="${{ steps.test-custom-pattern-env-var.outputs.policy_validation }}"
+                raw_output="$TEST_CUSTOM_PATTERN_ENV_VAR_OUTPUT"
                 ;;
               "test-fixtures")
-                raw_output="${{ steps.test-fixtures.outputs.policy_validation }}"
+                raw_output="$TEST_FIXTURES_OUTPUT"
                 ;;
               *)
                 echo "Unknown step name: $step_name"
@@ -275,4 +280,3 @@ jobs:
           fi
 
 
- 
