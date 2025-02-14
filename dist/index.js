@@ -210,6 +210,7 @@ async function runAction() {
         error: (msg) => core.error(msg)
     };
     let inputPath = 'unknown'; // Declare and initialize inputPath
+    let allOutputs = []; // Declare allOutputs outside the try block
     try {
         inputPath = core.getInput('path');
         const scanPath = path.resolve(getWorkspacePath(), inputPath);
@@ -223,43 +224,60 @@ async function runAction() {
         core.debug(`Found ${tfFiles.length} Terraform files`);
         if (tfFiles.length === 0) {
             core.warning('No .tf files found');
-            return;
+            allOutputs = [{
+                    file: inputPath,
+                    isValid: false,
+                    statements: [],
+                    errors: [{
+                            statement: '',
+                            position: 0,
+                            message: 'No .tf files found'
+                        }]
+                }];
         }
-        let allOutputs = [];
-        for (const file of tfFiles) {
-            actionLogger.info(`Validating policy statements for file ${file}`);
-            const expressions = await processFile(file, pattern, extractorType, actionLogger);
-            if (expressions.length > 0) {
-                const result = parsePolicy(formatPolicyStatements(expressions), actionLogger);
-                if (!result.isValid) {
-                    result.errors.forEach(error => {
-                        actionLogger.error('Failed to parse policy statement:');
-                        actionLogger.error(`Statement: "${error.statement}"`);
-                        actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+        else {
+            for (const file of tfFiles) {
+                actionLogger.info(`Validating policy statements for file ${file}`);
+                const expressions = await processFile(file, pattern, extractorType, actionLogger);
+                if (expressions.length > 0) {
+                    const result = parsePolicy(formatPolicyStatements(expressions), actionLogger);
+                    if (!result.isValid) {
+                        result.errors.forEach(error => {
+                            actionLogger.error('Failed to parse policy statement:');
+                            actionLogger.error(`Statement: "${error.statement}"`);
+                            actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
+                        });
+                    }
+                    allOutputs.push({
+                        file,
+                        isValid: result.isValid,
+                        statements: expressions,
+                        errors: result.errors
                     });
-                    core.setFailed(`Policy validation failed for file ${file}`);
-                    if (exitOnError) {
+                    if (exitOnError && !result.isValid) {
                         core.setFailed('Exiting due to policy validation errors');
-                        return;
+                        break; // Exit the loop if exitOnError is true
                     }
                 }
-                allOutputs.push({
-                    file,
-                    isValid: result.isValid,
-                    statements: expressions,
-                    errors: result.errors
-                });
             }
         }
-        if (allOutputs.length === 0) {
+        if (allOutputs.length === 0 && tfFiles.length > 0) {
             core.warning('No policy statements found');
-            return;
+            allOutputs = [{
+                    file: inputPath,
+                    isValid: false,
+                    statements: [],
+                    errors: [{
+                            statement: '',
+                            position: 0,
+                            message: 'No policy statements found'
+                        }]
+                }];
         }
         core.info('Policy validation successful');
-        core.setOutput('policy_validation', allOutputs);
     }
     catch (error) {
-        const errorOutput = [{
+        allOutputs = [{
                 file: inputPath,
                 isValid: false,
                 statements: [],
@@ -269,8 +287,14 @@ async function runAction() {
                         message: error instanceof Error ? error.message : String(error)
                     }]
             }];
-        core.setOutput('policy_validation', JSON.stringify(errorOutput));
         core.setFailed(`Action failed: ${error}`);
+    }
+    finally {
+        // Always set output before exiting
+        core.setOutput('policy_validation', JSON.stringify(allOutputs));
+        if (allOutputs.some(output => !output.isValid)) {
+            core.setFailed('Policy validation failed');
+        }
     }
 }
 // Only run the action if we're in a GitHub Action environment
