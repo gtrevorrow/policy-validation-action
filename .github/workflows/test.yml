@@ -197,12 +197,12 @@ jobs:
               return 1
             fi
             
-            # Verify JSON structure (if output exists)
+            # Updated jq filter for JSON structure verification
             if ! echo "$raw_output" | jq -e '
-              if type == "array" then
-                all(.[] | (.isValid == false) and (.errors != null and (.errors | length) > 0))
-              elif type == "object" then
-                (.error != null) or ((.isValid == false) and (.errors != null and (.errors | length) > 0))
+              if type=="array" then
+                all(.[]; (.isValid == false and (.errors | length) > 0))
+              elif type=="object" then
+                (.error != null) or (.isValid == false and (.errors | length) > 0)
               else
                 false
               end
@@ -269,7 +269,7 @@ jobs:
       - name: Run Jest tests
         run: npm test
 
-      - name: Verify test results
+      - name: Verify Jest test results
         run: |
           if [[ "${{ job.status }}" == "success" ]]; then
             echo "Tests passed successfully"
