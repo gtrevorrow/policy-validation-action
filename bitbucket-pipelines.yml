@@ -81,17 +81,22 @@ definitions:
               ]
             }
             EOL
-          # Run tests with failure allowed
+          # Updated verify_json with stricter type checking
           - |
             verify_json() {
               local output="$1"
               echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1 | jq -e '
-                (arrays and all(.[] | has("isValid") and has("errors"))) or
-                (objects and (.error or has("isValid")))
+                if type=="object" then
+                  (.error != null or (.isValid != null and (.errors|type)=="array"))
+                elif type=="array" then
+                  all(.[]; (type=="object" and (.isValid|type)=="boolean" and (.errors|type)=="array"))
+                else
+                  false
+                end
               ' >/dev/null
             }
             
-            for file in valid.tf invalid.tf variables.tf; do
+            for file in valid.tf invalid.tf variable_interpolation.tf; do
               echo "Testing $file..."
               if OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1); then
                 if ! verify_json "$OUTPUT"; then
