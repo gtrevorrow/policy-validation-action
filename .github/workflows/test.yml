@@ -150,20 +150,35 @@ jobs:
         shell: bash
         run: |
           verify_output() {
-            local output="$1"
+            local step_id="$1"
             
-            # GitHub Actions wraps outputs in ::set-output format
-            # Extract the actual JSON content
-            if [[ "$output" =~ ::set-output[^{]*(.*)$ ]]; then
-              output="${BASH_REMATCH[1]}"
+            # Debug output
+            echo "Verifying output from step: $step_id"
+            echo "Raw output value:"
+            echo "${{ toJSON(steps[step_id]) }}"
+            
+            # For GitHub Actions, we need to check the outcome first
+            if [[ "${{ steps[step_id].outcome }}" == "success" ]]; then
+              echo "Step succeeded when it should have failed"
+              return 1
             fi
+            
+            # Get the actual output
+            local output="${{ steps[step_id].outputs.policy_validation }}"
+            if [ -z "$output" ]; then
+              # Try getting the stdout directly
+              output="${{ steps[step_id].stdout }}"
+            fi
+            
+            echo "Parsed output:"
+            echo "$output"
             
             if [ -z "$output" ]; then
               echo "No output found"
               return 1
             fi
             
-            # Verify JSON structure
+            # Verify JSON structure (if output exists)
             if ! echo "$output" | jq -e '
               if type == "array" then
                 all(.[] | has("isValid") and has("errors"))
@@ -177,12 +192,12 @@ jobs:
               echo "$output"
               return 1
             fi
+            
             return 0
           }
           
           echo "Checking invalid policy output..."
-          INVALID_OUTPUT="${{ steps.test-invalid.outputs.policy_validation }}"
-          verify_output "$INVALID_OUTPUT"
+          verify_output "test-invalid"
           
           # Continue with other verifications
           check_outcome() {
