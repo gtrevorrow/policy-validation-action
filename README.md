@@ -76,18 +76,18 @@ jobs:
 
 #### Github Action Inputs
 
-| Name         | Description                                                   | Required | Default |
-|--------------|---------------------------------------------------------------|----------|---------|
-| `path`       | Path to policy file or directory                              | No       | `.`     |
-| `extractor`  | Type of policy extractor to use (regex, json)                 | No       | `regex` |
-| `extractorPattern` | Custom pattern for the policy extractor                 | No       | -       |
-| `exitOnError`| return imediatly if policy validation fails                   | No       | `true`  |
+| Name                | Description                                                          | Required | Default |
+|---------------------|----------------------------------------------------------------------|----------|---------|
+| `path`              | Path to policy file or directory                                     | No       | `.`     |
+| `extractor`         | Type of policy extractor to use (regex, json)                        | No       | `regex` |
+| `extractorPattern`  | Custom pattern for the policy extractor                              | No       | -       |
+| `exitOnError`       | Exit immediately if policy validation fails                          | No       | `true`  |
 
 #### Github Action Outputs
 
-| Name | Description |
-|------|-------------|
-| `policy_expressions` | List of all validated policy expressions (Allow, Define, Endorse, Admit) |
+| Name                  | Description                                                                        |
+|-----------------------|------------------------------------------------------------------------------------|
+| `policy_expressions`  | List of all validated policy expressions (Allow, Define, Endorse, Admit)           |
 
 ### GitLab CI
 
@@ -158,15 +158,15 @@ policy-validator --help
 
 ### CLI Options
 
-| Option         | Alias | Description                                                         | Default |
-|----------------|-------|---------------------------------------------------------------------|---------|
-| `--path`       | `-p`  | Path to policy file or directory                                    | `.`     |
-| `--verbose`    | `-v`  | Enable verbose output                                               | false   |
-| `--extractor`  |       | Policy extractor type (regex)                                       | `regex` |
-| `--pattern`    |       | Custom regex pattern for policy extraction                          | System default |
-| `--exitOnError`|       | Exit with non-zero status if validation fails                       | `true`  |
-| `--version`    |       | Show version number                                                 | n/a     |
-| `--help`       |       | Show help                                                           | n/a     |
+| Option           | Alias | Description                                                         | Default |
+|------------------|-------|---------------------------------------------------------------------|---------|
+| `--path`         | `-p`  | Path to policy file or directory                                    | `.`     |
+| `--verbose`      | `-v`  | Enable verbose output                                               | false   |
+| `--extractor`    |       | Policy extractor type (regex)                                       | `regex` |
+| `--pattern`      |       | Custom regex pattern for policy extraction                          | System default |
+| `--exitOnError`  |       | Exit immediately if validation fails                                | `true`  |
+| `--version`      |       | Show version number                                                 | n/a     |
+| `--help`         |       | Show help                                                           | n/a     |
 
 ### CLI Output Format
 
@@ -296,7 +296,6 @@ The `test-cli-install.sh` script verifies the CLI functionality by:
    - Verifies JSON output
    - Checks error handling
 
-
 Example test policy:
 ```hcl
 resource "oci_identity_policy" "test" {
@@ -319,15 +318,9 @@ resource "oci_identity_policy" "test" {
 Test fixtures are located in `src/__tests__/fixtures/` and include:
 - `valid.tf`: Valid policy statements
 
-
 ### CI Test Workflow
 
-The GitHub Actions workflow (`test.yml`) performs:
-1. Policy validation tests
-2. Expression type checks
-3. Variable interpolation validation
-4. Error handling verification
-5. Cross-platform compatibility tests
+The GitHub Actions workflow (`.github/workflows/test.yml`), GitLab CI configuration (`.gitlab-ci.yml`), and BitBucket Pipelines file (`bitbucket-pipelines.yml`) all execute policy validation during their pipelines to ensure cross-platform consistency.
 
 ### Coverage Requirements
 
@@ -348,11 +341,11 @@ Before publishing to npm, test the CLI installation locally:
 # Test CLI installation
 npm run test:cli
 
-#This will:
-#1. Link the package globally
-#2. Create test policy files
-#3. Run CLI commands
-#4. Clean up test files
+# This will:
+# 1. Link the package globally
+# 2. Create test policy files
+# 3. Run CLI commands
+# 4. Clean up test files
 ```
 
 ## Release Process & Versioning
@@ -363,13 +356,13 @@ This project follows [Semantic Versioning](https://semver.org/) with automated v
 
 Versions are automatically determined from commit messages using conventional commits:
 
-| Commit Type | Description | Version Bump |
-|------------|-------------|--------------|
-| `feat:` | A new feature | MINOR |
-| `fix:` | A bug fix | PATCH |
-| `docs:` | Documentation only changes | No bump |
-| `chore:` | Maintenance tasks | No bump |
-| `BREAKING CHANGE:` | Breaking API changes (in commit body) | MAJOR |
+| Commit Type          | Description                                             | Version Bump |
+|----------------------|---------------------------------------------------------|--------------|
+| `feat:`              | A new feature                                           | MINOR        |
+| `fix:`               | A bug fix                                               | PATCH        |
+| `docs:`              | Documentation only changes                              | No bump      |
+| `chore:`             | Maintenance tasks                                       | No bump      |
+| `BREAKING CHANGE:`   | Breaking API changes (in commit body)                   | MAJOR        |
 
 Example commit messages:
 ```bash
@@ -421,7 +414,7 @@ The release workflow will automatically:
 - Create git tag
 - Build distribution files
 - Create GitHub release
-- Publish to npm - (not yet implemented )
+- Publish to npm (not yet implemented)
 
 ### Release Workflow
 
