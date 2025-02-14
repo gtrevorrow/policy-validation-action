@@ -192,16 +192,19 @@ jobs:
               return 1
             fi
             
-            if ! echo "$raw_output" | jq . >/dev/null 2>&1; then
-              echo "Invalid JSON in output"
+            # Verify JSON structure (if output exists)
+            if ! echo "$raw_output" | jq -e '
+              if type == "array" then
+                all(.[] | .isValid == false and (.errors != null and (.errors | length) > 0))
+              elif type == "object" then
+                (.error != null) or (.isValid == false and (.errors != null and (.errors | length) > 0))
+              else
+                false
+              end
+            ' >/dev/null 2>&1; then
+              echo "Invalid JSON structure in output:"
+              echo "$raw_output"
               return 1
-            fi
-            
-            if [[ "$expect_failure" == "true" ]]; then
-              if ! echo "$raw_output" | jq -e 'all(.[] | .isValid == false)' >/dev/null; then
-                echo "Expected all policies to be invalid"
-                return 1
-              fi
             fi
             
             return 0
