@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.1](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.0...v0.2.1) (2025-02-15)
+
+
+### Features
+
+* Adopt scoped package name for GitHub Packages ([db379be](https://github.com/gtrevorrow/policy-validation-action/commit/db379be2f146affc1d19fdeb14053d1e19f8ca27))
+* **cli:** add structured logging and JSON output ([c4743ee](https://github.com/gtrevorrow/policy-validation-action/commit/c4743ee903d3309387a04cd7fd41695627f7cdc8))
+* Configure publishing to GitHub Packages ([ab243b6](https://github.com/gtrevorrow/policy-validation-action/commit/ab243b6314201784e9e975e5ed0c38c304724f0b))
+* Configure release workflow for scoped package ([d6e8ef2](https://github.com/gtrevorrow/policy-validation-action/commit/d6e8ef274af73086180a8ce52ff8a5789e12c280))
+* install policy-validation-action from GitHub repo ([f241872](https://github.com/gtrevorrow/policy-validation-action/commit/f2418720e5ecc91bda1167c01ca22debebdbc926))
+* Support pluggable extraction strategies and OCI Landing Zone IAM module ([fc1d028](https://github.com/gtrevorrow/policy-validation-action/commit/fc1d028d0164b72c241bf261832ad7ec9bda2a98))
+
+
+### Bug Fixes
+
+* ensure consistent JSON output handling across CLI and tests ([a6780bb](https://github.com/gtrevorrow/policy-validation-action/commit/a6780bbb1ee4cdcba80dd58ce3628c3ea94e5f8c))
+* **extractor:** enable global pattern matching for policy statements ([20588e1](https://github.com/gtrevorrow/policy-validation-action/commit/20588e1a9935b07f83cda4fccb66a5852bf30cc9))
+* **workflow:** improve JSON output extraction and validation in GitHub Actions ([0e7cf6a](https://github.com/gtrevorrow/policy-validation-action/commit/0e7cf6a5cfe7bd948c0515b833dfa8698cb0a5d7))
+
+
+### Tests
+
+* update integration test to check for exact length of expressions ([7f27893](https://github.com/gtrevorrow/policy-validation-action/commit/7f27893609648f0d4cea7770e9ec0a379158309c))
+* **workflow:** add custom extractor pattern test using environment variable. ([46c5756](https://github.com/gtrevorrow/policy-validation-action/commit/46c57561936fc1b6d41efe845559022772187738))
+* **workflow:** correct outcome check for test fixtures in workflow ([ada803c](https://github.com/gtrevorrow/policy-validation-action/commit/ada803cd5d89ec157e8b0c415fe6e4146191653d))
+* **workflow:** correct typo in tenancy definition in test workflow ([6eaa687](https://github.com/gtrevorrow/policy-validation-action/commit/6eaa68788858f0aaad668773603cc81f7439a30f))
+* **workflow:** enhance JSON structure validation in output handling ([a4271ba](https://github.com/gtrevorrow/policy-validation-action/commit/a4271bad80a5ba9c86ecde2ea7125ed18538d3fe))
+* **workflow:** enhance JSON validation logic in verify_json function ([8f90c8f](https://github.com/gtrevorrow/policy-validation-action/commit/8f90c8f1c83fd2b0db6bca4248afab5807c150d1))
+* **workflow:** enhance output verification by explicitly handling step names and improving JSON validation ([443b599](https://github.com/gtrevorrow/policy-validation-action/commit/443b59947c07a862492c36a79a51a626a3506e2e))
+* **workflow:** enhance output verification for invalid policy tests with JSON validation ([a7810c9](https://github.com/gtrevorrow/policy-validation-action/commit/a7810c926e41f5b36216f720cc94715231e8024d))
+* **workflow:** enhance output verification in GitHub Actions with detailed logging ([81679f9](https://github.com/gtrevorrow/policy-validation-action/commit/81679f9f173ce8aa2f684b281be39f9ab08757f6))
+* **workflow:** improve output verification by using step names and handling different cases ([5b738b9](https://github.com/gtrevorrow/policy-validation-action/commit/5b738b91a3d67d358069ca19fc33a963cdc8a8f1))
+* **workflow:** install jq for JSON processing in bitbucket-pipelines.yml ([22c7a57](https://github.com/gtrevorrow/policy-validation-action/commit/22c7a57cc7e27a3e770811449b79ce1e7f67cfed))
+* **workflow:** install jq for JSON processing in gitlab CI pipeline ([60ac811](https://github.com/gtrevorrow/policy-validation-action/commit/60ac811d18234a244f9004ff83c285e29047e92f))
+
+
+### Refactors
+
+* standardize validation output format across CLI and GitHub Action ([4b30f55](https://github.com/gtrevorrow/policy-validation-action/commit/4b30f550a8332522cd51d449c89007cd9d7f08a7))
+* **workflow:** enhance verify_json function with stricter type checking ([237554f](https://github.com/gtrevorrow/policy-validation-action/commit/237554fff0e15a231bf92ff14103dd482bf1a471))
+* **workflow:** improve JSON validation logic in output handling ([b539824](https://github.com/gtrevorrow/policy-validation-action/commit/b539824780ba044309358477df504772e9a5a466))
+* **workflow:** remove validatePolicies function and streamline policy validation in runAction ([09e3137](https://github.com/gtrevorrow/policy-validation-action/commit/09e3137e60a35a41efdb3ce97144b4241478d0b9))
+* **workflow:** simplify output verification by using environment variables in test.yml ([02a5ab3](https://github.com/gtrevorrow/policy-validation-action/commit/02a5ab3ae5e19740bd1c67a61637b876732efc0a))
+* **workflow:** streamline policy validation output handling in runAction ([4dd899a](https://github.com/gtrevorrow/policy-validation-action/commit/4dd899aaa701f539f8fb01830b1bd75195efad26))
+* **workflow:** update jq filter for improved JSON structure verification in test.yml ([1fd2794](https://github.com/gtrevorrow/policy-validation-action/commit/1fd27949d75699d40672de49e057d5c1819c4d2e))
+
+
+### Documentation
+
+* update README formatting for improved readability and consistency ([62b2142](https://github.com/gtrevorrow/policy-validation-action/commit/62b214284d09836ac7b86b048e549999e7e956a8))
+* update README to include Table of Contents and enhance sections for clarity ([461fefb](https://github.com/gtrevorrow/policy-validation-action/commit/461fefb7e18ca7b491b387f6618867832ec7e317))
+
+
+### Maintenance
+
+* Fix formatting in release workflow configuration ([a738826](https://github.com/gtrevorrow/policy-validation-action/commit/a7388263a1f5f6d2ab6c19e54ec6fbf8720c771f))
+* **package.json:** updated the repository url with the correct github url ([6cdc0f7](https://github.com/gtrevorrow/policy-validation-action/commit/6cdc0f7a08ec729390a5e4fac3fe24b907b892fe))
+* Refactor CI configurations to use globally installed CLI ([f12e6ce](https://github.com/gtrevorrow/policy-validation-action/commit/f12e6ce0e12919a5ee0237748e2362f98c06f2fa))
+
 ## 0.2.0 (2025-02-11)
 
 
