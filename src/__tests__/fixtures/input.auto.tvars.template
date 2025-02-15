@@ -1,0 +1,46 @@
+# Copyright (c) 2023 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
+#------------------------------------------------------------------------------------------------------------------------------------------------------
+# 1. Rename this file to <project-name>.auto.tfvars, where <project-name> is any name of your choice.
+# 2. Provide values for "Tenancy Connectivity Variables".
+# 3. Replace <REPLACE-BY-COMPARTMENT-OCID> placeholder by a compartment OCID or use "TENANCY-ROOT" for attaching the policy to the Root compartment. 
+#    This determines the compartment that "SAMPLE-POLICY" gets attached to. 
+#------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#---------------------------------------
+# Tenancy Connectivity Variables
+#---------------------------------------
+
+tenancy_ocid         = "<tenancy OCID>"             # Get this from OCI Console (after logging in, go to top-right-most menu item and click option "Tenancy: <your tenancy name>").
+user_ocid            = "<user OCID>"                # Get this from OCI Console (after logging in, go to top-right-most menu item and click option "My profile").
+fingerprint          = "<PEM key fingerprint>"      # The fingerprint can be gathered from your user account. In the "My profile page, click "API keys" on the menu in left hand side).
+private_key_path     = "<path to the private key>"  # This is the full path on your local system to the API signing private key.
+private_key_password = ""                           # This is the password that protects the private key, if any.
+region               = "<your tenancy home region>" # This is your tenancy home region.
+
+#---------------------------------------
+# Input variable
+#---------------------------------------
+
+policies_configuration = {
+  supplied_policies : {
+    "SAMPLE-POLICY" : {
+      name : "sample-policy"
+      description : "Sample policy with random statements."
+      compartment_id : "<REPLACE-BY-COMPARTMENT-OCID>" # Instead of an OCID, you can replace it with the string "TENANCY-ROOT" for attaching the policy to the Root compartment.
+      #-- The "not ok" statements below are flagged by the policy module per CIS recommendations.
+      statements : [
+        #"allow group-a to manage all-resources in tenancy", # not ok
+        #"allow group-b to manage all-resources in tenancy ", # not ok
+        "allow group group-a to use groups in tenancy where target.group.name != 'Administrators'", # ok
+        "allow group group-a to use groups in tenancy where target.group.name = 'group-a'", # ok
+        "allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators'}", # ok
+        #"allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators', request.operation = 'UpdateGroup'}", # not ok
+        "allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators', request.operation = 'ListAPiKeys'}" # ok
+        #"allow group vision-cred-admin-group to manage groups in tenancy", # not ok
+        #"allow group vision-cred-admin-group to manage users in tenancy" # not ok
+      ]            
+    }
+  } 
+}

@@ -1,14 +1,18 @@
 import { PolicyExtractor } from './PolicyExtractor';
+import { ExtractionStrategy } from './ExtractionStrategy';
+import { DefaultExtractionStrategy } from './DefaultExtractionStrategy';
 
 export class RegexPolicyExtractor implements PolicyExtractor {
     private pattern: RegExp;
+    private extractionStrategy: ExtractionStrategy;
 
-    constructor(pattern?: string) {
+    constructor(pattern?: string, extractionStrategy?: ExtractionStrategy) {
         this.pattern = new RegExp(
             pattern ||
             'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]',
             'sg'
         );
+        this.extractionStrategy = extractionStrategy || new DefaultExtractionStrategy();
     }
 
     extract(text: string): string[] {
@@ -19,20 +23,14 @@ export class RegexPolicyExtractor implements PolicyExtractor {
         }
 
         // Process each match and flatten the results
-        return matches
+        const processedStatements = matches
             .map(match => match[1])  // Get capturing group from each match
             .filter(Boolean)         // Remove any undefined/null matches
-            .flatMap(statement =>    // Process each statement block
-                statement
-                    .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)
-                    .map(s => s.trim())
-                    .filter(s => s && !s.startsWith('#'))
-                    .map(s => s.replace(/^["'](.*)["']$/, '$1'))
-                    .map(s => s.replace(/\\(["'])/, '$1'))
-                    // .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s))
-            );
+            .flatMap(statement => this.extractionStrategy.extractStatements(statement));
+        
+        return processedStatements;
     }
-
+     // Log the entire array
     name(): string {
         return 'regex';
     }
