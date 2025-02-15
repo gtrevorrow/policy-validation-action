@@ -1,15 +1,17 @@
 # OCI Policy Validation Tool
 
+This tool validates OCI policy statements in Terraform files, ensuring that your policies adhere to the correct syntax and structure. It supports multiple CI platforms and provides detailed error messages to help you quickly identify and fix any issues.
+
 <!-- Consider adding a Table of Contents for easier navigation -->
 ## Table of Contents
 - [Features](#features)
 - [Prerequisites](#prerequisites)
-- [Installation](#installation)
 - [Usage in CI Platforms](#usage-in-ci-platforms)
 - [CLI](#cli)
 - [Configuration](#configuration)
 - [Policy Extractors](#policy-extractors)
-- [Error Messages](#error-messages)
+- [OCI Core Landing Zone IAM Policy Module Support](#oci-core-landing-zone-iam-policy-module-support)
+- [ANTLR Parser](#antlr-parser)
 - [Testing](#testing)
 - [Development](#development)
 - [Release Process & Versioning](#release-process--versioning)
@@ -18,6 +20,7 @@
 ## Features
 
 - Validates OCI policy statements in Terraform files.
+- Supports OCI Core Landing Zone IAM Policy Module
 - Supports multiple OCI policy expression types:
   - Allow, Define, Endorse, and Admit statements.
 - Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines, CLI).
@@ -32,16 +35,6 @@
 - Node.js 16 or higher.
 - For CI/CD usage, access to GitHub Actions, GitLab CI, or BitBucket Pipelines.
 - Terraform files containing OCI policy statements.
-
-## Installation
-
-```bash
-# Install globally from npm registry
-npm install -g policy-validation-action
-
-# Or install locally in your project
-npm install --save-dev policy-validation-action
-```
 
 ### Publishing to npm
 
@@ -114,25 +107,31 @@ validate_policies:
 ```yaml
 image: node:16
 
-definitions:
-  steps:
-    - step: &validate
-        name: Validate
-        script:
-          - npm ci
-          - npm run build
-          # Run tests with detailed reporting
-          - npm test
-          # Validate policies
-          - node dist/index.js --path ./terraform
-        artifacts:
-          reports:
-            junit: test-results/test-results.xml
-          when: always
-
 pipelines:
   default:
-    - step: *validate
+    - step:
+        name: Validate Policies
+        script:
+          - npm install -g policy-validation-action # Install the tool globally
+          # Alternatively, install directly from GitHub:
+          # - npm install -g https://github.com/gtrevorrow/policy-validation-action
+          - npm ci
+          - npm run build # if your project requires a build step
+          - policy-validator --path ./terraform
+```
+
+### Error Messages
+
+When a policy statement is invalid, the action provides detailed error messages including:
+- The invalid statement
+- The position of the error
+- Expected syntax
+
+Example error output:
+```
+Failed to parse policy statement:
+Statement: "Allow BadSyntax manage"
+Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
 ```
 
 ## CLI 
@@ -142,6 +141,9 @@ The CLI tool provides validation for OCI policy statements:
 ```bash
 # Install globally
 npm install -g policy-validation-action
+
+# Or install locally in your project
+npm install --save-dev policy-validation-action
 
 # Validate with detailed output
 policy-validator --path ./policies --verbose
@@ -226,17 +228,6 @@ The CLI produces JSON-formatted output containing an array of validation results
 
 ## Configuration
 
-### Policy Statement Pattern
-
-The tool uses a regular expression to extract policy statements from Terraform files. This pattern can be customized for each supported CI platform using environment variables:
-
-If no pattern is specified, the action will use a default pattern that handles:
-- Multiline statements
-- Quoted strings (both single and double quotes)
-- Variable interpolation ${var.name}
-- Nested structures
-- Comments
-
 ## Policy Extractors
 
 The tool supports pluggable policy extractors for different file formats:
@@ -245,6 +236,17 @@ The tool supports pluggable policy extractors for different file formats:
 
 - `regex` (default): Uses regular expressions to extract policies from HCL
 - `json`: (coming soon) Extracts policies from JSON format
+
+### Regex Policy Extractor Policy Statement Pattern 
+
+The `regex` extractor pattern can be customized using environment variables as described above:
+
+If no pattern is specified, the action will use a default pattern that handles:
+- Multiline statements
+- Quoted strings (both single and double quotes)
+- Variable interpolation ${var.name}
+- Nested structures
+- Comments
 
 ### OCI Core Landing Zone IAM Policy Module Support
 
@@ -259,20 +261,6 @@ For example, if you have a directory structure like this:
 │   └── outputs.tf
 ```
 You would set the `path` to `./terraform` in your CI configuration.
-
-## Error Messages
-
-When a policy statement is invalid, the action provides detailed error messages including:
-- The invalid statement
-- The position of the error
-- Expected syntax
-
-Example error output:
-```
-Failed to parse policy statement:
-Statement: "Allow BadSyntax manage"
-Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
-```
 
 ## Testing
 
@@ -361,6 +349,22 @@ npm run test:cli
 # 3. Run CLI commands
 # 4. Clean up test files
 ```
+
+## ANTLR Parser
+
+This project uses ANTLR (ANother Tool for Language Recognition) to parse and validate OCI policy statements. ANTLR is a powerful parser generator that allows us to define a grammar for the OCI policy language and automatically generate a parser that can check if a given policy statement conforms to that grammar.
+
+### Grammar Definition
+
+The grammar for the OCI policy language is defined in the `src/generated/Policy.g4` file. This file specifies the syntax rules for OCI policy statements, including the keywords, operators, and data types that are allowed.
+
+### Parser Generation
+
+The ANTLR parser is generated automatically from the `Policy.g4` file using the ANTLR tool. The generated parser code is located in the `src/generated` directory.
+
+### Validation Process
+
+When the policy validation tool is run, it uses the ANTLR parser to check each policy statement against the grammar. If a statement does not conform to the grammar, the parser will generate an error message indicating the location and type of syntax error. These error messages are then displayed to the user to help them identify and fix the invalid policy statement.
 
 ## Release Process & Versioning
 
