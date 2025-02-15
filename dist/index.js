@@ -433,6 +433,33 @@ run();
 
 /***/ }),
 
+/***/ 5675:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DefaultExtractionStrategy = void 0;
+class DefaultExtractionStrategy {
+    extractStatements(statement) {
+        // Split into lines and remove comments
+        const lines = statement.split('\n')
+            .map(line => line.replace(/\s*#.*$/, '').trim()) // Remove comments and trim
+            .filter(line => line); // Remove empty lines
+        // Split each line by commas
+        return lines.flatMap(line => line.split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)
+            .map(s => s.trim())
+            .map(s => s.replace(/^["'](.*)["']$/, '$1'))
+            .map(s => s.replace(/\\(["'])/, '$1'))
+            .filter(s => s) // Remove empty strings after processing
+        );
+    }
+}
+exports.DefaultExtractionStrategy = DefaultExtractionStrategy;
+
+
+/***/ }),
+
 /***/ 9727:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -445,7 +472,7 @@ class ExtractorFactory {
     static create(type = 'regex', options) {
         switch (type) {
             case 'regex':
-                return new RegexPolicyExtractor_1.RegexPolicyExtractor(options === null || options === void 0 ? void 0 : options.pattern);
+                return new RegexPolicyExtractor_1.RegexPolicyExtractor(options === null || options === void 0 ? void 0 : options.pattern, options === null || options === void 0 ? void 0 : options.extractionStrategy);
             default:
                 throw new Error(`Unsupported extractor type: ${type}`);
         }
@@ -457,16 +484,18 @@ exports.ExtractorFactory = ExtractorFactory;
 /***/ }),
 
 /***/ 7307:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RegexPolicyExtractor = void 0;
+const DefaultExtractionStrategy_1 = __nccwpck_require__(5675);
 class RegexPolicyExtractor {
-    constructor(pattern) {
+    constructor(pattern, extractionStrategy) {
         this.pattern = new RegExp(pattern ||
             'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]', 'sg');
+        this.extractionStrategy = extractionStrategy || new DefaultExtractionStrategy_1.DefaultExtractionStrategy();
     }
     extract(text) {
         // With global flag, matchAll returns an iterator of all matches
@@ -475,19 +504,13 @@ class RegexPolicyExtractor {
             return [];
         }
         // Process each match and flatten the results
-        return matches
+        const processedStatements = matches
             .map(match => match[1]) // Get capturing group from each match
             .filter(Boolean) // Remove any undefined/null matches
-            .flatMap(statement => // Process each statement block
-         statement
-            .split(/,(?=(?:[^"']*["'][^"']*["'])*[^"']*$)/)
-            .map(s => s.trim())
-            .filter(s => s && !s.startsWith('#'))
-            .map(s => s.replace(/^["'](.*)["']$/, '$1'))
-            .map(s => s.replace(/\\(["'])/, '$1'))
-        // .filter(s => /^(Allow|Define|Endorse|Admit)\s+.+$/i.test(s))
-        );
+            .flatMap(statement => this.extractionStrategy.extractStatements(statement));
+        return processedStatements;
     }
+    // Log the entire array
     name() {
         return 'regex';
     }
@@ -35091,7 +35114,7 @@ exports.suggestSimilar = suggestSimilar;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.2.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/username/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","test:cli:validator":"chmod +x ./scripts/test-validator.sh && ./scripts/test-validator.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit","release:minor":"standard-version --release-as minor","release:major":"standard-version --release-as major","release:patch":"standard-version --release-as patch"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=16"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"},"standard-version":{"tag-prefix":"v","sign":false,"verify":false,"infile":"CHANGELOG.md","types":[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"chore","section":"Maintenance"},{"type":"docs","section":"Documentation"},{"type":"style","section":"Styling"},{"type":"refactor","section":"Refactors"},{"type":"perf","section":"Performance"},{"type":"test","section":"Tests"}]}}');
+module.exports = JSON.parse('{"name":"policy-validation-action","version":"0.2.0","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public"},"repository":{"type":"git","url":"https://github.com/gtrevorrow/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validator":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm run security:audit && npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","test:cli:validator":"chmod +x ./scripts/test-validator.sh && ./scripts/test-validator.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","pretest":"npm run security:audit","release:minor":"standard-version --release-as minor","release:major":"standard-version --release-as major","release:patch":"standard-version --release-as patch"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=16"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^5.1.1","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"},"standard-version":{"tag-prefix":"v","sign":false,"verify":false,"infile":"CHANGELOG.md","types":[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"chore","section":"Maintenance"},{"type":"docs","section":"Documentation"},{"type":"style","section":"Styling"},{"type":"refactor","section":"Refactors"},{"type":"perf","section":"Performance"},{"type":"test","section":"Tests"}]}}');
 
 /***/ })
 
