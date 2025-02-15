@@ -2,13 +2,27 @@ image: node:16
 
 definitions:
   steps:
+    - step: &build
+        name: Build
+        clone:
+          depth: full  # Ensure we have full repository access
+        caches:
+          - node
+        script:
+          - npm ci
+          - npm run build
+        artifacts:
+          - dist/**
+
     - step: &test
         name: Test
+        caches:
+          - node
         script:
           - apt-get update && apt-get install -y jq
-          # Install the policy-validation-action CLI globally from the development branch
-          - npm install -g gtrevorrow/policy-validation-action#development
-
+          - npm ci
+          - npm run build
+          
           # Run Jest tests with detailed reporting
           - |
             echo "Running Jest Tests..."
@@ -24,12 +38,12 @@ definitions:
               echo "======================="
               exit 1
             }
-
+            
             if [ -f "test-results/test-results.xml" ]; then
               echo "Test Report Summary:"
               grep -A 1 "testsuites" test-results/test-results.xml
             fi
-
+          
           # Create test policies
           - |
             mkdir -p test/policies
@@ -81,10 +95,10 @@ definitions:
                 end
               ' >/dev/null
             }
-
+            
             for file in valid.tf invalid.tf variable_interpolation.tf; do
               echo "Testing $file..."
-              if OUTPUT=$(policy-validation-action --path test/policies/$file 2>&1); then
+              if OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1); then
                 if ! verify_json "$OUTPUT"; then
                   echo "Invalid JSON output for $file"
                   echo "$OUTPUT"
@@ -98,7 +112,7 @@ definitions:
                 fi
               fi
             done
-
+        
         artifacts:
           reports:
             junit: test-results/test-results.xml
@@ -106,10 +120,12 @@ definitions:
 
 pipelines:
   default:
+    - step: *build
     - step: *test
-
+  
   branches:
     main:
+      - step: *build
       - step: *test
       - step:
           name: Publish
@@ -127,10 +143,12 @@ pipelines:
 
   pull-requests:
     '**':
+      - step: *build
       - step: *test
 
 custom:
   release:
+    - step: *build
     - step: *test
     - step:
         name: Publish to NPM

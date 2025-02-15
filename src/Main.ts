@@ -119,7 +119,6 @@ async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[
                 }
             }
         }
-        
         return files;
     } catch (error) {
         logger?.error(`Error processing path ${dir}: ${error}`);

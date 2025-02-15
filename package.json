@@ -10,11 +10,12 @@
     "cli"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://npm.pkg.github.com/gtrevorrow"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/gtrevorrow/policy-validation-action.git"
+    "url": "git+https://github.com/gtrevorrow/policy-validation-action.git"
   },
   "main": "lib/Main.js",
   "bin": {
