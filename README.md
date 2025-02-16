@@ -1,6 +1,6 @@
 # OCI Policy Validation Tool
 
-This tool validates OCI policy statements in Terraform files, ensuring that your policies adhere to the correct syntax and structure. It supports multiple CI platforms and provides detailed error messages to help you quickly identify and fix any issues.
+This tool validates OCI policy statements in Terraform files, ensuring that your policies adhere to the correct syntax. It supports multiple CI platforms and provides detailed error messages to help you quickly identify and fix any issues.
 
 <!-- Consider adding a Table of Contents for easier navigation -->
 ## Table of Contents
@@ -28,7 +28,7 @@ This tool validates OCI policy statements in Terraform files, ensuring that your
 - Colored CLI output with verbose mode.
 - Recursive directory scanning.
 - Configurable policy extractors for extracting IAM policies from various file types.
-- Although Terraform is the primary focus, the tool works with any text-based file.
+- Although Terraform is the primary target, the tool works with any text-based file.
 
 ## Prerequisites
 
@@ -45,95 +45,6 @@ npm login
 # Publish package
 npm publish
 ```
-
-## Usage in CI Platforms
-
-### GitHub Actions
-
-```yaml
-name: Validate OCI Policies
-on: [push, pull_request]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Validate policies
-        uses: policy-validation-action@v1
-        with:
-          path: './terraform'
-          extractor: 'regex'  # Optional: defaults to regex
-          extractorPattern: 'your-custom-pattern'  # Optional
-```
-
-#### Github Action Inputs
-
-| Name                | Description                                                          | Required | Default |
-|---------------------|----------------------------------------------------------------------|----------|---------|
-| `path`              | Path to policy file or directory                                     | No       | `.`     |
-| `extractor`         | Type of policy extractor to use (regex, json)                        | No       | `regex` |
-| `extractorPattern`  | Custom pattern for the policy extractor                              | No       | -       |
-| `exitOnError`       | Exit immediately if policy validation fails                          | No       | `true`  |
-
-#### Github Action Outputs
-
-| Name                  | Description                                                                        |
-|-----------------------|------------------------------------------------------------------------------------|
-| `policy_expressions`  | List of all validated policy expressions (Allow, Define, Endorse, Admit)           |
-
-### GitLab CI
-
-```yaml
-validate_policies:
-  image: node:latest
-  script:
-    - npm ci
-    - npm run build
-    # Run Jest tests with reporting
-    - npm test
-    # Run policy validation
-    - node dist/index.js --path ./terraform
-  artifacts:
-    reports:
-      junit: test-results/test-results.xml
-    paths:
-      - test-results/
-    when: always
-```
-
-### BitBucket Pipelines
-
-```yaml
-image: node:16
-
-pipelines:
-  default:
-    - step:
-        name: Validate Policies
-        script:
-          - npm install -g policy-validation-action # Install the tool globally
-          # Alternatively, install directly from GitHub:
-          # - npm install -g https://github.com/gtrevorrow/policy-validation-action
-          - npm ci
-          - npm run build # if your project requires a build step
-          - policy-validator --path ./terraform
-```
-
-### Error Messages
-
-When a policy statement is invalid, the action provides detailed error messages including:
-- The invalid statement
-- The position of the error
-- Expected syntax
-
-Example error output:
-```
-Failed to parse policy statement:
-Statement: "Allow BadSyntax manage"
-Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
-```
-
 ## CLI 
 
 The CLI tool provides validation for OCI policy statements:
@@ -226,6 +137,91 @@ The CLI produces JSON-formatted output containing an array of validation results
 ]
 ```
 
+## Usage in CI Platforms
+
+### GitHub Actions
+
+```yaml
+name: Validate OCI Policies
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Validate policies
+        uses: policy-validation-action@v1
+        with:
+          path: './terraform'
+          extractor: 'regex'  # Optional: defaults to regex
+          extractorPattern: 'your-custom-pattern'  # Optional
+```
+
+#### Github Action Inputs
+
+| Name                | Description                                                          | Required | Default |
+|---------------------|----------------------------------------------------------------------|----------|---------|
+| `path`              | Path to policy file or directory                                     | No       | `.`     |
+| `extractor`         | Type of policy extractor to use (regex, json)                        | No       | `regex` |
+| `extractorPattern`  | Custom pattern for the policy extractor                              | No       | -       |
+| `exitOnError`       | Exit immediately if policy validation fails                          | No       | `true`  |
+
+#### Github Action Outputs
+
+| Name                  | Description                                                                        |
+|-----------------------|------------------------------------------------------------------------------------|
+| `policy_expressions`  | List of all validated policy expressions (Allow, Define, Endorse, Admit)           |
+
+### GitLab CI
+
+```yaml
+validate_policies:
+  image: node:latest
+  script:
+    - npm install -g policy-validation-action # Install the tool globally
+    # Alternatively, install directly from GitHub:
+    # - npm install -g https://github.com/gtrevorrow/policy-validation-action
+    # - npm ci
+    # - npm run build
+    # Run policy validation
+    - node dist/index.js --path ./terraform
+
+```
+
+### BitBucket Pipelines
+
+```yaml
+image: node:16
+
+pipelines:
+  default:
+    - step:
+        name: Validate Policies
+        script:
+          - npm install -g policy-validation-action # Install the tool globally
+          # Alternatively, install directly from GitHub:
+          # - npm install -g https://github.com/gtrevorrow/policy-validation-action
+          # - npm ci
+          # - npm run build # if your project requires a build step
+          - policy-validator --path ./terraform
+```
+
+### Error Messages
+
+When a policy statement is invalid, the action provides detailed error messages including:
+- The invalid statement
+- The position of the error
+- Expected syntax
+
+Example error output:
+```
+Failed to parse policy statement:
+Statement: "Allow BadSyntax manage"
+Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
+```
+
+
 ## Configuration
 
 ## Policy Extractors
@@ -247,6 +243,93 @@ If no pattern is specified, the action will use a default pattern that handles:
 - Variable interpolation ${var.name}
 - Nested structures
 - Comments
+
+**Important Considerations for the Regex Pattern:**
+
+*   **Capturing Group:** The regex pattern *must* include a capturing group (using parentheses `()`) that isolates the portion of the text containing the policy statements. This captured group will be passed to the `DefaultExtractionStrategy.ts` for further processing.
+*   **Handling Newlines and Whitespace:** The pattern should be able to handle newlines and varying amounts of whitespace within the policy statements block.
+*   **Comments and Other Syntax:** The pattern should be designed to ignore comments or other syntax that might be present within the policy statements block but are not part of the actual policy statements.
+*   **Matching the Entire Block:** The regex should match the entire block of policy statements, from the beginning of the `statements = [` to the end of the `]` (or equivalent delimiters in your file format).
+
+**Example:**
+
+## Terraform Policy Extraction
+
+Given the following Terraform code:
+```terraform
+resource "oci_identity_policy" "test" {
+    statements = [
+        "Allow group Administrators to manage all-resources in tenancy",
+        "Allow group NetworkAdmins to manage virtual-network-family in tenancy foo",
+        # This is a comment
+        "Allow group Developers to use instances in compartment dev",
+        "${var.policy_statement}",
+    ]
+}
+```
+
+This pattern captures everything between the square brackets, including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to the DefaultExtractionStrategy.ts for processing.
+
+**Processing Steps:**
+1. **Split into lines:**  
+   Splits the captured group into individual lines.
+2. **Remove comments:**  
+   Removes any lines starting with `#`.
+3. **Trim whitespace:**  
+   Removes leading and trailing spaces.
+4. **Split by commas:**  
+   Breaks lines into separate policy statements.
+5. **Remove quotes:**  
+   Strips surrounding quotes from each statement.
+6. **Handle escaped quotes:**  
+   Processes any escaped quotes.
+7. **Filter empty strings:**  
+   Discards any empty elements.
+
+*Illustrative Example:*
+
+Captured string:
+```terraform
+"Allow group Administrators to manage all-resources in tenancy",
+"Allow group NetworkAdmins to manage virtual-network-family in tenancy foo",
+# This is a comment
+"Allow group Developers to use instances in compartment dev",
+"${var.policy_statement}",
+```
+
+Processing details:
+- **Split into lines:**
+```text
+"Allow group Administrators to manage all-resources in tenancy",
+"Allow group NetworkAdmins to manage virtual-network-family in tenancy foo",
+# This is a comment
+"Allow group Developers to use instances in compartment dev",
+"${var.policy_statement}",
+```
+- **Remove comments and trim:**
+```text
+"Allow group Administrators to manage all-resources in tenancy",
+"Allow group NetworkAdmins to manage virtual-network-family in tenancy foo",
+"Allow group Developers to use instances in compartment dev",
+"${var.policy_statement}",
+```
+- **Split by commas, trim, and remove quotes:**
+```text
+Allow group Administrators to manage all-resources in tenancy
+Allow group NetworkAdmins to manage virtual-network-family in tenancy foo
+Allow group Developers to use instances in compartment dev
+${var.policy_statement}
+```
+
+The final result becomes the following array:
+```json
+[
+  "Allow group Administrators to manage all-resources in tenancy",
+  "Allow group NetworkAdmins to manage virtual-network-family in tenancy foo",
+  "Allow group Developers to use instances in compartment dev",
+  "${var.policy_statement}"
+]
+```
 
 ### OCI Core Landing Zone IAM Policy Module Support
 
@@ -432,7 +515,7 @@ The release workflow will automatically:
 - Create git tag
 - Build distribution files
 - Create GitHub release
-- Publish to npm (not yet implemented)
+- Publish to npm 
 
 ### Release Workflow
 
