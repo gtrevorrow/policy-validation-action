@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.1...v0.2.2) (2025-02-26)
+
+
+### Bug Fixes
+
+* Update authentication token for npm registry and add audit step ([dc4ec75](https://github.com/gtrevorrow/policy-validation-action/commit/dc4ec75d1f23b8ecfe55d0ccd1a765531680d26f))
+
+
+### Documentation
+
+* update README.md with regex pattern processing details and CI configuration updates ([2bc591c](https://github.com/gtrevorrow/policy-validation-action/commit/2bc591cfaf7205091b225ca6d01496641714ae82))
+
 ### [0.2.1](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.0...v0.2.1) (2025-02-15)
 
 
