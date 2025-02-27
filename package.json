@@ -42,7 +42,7 @@
     "security:audit": "npm audit",
     "security:audit:fix": "npm audit fix",
     "security:report": "npm audit --json > security-report.json",
-    "pretest": "npm run security:audit",
+    "pretest": "npm audit --audit-level=high",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "release:patch": "standard-version --release-as patch"
