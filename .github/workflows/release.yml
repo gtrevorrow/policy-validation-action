@@ -6,18 +6,71 @@ on:
       - 'v*.*.*'
 
 jobs:
-  release:
+  verify-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      
+      - name: Check test workflow status
+        id: test-check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const commit = context.sha;
+            
+            console.log(`Looking for test workflow runs for commit: ${commit}`);
+            
+            const workflows = await github.rest.actions.listRepoWorkflows({
+              owner,
+              repo
+            });
+            
+            const testWorkflow = workflows.data.workflows.find(w => w.name === 'Test Policy Validation Action');
+            if (!testWorkflow) {
+              core.setFailed('Test workflow not found');
+              return;
+            }
+            
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: testWorkflow.id,
+              head_sha: commit
+            });
+            
+            if (runs.data.workflow_runs.length === 0) {
+              core.setFailed('No test workflow runs found for the current commit');
+              return;
+            }
+            
+            const latestRun = runs.data.workflow_runs[0];
+            console.log(`Latest test run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
+            
+            if (latestRun.conclusion !== 'success') {
+              core.setFailed('Latest test workflow run was not successful');
+              return;
+            }
+            
+            console.log('Test workflow passed successfully for this commit');
+  
+  publish:
+    needs: verify-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js for publishing
+        uses: actions/setup-node@v3
         with:
           node-version: '16'
           registry-url: 'https://npm.pkg.github.com'
           scope: "@gtrevorrow"
+          
       - run: npm ci
       - run: npm run build
-      - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
-      - run: npm publish --registry https://npm.pkg.github.com
+          
+      - name: Publish to GitHub Packages
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
