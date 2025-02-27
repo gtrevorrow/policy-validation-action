@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.3](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.2...v0.2.3) (2025-02-27)
+
+
+### Bug Fixes
+
+* update package name and version to @gtrevorrow/policy-validation-action@0.2.2 ([bbb513e](https://github.com/gtrevorrow/policy-validation-action/commit/bbb513e8176edcbdb570d1c07ff2e769efc92589))
+* update pretest script to set npm audit level to high ([63c25b3](https://github.com/gtrevorrow/policy-validation-action/commit/63c25b3d02f6ebc4a489312fe86263e5d6f0bd49))
+* update release workflow to use GITHUB_TOKEN for npm authentication ([c801be1](https://github.com/gtrevorrow/policy-validation-action/commit/c801be19f067659b5c200293b60a96554bd34a0e))
+
+
+### Maintenance
+
+* bumped @actions/github version ([731db87](https://github.com/gtrevorrow/policy-validation-action/commit/731db877951f822c1fa1919d769b1ad230f5d8ff))
+* remove npm audit step from release workflow ([84457b7](https://github.com/gtrevorrow/policy-validation-action/commit/84457b7c6e23fdd38d340257edbfdef5108e2b9d))
+* update package configuration ([6650ef6](https://github.com/gtrevorrow/policy-validation-action/commit/6650ef6426f025554d56508ac0f36cb72fb05476))
+
 ### [0.2.2](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.1...v0.2.2) (2025-02-26)
 
 
