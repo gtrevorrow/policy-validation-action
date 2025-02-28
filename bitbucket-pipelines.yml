@@ -98,7 +98,7 @@ definitions:
             
             for file in valid.tf invalid.tf variable_interpolation.tf; do
               echo "Testing $file..."
-              if OUTPUT=$(node dist/index.js --path test/policies/$file 2>&1); then
+              if OUTPUT=$(node dist/index.js validate test/policies/$file 2>&1); then
                 if ! verify_json "$OUTPUT"; then
                   echo "Invalid JSON output for $file"
                   echo "$OUTPUT"

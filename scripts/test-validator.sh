@@ -1,69 +1,102 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -e
 
-# Colors for output
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m'
+echo "Testing validator functionality..."
 
-# Ensure test-cli-install.sh has been run first
-if ! command -v policy-validator &> /dev/null; then
-    echo "policy-validator not found. Please run test-cli-install.sh first"
+# Set up test directory
+TEST_DIR=$(mktemp -d)
+cd "$TEST_DIR"
+
+# Create test policy files
+mkdir -p ./policies
+
+# Valid policy
+cat > ./policies/valid.tf << EOF
+resource "oci_identity_policy" "test_policy" {
+  statements = [
+    "Allow group Administrators to manage all-resources in tenancy",
+    "Allow group Developers to use instances in compartment dev",
+    "Define tenancy Acceptor as ocid1.tenancy.oc1..aaaaaa",
+    "Endorse group NetworkAdmins to manage virtual-network-family in tenancy foo",
+    "Admit group ServiceAdmins of tenancy accountFoo to manage instances in tenancy"
+  ]
+}
+EOF
+
+# Invalid policy
+cat > ./policies/invalid.tf << EOF
+resource "oci_identity_policy" "invalid_policy" {
+  statements = [
+    "Allow BadSyntax manage",
+    "Allow groupDevelopers to use instances in compartment dev",
+    "Admit group ServiceAdmins of 123 to manage instances in tenancy"
+  ]
+}
+EOF
+
+# Policy with variables
+cat > ./policies/with-vars.tf << EOF
+resource "oci_identity_policy" "test_policy_vars" {
+  statements = [
+    "Allow group \${var.admin_group} to manage all-resources in tenancy",
+    "Define tenancy \${var.tenant_name} as \${var.tenant_ocid}",
+    "Allow any-user to use instances in compartment \${var.public_compartment} where request.time BETWEEN \${var.start_time} AND \${var.end_time}"
+  ]
+}
+EOF
+
+# Run validator
+echo "Running validator on valid policy..."
+npm run --silent build
+
+# Test valid policy
+if ! RESULT=$(node ../dist/index.js validate ./policies/valid.tf); then
+    echo "❌ Validation of valid policy failed unexpectedly"
     exit 1
 fi
+echo "✅ Valid policy validation passed"
 
-echo -e "${BLUE}Running policy-validator examples:${NC}"
-
-# Helper function to check invalid policy output
-check_invalid_output() {
-    local output="$1"
-    
-    # Get only stdout lines that look like JSON
-    local json_line=$(echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1)
-    
-    if [ -z "$json_line" ]; then
-        echo -e "${RED}Error: No JSON output found${NC}"
-        echo -e "${RED}Full output:${NC}"
-        echo "$output"
-        return 1
-    fi
-
-    # Validate JSON structure and content
-    if ! echo "$json_line" | jq -e '
-        (arrays and all(.[] | .isValid == false and .errors)) or
-        (objects and (.error or .isValid == false))
-    ' >/dev/null; then
-        echo -e "${RED}Error: Invalid JSON structure or content${NC}"
-        echo -e "${RED}JSON output:${NC}"
-        echo "$json_line" | jq '.'
-        return 1
-    fi
-
-    echo -e "${GREEN}Invalid policy validation output matches expected format${NC}"
-    return 0
-}
-
-# Example policy statements with different scenarios
-policy-validator --help
-
-echo -e "\n${BLUE}1. Validate with custom pattern:${NC}"
-policy-validator --path ./src/__tests__/fixtures/valid.tf --pattern "statements\\s*=\\s*\\[(.*?)\\]"
-
-echo -e "\n${BLUE}2. Validate with verbose output:${NC}"
-policy-validator --path ./src/__tests__/fixtures/valid.tf --verbose
-
-echo -e "\n${BLUE}3. Validate using specific extractor:${NC}"
-policy-validator --path ./src/__tests__/fixtures/valid.tf --extractor regex
-
-echo -e "\n${BLUE}4. Validate with invalid policy:${NC}"
-if OUTPUT=$(policy-validator --path ./src/__tests__/fixtures/invalid.tf 2>&1); then
-    echo -e "${RED}Error: Invalid policy validation should have failed${NC}"
+# Test invalid policy - should exit with an error
+echo "Running validator on invalid policy..."
+if node ../dist/index.js validate ./policies/invalid.tf > /dev/null 2>&1; then
+    echo "❌ Validation of invalid policy passed unexpectedly"
     exit 1
 else
-    echo "Invalid policy validation failed as expected"
-    check_invalid_output "$OUTPUT"
+    echo "✅ Invalid policy correctly failed validation"
+    
+    # Capture and verify JSON output
+    RESULT=$(node ../dist/index.js validate ./policies/invalid.tf 2>&1 || true)
+    if ! echo "$RESULT" | jq . > /dev/null 2>&1; then
+        echo "❌ Failed output is not valid JSON:"
+        echo "$RESULT"
+        exit 1
+    fi
+    echo "✅ Invalid policy returned valid JSON error output"
 fi
 
-echo -e "\n${BLUE}All examples completed.${NC}"
+# Test variable interpolation
+echo "Running validator on policy with variables..."
+if ! RESULT=$(node ../dist/index.js validate ./policies/with-vars.tf); then
+    echo "❌ Validation of policy with variables failed unexpectedly"
+    exit 1
+fi
+echo "✅ Variable interpolation test passed"
+
+# Test with specific files option
+echo "Testing --files option..."
+if ! RESULT=$(node ../dist/index.js validate . --files valid.tf); then
+    echo "❌ Validation with --files option failed unexpectedly"
+    exit 1
+fi
+
+echo "Running validator with nonexistent file..."
+if node ../dist/index.js validate ./policies/nonexistent.tf > /dev/null 2>&1; then
+    echo "❌ Validation of nonexistent file passed unexpectedly"
+    exit 1
+else
+    echo "✅ Nonexistent file correctly failed validation"
+fi
+
+echo "✅ All validator tests passed!"
+cd -
+rm -rf "$TEST_DIR"

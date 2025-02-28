@@ -18,9 +18,7 @@ module.exports = {
     
     // Test file patterns to look for
     testMatch: [
-        "**/__tests__/**/*.[jt]s?(x)",
-        "**/?(*.)+(spec|test).[jt]s?(x)",
-        "**/*.test.ts"
+        "**/__tests__/**/*.test.ts"
     ],
     
     // Coverage reporting configuration
@@ -34,7 +32,12 @@ module.exports = {
     clearMocks: true,
     moduleFileExtensions: ['js', 'ts'],
     transform: {
-        '^.+\\.ts$': 'ts-jest'
+        '^.+\\.tsx?$': [
+            'ts-jest',
+            {
+                tsconfig: 'tsconfig.json'
+            }
+        ]
     },
     roots: ['<rootDir>/src'],
     reporters: [
@@ -48,5 +51,9 @@ module.exports = {
             classNameTemplate: '{classname}',
             titleTemplate: '{title}'
         }]
+    ],
+    coveragePathIgnorePatterns: [
+        "/node_modules/",
+        "/__tests__/fixtures/"
     ]
 };

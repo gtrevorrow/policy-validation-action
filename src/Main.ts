@@ -56,7 +56,13 @@ function getWorkspacePath(): string {
            process.cwd();                     // Fallback to current directory
 }
 
-async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[]> {
+async function findPolicyFiles(
+    dir: string, 
+    options?: { fileNames?: string[], fileExtension?: string }, 
+    logger?: Logger
+): Promise<string[]> {
+    const fileExtension = options?.fileExtension || '.tf';
+    
     try {
         // First check if path exists and is accessible
         try {
@@ -68,9 +74,18 @@ async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[
 
         const stats = await fs.promises.stat(dir);
         
+        // If it's a file, check if it matches criteria
         if (stats.isFile()) {
             logger?.debug(`Processing single file: ${dir}`);
-            return dir.endsWith('.tf') ? [dir] : [];
+            
+            // If specific files are provided, check if this file is in that list
+            if (options?.fileNames && options.fileNames.length > 0) {
+                const fileName = path.basename(dir);
+                return options.fileNames.includes(fileName) ? [dir] : [];
+            }
+            
+            // Otherwise, check file extension
+            return dir.endsWith(fileExtension) ? [dir] : [];
         }
 
         if (!stats.isDirectory()) {
@@ -78,6 +93,26 @@ async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[
             return [];
         }
 
+        // If we have specific file names, we'll look for those files directly
+        if (options?.fileNames && options.fileNames.length > 0) {
+            const files: string[] = [];
+            for (const fileName of options.fileNames) {
+                const filePath = path.join(dir, fileName);
+                try {
+                    await fs.promises.access(filePath, fs.constants.R_OK);
+                    const fileStats = await fs.promises.stat(filePath);
+                    if (fileStats.isFile()) {
+                        files.push(filePath);
+                    }
+                } catch (error) {
+                    // File doesn't exist or isn't accessible, just skip it
+                    logger?.debug(`File ${fileName} not found in ${dir}`);
+                }
+            }
+            return files;
+        }
+
+        // Otherwise, scan the directory recursively
         const files: string[] = [];
         
         try {
@@ -89,9 +124,9 @@ async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[
                 try {
                     if (entry.isDirectory()) {
                         logger?.debug(`Recursing into directory: ${fullPath}`);
-                        files.push(...await findTerraformFiles(fullPath, logger));
-                    } else if (entry.isFile() && entry.name.endsWith('.tf')) {
-                        logger?.debug(`Found Terraform file: ${fullPath}`);
+                        files.push(...await findPolicyFiles(fullPath, options, logger));
+                    } else if (entry.isFile() && entry.name.endsWith(fileExtension)) {
+                        logger?.debug(`Found policy file: ${fullPath}`);
                         files.push(fullPath);
                     }
                 } catch (error) {
@@ -109,8 +144,8 @@ async function findTerraformFiles(dir: string, logger?: Logger): Promise<string[
                 try {
                     const entryStats = await fs.promises.stat(fullPath);
                     if (entryStats.isDirectory()) {
-                        files.push(...await findTerraformFiles(fullPath, logger));
-                    } else if (name.endsWith('.tf')) {
+                        files.push(...await findPolicyFiles(fullPath, options, logger));
+                    } else if (name.endsWith(fileExtension)) {
                         files.push(fullPath);
                     }
                 } catch (error) {
@@ -199,13 +234,17 @@ async function runAction(): Promise<void> {
         const extractorType = (core.getInput('extractor') || 'regex') as ExtractorType;
         const pattern = core.getInput('extractorPattern');
         const exitOnError = core.getBooleanInput('exitOnError');
+        const fileNames = core.getInput('files') ? core.getInput('files').split(',').map(f => f.trim()) : undefined;
 
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
         actionLogger.debug(`Using extractor: ${extractorType}`);
+        if (fileNames) {
+            actionLogger.debug(`Specific files to process: ${fileNames.join(', ')}`);
+        }
         
-        const tfFiles = await findTerraformFiles(scanPath, actionLogger);
-        core.debug(`Found ${tfFiles.length} Terraform files`);
+        const tfFiles = await findPolicyFiles(scanPath, { fileNames, fileExtension: '.tf' }, actionLogger);
+        core.debug(`Found ${tfFiles.length} policy files to validate`);
         
         if (tfFiles.length === 0) {
             core.warning('No .tf files found');
@@ -289,7 +328,7 @@ if (process.env.GITHUB_ACTION) {
 
 // Single export statement at the end of the file
 export {
-    findTerraformFiles,
+    findPolicyFiles,
     processFile,
     parsePolicy,
     formatPolicyStatements
