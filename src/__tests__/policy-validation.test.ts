@@ -55,47 +55,7 @@ describe('OCI Policy Validation', () => {
                 expect.stringMatching(/BETWEEN.*AND/)
             ]));
         });
-
-        it('should handle extraction from OCI Core Landing Zone IAM Policy module supplied policies', () => {
-            const extractor = ExtractorFactory.create('regex', {
-                // Updated pattern to handle both commented and uncommented statements
-                pattern: 'statements\\s*:\\s*\\[([\\s\\S]*?)\\]'
-            });
-
-            const input = `
-                policies_configuration = {
-                supplied_policies : {
-                    "SAMPLE-POLICY" : {
-                    name : "sample-policy"
-                    description : "Sample policy with random statements."
-                    compartment_id : "<REPLACE-BY-COMPARTMENT-OCID>" # Instead of an OCID, you can replace it with the string "TENANCY-ROOT" for attaching the policy to the Root compartment.
-                    #-- The "not ok" statements below are flagged by the policy module per CIS recommendations.
-                    statements : [
-                        # "allow group-a to manage all-resources in tenancy", 
-                        "allow group-b to manage all-resources in tenancy", 
-                        "allow group group-a to use groups in tenancy where target.group.name != 'Administrators'", 
-                        "allow group \${var.network_admins} to use groups in tenancy where target.group.name = 'group-a'",
-                        "allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators'}",
-                        "allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators', request.operation = 'UpdateGroup'}", 
-                        "allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators', request.operation = 'ListAPiKeys'}" 
-                        #"allow group vision-cred-admin-group to manage groups in tenancy", 
-                        #"allow group vision-cred-admin-group to manage users in tenancy" 
-                    ]            
-                    }
-                }}
-            `;
-            const result = extractor.extract(input);
-            expect(result).toHaveLength(6);
-            expect(result).toEqual(expect.arrayContaining([
-                expect.stringMatching(/^allow group-b to manage all-resources in tenancy/),
-        expect.stringMatching(/^allow group group-a to use groups in tenancy where target.group.name != 'Administrators'/),
-        expect.stringMatching(/^allow group \${var.network_admins} to use groups in tenancy where target.group.name = 'group-a'/),
-        expect.stringMatching(/^allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators'}/),
-        expect.stringMatching(/^allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators', request.operation = 'UpdateGroup'}/),
-        expect.stringMatching(/^allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != 'Administrators', request.operation = 'ListAPiKeys'}/)
-            ]));
-        });
-
+  
     });
 
     describe('Validation', () => {

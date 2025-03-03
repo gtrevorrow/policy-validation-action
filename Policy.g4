@@ -23,7 +23,7 @@ grammar Policy;
  resourceSubjectId   : (WORD | HCL_VAR) ('\'' (WORD | HCL_VAR) '\'' | '\'' (WORD | HCL_VAR) '/' (WORD | HCL_VAR) '\'' )+?;
  serviceSubjectId    : (WORD | HCL_VAR);
  groupID             : ID (WORD | HCL_VAR);
- dynamicGroupSubject : DYNAMICGROUP ID? WORD ;
+ dynamicGroupSubject : DYNAMICGROUP ID? (WORD | HCL_VAR) ; // Updated to support HCL variable interpolation
  tenancySubject      : TENANCY (WORD | HCL_VAR);
  definedSubject      : (groupSubject | dynamicGroupSubject | serviceSubject | tenancySubject);
  defined             : (WORD | HCL_VAR);

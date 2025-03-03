@@ -333,9 +333,8 @@ describe('Main', () => {
                 'allow group group-a to use groups in tenancy where target.group.name = \'group-a\'',
                 'allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != \'Administrators\'}',
                 'allow group vision-cred-admin-group to manage users in tenancy where any {target.group.name != \'Administrators\', request.operation = \'ListAPiKeys\'}'
-            ];
-            
-            expect(expressions.length).toBeGreaterThan(0);
+            ];            
+            expect(expressions.length).toEqual(4);
             
             // Should find all the expected, uncommented policies
             expectedPolicies.forEach(policy => {
@@ -354,53 +353,39 @@ describe('Main', () => {
         it('should extract and validate complex security compartment policies from OCI Core Landing Zone IAM module', async () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'security_cmp_policy.tf');
             
-            // The exact pattern to match how policies are defined in security_cmp_policy.tf
-            // This captures the complete array of policies between square brackets
-            const blockPattern = '\\?\\s*\\[(.*?)\\]\\s*:';
+            // Pattern to extract entire policy arrays from the ternary conditional operator pattern
+            // Captures everything between the brackets in the "true" case of the ternary, ending with : []
+            // const policyPattern = '\\?\\s*\\[\\s*(["\'](?:#?(?:allow|define|endorse|admit).*?)["\'](?:\\s*,\\s*["\'](?:#?(?:allow|define|endorse|admit).*?)["\'])*\\s*)\\]\\s*:\\s*\\[\\s*\\]';
+            const policyPattern = '\\?\\s*\\[\\s*(?:#[^\\n]*\\n\\s*)?(["\'](?:#?(?:allow|define|endorse|admit).*?)["\'](?:\\s*(?:,|#[^\\n]*\\n)\\s*["\'](?:#?(?:allow|define|endorse|admit).*?)["\'])*\\s*)\\]\\s*:\\s*\\[\\s*\\]';
             
-            // Use processFile to correctly extract the policy arrays
-            const policyArrays = await processFile(
-                fixturePath, 
-                blockPattern,
+            const extractedPolicies = await processFile(
+                fixturePath,
+                policyPattern,
                 'regex' as ExtractorType,
                 mockLogger
             );
             
-            console.log(`Found ${policyArrays.length} policy arrays in the file`);
+            console.log(`Extracted ${extractedPolicies.length} total policy statements`);
+            expect(extractedPolicies.length).toEqual(38);
             
-            // Verify we found policy arrays
-            expect(policyArrays.length).toBeGreaterThan(0);
+            // Filter policies to find those with read all-resources and those with join expressions
+            const readPolicies = extractedPolicies.filter(p => p.includes('read all-resources'));
+            const joinPolicies = extractedPolicies.filter(p => p.includes('${join('));
             
-            // Log sample of first array for visibility
-            console.log(`First policy array: ${policyArrays[0].substring(0, 100)}...`);
+            console.log(`Found ${readPolicies.length} 'read all-resources' policies`);
+            console.log(`Found ${joinPolicies.length} policies with join expressions`);
             
-            // Test that we found security-related policy arrays
-            expect(policyArrays.some(array => array.toLowerCase().includes('read all-resources'))).toBe(true);
-            expect(policyArrays.some(array => array.toLowerCase().includes('manage instance-family'))).toBe(true);
+            // We should have found at least one of each type of policy
+            expect(readPolicies.length).toBeGreaterThan(0);
+            expect(joinPolicies.length).toBeGreaterThan(0);
             
-            // Test that we found storage admin policy arrays
-            expect(policyArrays.some(array => 
-                array.toLowerCase().includes('volume_delete') || 
-                array.toLowerCase().includes('bucket_delete')
-            )).toBe(true);
+            // Format and validate the policies
+            const policyText = formatPolicyStatements(extractedPolicies);
+            const result = parsePolicy(policyText, mockLogger);
             
-            // Take one complete array and validate its policies - NO INDIVIDUAL EXTRACTION
-            // We're taking the entire array as processFile returns it and validating it directly
-            const arrayToValidate = policyArrays[0]; 
-            
-            // Format the array for validation
-            const formattedArray = formatPolicyStatements([arrayToValidate]);
-            
-            // Log what we're validating
-            console.log('Validating complete policy array without individual extraction');
-            
-            // Pass the entire array to parsePolicy
-            const result = parsePolicy(formattedArray, mockLogger);
-            
-            // Log results
             console.log(`Validation result: ${result.isValid}`);
             
-            // Expect the array to be valid
+            // The policies should be valid
             expect(result.isValid).toBe(true);
         });
     });

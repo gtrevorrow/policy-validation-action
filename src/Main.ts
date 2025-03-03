@@ -10,8 +10,8 @@ import {
     Lexer
 } from 'antlr4';
 import { Logger, ParseResult, PolicyError, ValidationOutput } from './types';
-import PolicyLexer from './generated/PolicyLexer';
-import PolicyParser from './generated/PolicyParser';
+import  PolicyLexer from './generated/PolicyLexer';
+import  PolicyParser from './generated/PolicyParser';
 import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
 
 // Remove the redundant extractPolicyExpressions function since we now have PolicyExtractor
