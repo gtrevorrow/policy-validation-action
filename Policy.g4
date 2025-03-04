@@ -28,7 +28,7 @@ grammar Policy;
  definedSubject      : (groupSubject | dynamicGroupSubject | serviceSubject | tenancySubject);
  defined             : (WORD | HCL_VAR);
  resource            : (WORD | HCL_VAR);
- condition           : (comparisonList | comparison) ;
+ condition           : (comparisonList | comparison | HCL_VAR) ; // Added HCL_VAR to allow conditions to be HCL variables
  comparison          : variable operator (value|valueList|timeWindow| patternMatch) ;
  variable            : (WORD | HCL_VAR) (('.' (WORD | HCL_VAR) )+)? ;
  operator            : ('=' | '!''=' | BEFORE | IN | BETWEEN) ;

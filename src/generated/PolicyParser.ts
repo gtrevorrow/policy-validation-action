@@ -1512,25 +1512,27 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 296;
+			this.state = 297;
 			this._errHandler.sync(this);
-			switch (this._input.LA(1)) {
-			case 41:
-			case 43:
+			switch ( this._interp.adaptivePredict(this._input, 36, this._ctx) ) {
+			case 1:
 				{
 				this.state = 294;
 				this.comparisonList();
 				}
 				break;
-			case 46:
-			case 47:
+			case 2:
 				{
 				this.state = 295;
 				this.comparison();
 				}
 				break;
-			default:
-				throw new NoViableAltException(this);
+			case 3:
+				{
+				this.state = 296;
+				this.match(PolicyParser.HCL_VAR);
+				}
+				break;
 			}
 			}
 		}
@@ -1555,34 +1557,34 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 298;
-			this.variable();
 			this.state = 299;
+			this.variable();
+			this.state = 300;
 			this.operator();
-			this.state = 304;
+			this.state = 305;
 			this._errHandler.sync(this);
 			switch ( this._interp.adaptivePredict(this._input, 37, this._ctx) ) {
 			case 1:
 				{
-				this.state = 300;
+				this.state = 301;
 				this.value();
 				}
 				break;
 			case 2:
 				{
-				this.state = 301;
+				this.state = 302;
 				this.valueList();
 				}
 				break;
 			case 3:
 				{
-				this.state = 302;
+				this.state = 303;
 				this.timeWindow();
 				}
 				break;
 			case 4:
 				{
-				this.state = 303;
+				this.state = 304;
 				this.patternMatch();
 				}
 				break;
@@ -1611,7 +1613,7 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 306;
+			this.state = 307;
 			_la = this._input.LA(1);
 			if(!(_la===46 || _la===47)) {
 			this._errHandler.recoverInline(this);
@@ -1620,20 +1622,20 @@ export default class PolicyParser extends Parser {
 				this._errHandler.reportMatch(this);
 			    this.consume();
 			}
-			this.state = 313;
+			this.state = 314;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===7) {
 				{
-				this.state = 309;
+				this.state = 310;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 307;
-					this.match(PolicyParser.T__6);
 					this.state = 308;
+					this.match(PolicyParser.T__6);
+					this.state = 309;
 					_la = this._input.LA(1);
 					if(!(_la===46 || _la===47)) {
 					this._errHandler.recoverInline(this);
@@ -1644,7 +1646,7 @@ export default class PolicyParser extends Parser {
 					}
 					}
 					}
-					this.state = 311;
+					this.state = 312;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 				} while (_la===7);
@@ -1674,38 +1676,38 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 321;
+			this.state = 322;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 8:
 				{
-				this.state = 315;
+				this.state = 316;
 				this.match(PolicyParser.T__7);
 				}
 				break;
 			case 9:
 				{
-				this.state = 316;
-				this.match(PolicyParser.T__8);
 				this.state = 317;
+				this.match(PolicyParser.T__8);
+				this.state = 318;
 				this.match(PolicyParser.T__7);
 				}
 				break;
 			case 14:
 				{
-				this.state = 318;
+				this.state = 319;
 				this.match(PolicyParser.BEFORE);
 				}
 				break;
 			case 27:
 				{
-				this.state = 319;
+				this.state = 320;
 				this.match(PolicyParser.IN);
 				}
 				break;
 			case 15:
 				{
-				this.state = 320;
+				this.state = 321;
 				this.match(PolicyParser.BETWEEN);
 				}
 				break;
@@ -1736,48 +1738,48 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 339;
+			this.state = 340;
 			this._errHandler.sync(this);
 			switch ( this._interp.adaptivePredict(this._input, 42, this._ctx) ) {
 			case 1:
 				{
-				this.state = 323;
+				this.state = 324;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 2:
 				{
-				this.state = 324;
+				this.state = 325;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 3:
 				{
-				this.state = 325;
-				this.match(PolicyParser.QUOTED_STRING);
 				this.state = 326;
-				this.match(PolicyParser.T__4);
+				this.match(PolicyParser.QUOTED_STRING);
 				this.state = 327;
+				this.match(PolicyParser.T__4);
+				this.state = 328;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 4:
 				{
-				this.state = 328;
+				this.state = 329;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 331;
+				this.state = 332;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 329;
-					this.match(PolicyParser.WS);
 					this.state = 330;
+					this.match(PolicyParser.WS);
+					this.state = 331;
 					this.match(PolicyParser.WORD);
 					}
 					}
-					this.state = 333;
+					this.state = 334;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 				} while (_la===18);
@@ -1785,17 +1787,17 @@ export default class PolicyParser extends Parser {
 				break;
 			case 5:
 				{
-				this.state = 335;
+				this.state = 336;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 336;
-				this.match(PolicyParser.T__5);
 				this.state = 337;
-				this.match(PolicyParser.HCL_VAR);
+				this.match(PolicyParser.T__5);
 				this.state = 338;
+				this.match(PolicyParser.HCL_VAR);
+				this.state = 339;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -1824,66 +1826,66 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 341;
+			this.state = 342;
 			this.match(PolicyParser.T__9);
-			this.state = 347;
+			this.state = 348;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 17:
 				{
-				this.state = 342;
+				this.state = 343;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 46:
 				{
-				this.state = 343;
+				this.state = 344;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 344;
-				this.match(PolicyParser.T__5);
 				this.state = 345;
-				this.match(PolicyParser.HCL_VAR);
+				this.match(PolicyParser.T__5);
 				this.state = 346;
+				this.match(PolicyParser.HCL_VAR);
+				this.state = 347;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 359;
+			this.state = 360;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 349;
+				this.state = 350;
 				this.match(PolicyParser.T__1);
-				this.state = 355;
+				this.state = 356;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
 				case 17:
 					{
-					this.state = 350;
+					this.state = 351;
 					this.match(PolicyParser.QUOTED_STRING);
 					}
 					break;
 				case 46:
 					{
-					this.state = 351;
+					this.state = 352;
 					this.match(PolicyParser.HCL_VAR);
 					}
 					break;
 				case 6:
 					{
-					this.state = 352;
-					this.match(PolicyParser.T__5);
 					this.state = 353;
-					this.match(PolicyParser.HCL_VAR);
+					this.match(PolicyParser.T__5);
 					this.state = 354;
+					this.match(PolicyParser.HCL_VAR);
+					this.state = 355;
 					this.match(PolicyParser.T__5);
 					}
 					break;
@@ -1892,11 +1894,11 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 361;
+				this.state = 362;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 362;
+			this.state = 363;
 			this.match(PolicyParser.T__10);
 			}
 		}
@@ -1921,58 +1923,58 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 369;
+			this.state = 370;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 17:
 				{
-				this.state = 364;
+				this.state = 365;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 46:
 				{
-				this.state = 365;
+				this.state = 366;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 366;
-				this.match(PolicyParser.T__5);
 				this.state = 367;
-				this.match(PolicyParser.HCL_VAR);
+				this.match(PolicyParser.T__5);
 				this.state = 368;
+				this.match(PolicyParser.HCL_VAR);
+				this.state = 369;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 371;
+			this.state = 372;
 			this.match(PolicyParser.AND);
-			this.state = 377;
+			this.state = 378;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 17:
 				{
-				this.state = 372;
+				this.state = 373;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 46:
 				{
-				this.state = 373;
+				this.state = 374;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 374;
-				this.match(PolicyParser.T__5);
 				this.state = 375;
-				this.match(PolicyParser.HCL_VAR);
+				this.match(PolicyParser.T__5);
 				this.state = 376;
+				this.match(PolicyParser.HCL_VAR);
+				this.state = 377;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -2003,29 +2005,29 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 379;
-			this.logicalCombine();
 			this.state = 380;
-			this.match(PolicyParser.T__0);
+			this.logicalCombine();
 			this.state = 381;
+			this.match(PolicyParser.T__0);
+			this.state = 382;
 			this.condition();
-			this.state = 386;
+			this.state = 387;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 382;
-				this.match(PolicyParser.T__1);
 				this.state = 383;
+				this.match(PolicyParser.T__1);
+				this.state = 384;
 				this.condition();
 				}
 				}
-				this.state = 388;
+				this.state = 389;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 389;
+			this.state = 390;
 			this.match(PolicyParser.T__2);
 			}
 		}
@@ -2051,7 +2053,7 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 391;
+			this.state = 392;
 			_la = this._input.LA(1);
 			if(!(_la===41 || _la===43)) {
 			this._errHandler.recoverInline(this);
@@ -2083,36 +2085,36 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 402;
+			this.state = 403;
 			this._errHandler.sync(this);
 			switch ( this._interp.adaptivePredict(this._input, 49, this._ctx) ) {
 			case 1:
 				{
-				this.state = 393;
-				this.match(PolicyParser.T__4);
 				this.state = 394;
-				this.match(PolicyParser.WORD);
+				this.match(PolicyParser.T__4);
 				this.state = 395;
+				this.match(PolicyParser.WORD);
+				this.state = 396;
 				this.match(PolicyParser.T__11);
 				}
 				break;
 			case 2:
 				{
-				this.state = 396;
-				this.match(PolicyParser.T__12);
 				this.state = 397;
-				this.match(PolicyParser.WORD);
+				this.match(PolicyParser.T__12);
 				this.state = 398;
+				this.match(PolicyParser.WORD);
+				this.state = 399;
 				this.match(PolicyParser.T__4);
 				}
 				break;
 			case 3:
 				{
-				this.state = 399;
-				this.match(PolicyParser.T__4);
 				this.state = 400;
-				this.match(PolicyParser.WORD);
+				this.match(PolicyParser.T__4);
 				this.state = 401;
+				this.match(PolicyParser.WORD);
+				this.state = 402;
 				this.match(PolicyParser.T__4);
 				}
 				break;
@@ -2134,7 +2136,7 @@ export default class PolicyParser extends Parser {
 		return localctx;
 	}
 
-	public static readonly _serializedATN: number[] = [4,1,47,405,2,0,7,0,2,
+	public static readonly _serializedATN: number[] = [4,1,47,406,2,0,7,0,2,
 	1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,2,
 	10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,2,15,7,15,2,16,7,16,2,17,
 	7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,2,22,7,22,2,23,7,23,2,24,7,
@@ -2155,37 +2157,37 @@ export default class PolicyParser extends Parser {
 	1,14,1,14,1,14,1,14,1,14,1,14,3,14,256,8,14,1,15,1,15,1,15,1,15,1,15,1,
 	15,1,15,1,15,1,15,4,15,267,8,15,11,15,12,15,268,1,16,1,16,1,17,1,17,1,17,
 	1,18,1,18,3,18,278,8,18,1,18,1,18,1,19,1,19,1,19,1,20,1,20,1,20,1,20,3,
-	20,289,8,20,1,21,1,21,1,22,1,22,1,23,1,23,3,23,297,8,23,1,24,1,24,1,24,
-	1,24,1,24,1,24,3,24,305,8,24,1,25,1,25,1,25,4,25,310,8,25,11,25,12,25,311,
-	3,25,314,8,25,1,26,1,26,1,26,1,26,1,26,1,26,3,26,322,8,26,1,27,1,27,1,27,
-	1,27,1,27,1,27,1,27,1,27,4,27,332,8,27,11,27,12,27,333,1,27,1,27,1,27,1,
-	27,3,27,340,8,27,1,28,1,28,1,28,1,28,1,28,1,28,3,28,348,8,28,1,28,1,28,
-	1,28,1,28,1,28,1,28,3,28,356,8,28,5,28,358,8,28,10,28,12,28,361,9,28,1,
-	28,1,28,1,29,1,29,1,29,1,29,1,29,3,29,370,8,29,1,29,1,29,1,29,1,29,1,29,
-	1,29,3,29,378,8,29,1,30,1,30,1,30,1,30,1,30,5,30,385,8,30,10,30,12,30,388,
-	9,30,1,30,1,30,1,31,1,31,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,3,
-	32,403,8,32,1,32,1,268,0,33,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,
-	32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,0,3,2,0,35,37,40,40,
-	1,0,46,47,2,0,41,41,43,43,446,0,70,1,0,0,0,2,76,1,0,0,0,4,99,1,0,0,0,6,
-	128,1,0,0,0,8,135,1,0,0,0,10,169,1,0,0,0,12,171,1,0,0,0,14,173,1,0,0,0,
-	16,197,1,0,0,0,18,202,1,0,0,0,20,209,1,0,0,0,22,211,1,0,0,0,24,226,1,0,
-	0,0,26,234,1,0,0,0,28,255,1,0,0,0,30,257,1,0,0,0,32,270,1,0,0,0,34,272,
-	1,0,0,0,36,275,1,0,0,0,38,281,1,0,0,0,40,288,1,0,0,0,42,290,1,0,0,0,44,
-	292,1,0,0,0,46,296,1,0,0,0,48,298,1,0,0,0,50,306,1,0,0,0,52,321,1,0,0,0,
-	54,339,1,0,0,0,56,341,1,0,0,0,58,369,1,0,0,0,60,379,1,0,0,0,62,391,1,0,
-	0,0,64,402,1,0,0,0,66,71,3,2,1,0,67,71,3,4,2,0,68,71,3,6,3,0,69,71,3,8,
-	4,0,70,66,1,0,0,0,70,67,1,0,0,0,70,68,1,0,0,0,70,69,1,0,0,0,71,72,1,0,0,
-	0,72,70,1,0,0,0,72,73,1,0,0,0,73,74,1,0,0,0,74,75,5,0,0,1,75,1,1,0,0,0,
-	76,77,5,22,0,0,77,88,3,20,10,0,78,80,5,25,0,0,79,78,1,0,0,0,79,80,1,0,0,
-	0,80,81,1,0,0,0,81,82,3,12,6,0,82,83,3,44,22,0,83,89,1,0,0,0,84,86,5,25,
-	0,0,85,84,1,0,0,0,85,86,1,0,0,0,86,87,1,0,0,0,87,89,3,14,7,0,88,79,1,0,
-	0,0,88,85,1,0,0,0,89,90,1,0,0,0,90,91,5,27,0,0,91,94,3,16,8,0,92,93,5,28,
-	0,0,93,95,3,46,23,0,94,92,1,0,0,0,94,95,1,0,0,0,95,97,1,0,0,0,96,98,5,16,
-	0,0,97,96,1,0,0,0,97,98,1,0,0,0,98,3,1,0,0,0,99,100,5,21,0,0,100,109,3,
-	20,10,0,101,102,5,25,0,0,102,103,3,10,5,0,103,104,3,44,22,0,104,110,1,0,
-	0,0,105,107,5,25,0,0,106,105,1,0,0,0,106,107,1,0,0,0,107,108,1,0,0,0,108,
-	110,3,14,7,0,109,101,1,0,0,0,109,106,1,0,0,0,110,111,1,0,0,0,111,119,5,
-	27,0,0,112,120,3,18,9,0,113,114,3,16,8,0,114,115,5,29,0,0,115,116,3,44,
+	20,289,8,20,1,21,1,21,1,22,1,22,1,23,1,23,1,23,3,23,298,8,23,1,24,1,24,
+	1,24,1,24,1,24,1,24,3,24,306,8,24,1,25,1,25,1,25,4,25,311,8,25,11,25,12,
+	25,312,3,25,315,8,25,1,26,1,26,1,26,1,26,1,26,1,26,3,26,323,8,26,1,27,1,
+	27,1,27,1,27,1,27,1,27,1,27,1,27,4,27,333,8,27,11,27,12,27,334,1,27,1,27,
+	1,27,1,27,3,27,341,8,27,1,28,1,28,1,28,1,28,1,28,1,28,3,28,349,8,28,1,28,
+	1,28,1,28,1,28,1,28,1,28,3,28,357,8,28,5,28,359,8,28,10,28,12,28,362,9,
+	28,1,28,1,28,1,29,1,29,1,29,1,29,1,29,3,29,371,8,29,1,29,1,29,1,29,1,29,
+	1,29,1,29,3,29,379,8,29,1,30,1,30,1,30,1,30,1,30,5,30,386,8,30,10,30,12,
+	30,389,9,30,1,30,1,30,1,31,1,31,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,
+	1,32,3,32,404,8,32,1,32,1,268,0,33,0,2,4,6,8,10,12,14,16,18,20,22,24,26,
+	28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,0,3,2,0,35,37,
+	40,40,1,0,46,47,2,0,41,41,43,43,448,0,70,1,0,0,0,2,76,1,0,0,0,4,99,1,0,
+	0,0,6,128,1,0,0,0,8,135,1,0,0,0,10,169,1,0,0,0,12,171,1,0,0,0,14,173,1,
+	0,0,0,16,197,1,0,0,0,18,202,1,0,0,0,20,209,1,0,0,0,22,211,1,0,0,0,24,226,
+	1,0,0,0,26,234,1,0,0,0,28,255,1,0,0,0,30,257,1,0,0,0,32,270,1,0,0,0,34,
+	272,1,0,0,0,36,275,1,0,0,0,38,281,1,0,0,0,40,288,1,0,0,0,42,290,1,0,0,0,
+	44,292,1,0,0,0,46,297,1,0,0,0,48,299,1,0,0,0,50,307,1,0,0,0,52,322,1,0,
+	0,0,54,340,1,0,0,0,56,342,1,0,0,0,58,370,1,0,0,0,60,380,1,0,0,0,62,392,
+	1,0,0,0,64,403,1,0,0,0,66,71,3,2,1,0,67,71,3,4,2,0,68,71,3,6,3,0,69,71,
+	3,8,4,0,70,66,1,0,0,0,70,67,1,0,0,0,70,68,1,0,0,0,70,69,1,0,0,0,71,72,1,
+	0,0,0,72,70,1,0,0,0,72,73,1,0,0,0,73,74,1,0,0,0,74,75,5,0,0,1,75,1,1,0,
+	0,0,76,77,5,22,0,0,77,88,3,20,10,0,78,80,5,25,0,0,79,78,1,0,0,0,79,80,1,
+	0,0,0,80,81,1,0,0,0,81,82,3,12,6,0,82,83,3,44,22,0,83,89,1,0,0,0,84,86,
+	5,25,0,0,85,84,1,0,0,0,85,86,1,0,0,0,86,87,1,0,0,0,87,89,3,14,7,0,88,79,
+	1,0,0,0,88,85,1,0,0,0,89,90,1,0,0,0,90,91,5,27,0,0,91,94,3,16,8,0,92,93,
+	5,28,0,0,93,95,3,46,23,0,94,92,1,0,0,0,94,95,1,0,0,0,95,97,1,0,0,0,96,98,
+	5,16,0,0,97,96,1,0,0,0,97,98,1,0,0,0,98,3,1,0,0,0,99,100,5,21,0,0,100,109,
+	3,20,10,0,101,102,5,25,0,0,102,103,3,10,5,0,103,104,3,44,22,0,104,110,1,
+	0,0,0,105,107,5,25,0,0,106,105,1,0,0,0,106,107,1,0,0,0,107,108,1,0,0,0,
+	108,110,3,14,7,0,109,101,1,0,0,0,109,106,1,0,0,0,110,111,1,0,0,0,111,119,
+	5,27,0,0,112,120,3,18,9,0,113,114,3,16,8,0,114,115,5,29,0,0,115,116,3,44,
 	22,0,116,117,5,27,0,0,117,118,3,18,9,0,118,120,1,0,0,0,119,112,1,0,0,0,
 	119,113,1,0,0,0,120,123,1,0,0,0,121,122,5,28,0,0,122,124,3,46,23,0,123,
 	121,1,0,0,0,123,124,1,0,0,0,124,126,1,0,0,0,125,127,5,16,0,0,126,125,1,
@@ -2234,41 +2236,41 @@ export default class PolicyParser extends Parser {
 	282,5,34,0,0,282,283,7,1,0,0,283,39,1,0,0,0,284,289,3,22,11,0,285,289,3,
 	36,18,0,286,289,3,26,13,0,287,289,3,38,19,0,288,284,1,0,0,0,288,285,1,0,
 	0,0,288,286,1,0,0,0,288,287,1,0,0,0,289,41,1,0,0,0,290,291,7,1,0,0,291,
-	43,1,0,0,0,292,293,7,1,0,0,293,45,1,0,0,0,294,297,3,60,30,0,295,297,3,48,
-	24,0,296,294,1,0,0,0,296,295,1,0,0,0,297,47,1,0,0,0,298,299,3,50,25,0,299,
-	304,3,52,26,0,300,305,3,54,27,0,301,305,3,56,28,0,302,305,3,58,29,0,303,
-	305,3,64,32,0,304,300,1,0,0,0,304,301,1,0,0,0,304,302,1,0,0,0,304,303,1,
-	0,0,0,305,49,1,0,0,0,306,313,7,1,0,0,307,308,5,7,0,0,308,310,7,1,0,0,309,
-	307,1,0,0,0,310,311,1,0,0,0,311,309,1,0,0,0,311,312,1,0,0,0,312,314,1,0,
-	0,0,313,309,1,0,0,0,313,314,1,0,0,0,314,51,1,0,0,0,315,322,5,8,0,0,316,
-	317,5,9,0,0,317,322,5,8,0,0,318,322,5,14,0,0,319,322,5,27,0,0,320,322,5,
-	15,0,0,321,315,1,0,0,0,321,316,1,0,0,0,321,318,1,0,0,0,321,319,1,0,0,0,
-	321,320,1,0,0,0,322,53,1,0,0,0,323,340,5,47,0,0,324,340,5,17,0,0,325,326,
-	5,17,0,0,326,327,5,5,0,0,327,340,5,47,0,0,328,331,5,17,0,0,329,330,5,18,
-	0,0,330,332,5,47,0,0,331,329,1,0,0,0,332,333,1,0,0,0,333,331,1,0,0,0,333,
-	334,1,0,0,0,334,340,1,0,0,0,335,340,5,46,0,0,336,337,5,6,0,0,337,338,5,
-	46,0,0,338,340,5,6,0,0,339,323,1,0,0,0,339,324,1,0,0,0,339,325,1,0,0,0,
-	339,328,1,0,0,0,339,335,1,0,0,0,339,336,1,0,0,0,340,55,1,0,0,0,341,347,
-	5,10,0,0,342,348,5,17,0,0,343,348,5,46,0,0,344,345,5,6,0,0,345,346,5,46,
-	0,0,346,348,5,6,0,0,347,342,1,0,0,0,347,343,1,0,0,0,347,344,1,0,0,0,348,
-	359,1,0,0,0,349,355,5,2,0,0,350,356,5,17,0,0,351,356,5,46,0,0,352,353,5,
-	6,0,0,353,354,5,46,0,0,354,356,5,6,0,0,355,350,1,0,0,0,355,351,1,0,0,0,
-	355,352,1,0,0,0,356,358,1,0,0,0,357,349,1,0,0,0,358,361,1,0,0,0,359,357,
-	1,0,0,0,359,360,1,0,0,0,360,362,1,0,0,0,361,359,1,0,0,0,362,363,5,11,0,
-	0,363,57,1,0,0,0,364,370,5,17,0,0,365,370,5,46,0,0,366,367,5,6,0,0,367,
-	368,5,46,0,0,368,370,5,6,0,0,369,364,1,0,0,0,369,365,1,0,0,0,369,366,1,
-	0,0,0,370,371,1,0,0,0,371,377,5,42,0,0,372,378,5,17,0,0,373,378,5,46,0,
-	0,374,375,5,6,0,0,375,376,5,46,0,0,376,378,5,6,0,0,377,372,1,0,0,0,377,
-	373,1,0,0,0,377,374,1,0,0,0,378,59,1,0,0,0,379,380,3,62,31,0,380,381,5,
-	1,0,0,381,386,3,46,23,0,382,383,5,2,0,0,383,385,3,46,23,0,384,382,1,0,0,
-	0,385,388,1,0,0,0,386,384,1,0,0,0,386,387,1,0,0,0,387,389,1,0,0,0,388,386,
-	1,0,0,0,389,390,5,3,0,0,390,61,1,0,0,0,391,392,7,2,0,0,392,63,1,0,0,0,393,
-	394,5,5,0,0,394,395,5,47,0,0,395,403,5,12,0,0,396,397,5,13,0,0,397,398,
-	5,47,0,0,398,403,5,5,0,0,399,400,5,5,0,0,400,401,5,47,0,0,401,403,5,5,0,
-	0,402,393,1,0,0,0,402,396,1,0,0,0,402,399,1,0,0,0,403,65,1,0,0,0,50,70,
-	72,79,85,88,94,97,106,109,119,123,126,133,139,146,149,158,162,165,169,179,
-	186,193,197,202,209,214,219,223,231,240,255,266,268,277,288,296,304,311,
-	313,321,333,339,347,355,359,369,377,386,402];
+	43,1,0,0,0,292,293,7,1,0,0,293,45,1,0,0,0,294,298,3,60,30,0,295,298,3,48,
+	24,0,296,298,5,46,0,0,297,294,1,0,0,0,297,295,1,0,0,0,297,296,1,0,0,0,298,
+	47,1,0,0,0,299,300,3,50,25,0,300,305,3,52,26,0,301,306,3,54,27,0,302,306,
+	3,56,28,0,303,306,3,58,29,0,304,306,3,64,32,0,305,301,1,0,0,0,305,302,1,
+	0,0,0,305,303,1,0,0,0,305,304,1,0,0,0,306,49,1,0,0,0,307,314,7,1,0,0,308,
+	309,5,7,0,0,309,311,7,1,0,0,310,308,1,0,0,0,311,312,1,0,0,0,312,310,1,0,
+	0,0,312,313,1,0,0,0,313,315,1,0,0,0,314,310,1,0,0,0,314,315,1,0,0,0,315,
+	51,1,0,0,0,316,323,5,8,0,0,317,318,5,9,0,0,318,323,5,8,0,0,319,323,5,14,
+	0,0,320,323,5,27,0,0,321,323,5,15,0,0,322,316,1,0,0,0,322,317,1,0,0,0,322,
+	319,1,0,0,0,322,320,1,0,0,0,322,321,1,0,0,0,323,53,1,0,0,0,324,341,5,47,
+	0,0,325,341,5,17,0,0,326,327,5,17,0,0,327,328,5,5,0,0,328,341,5,47,0,0,
+	329,332,5,17,0,0,330,331,5,18,0,0,331,333,5,47,0,0,332,330,1,0,0,0,333,
+	334,1,0,0,0,334,332,1,0,0,0,334,335,1,0,0,0,335,341,1,0,0,0,336,341,5,46,
+	0,0,337,338,5,6,0,0,338,339,5,46,0,0,339,341,5,6,0,0,340,324,1,0,0,0,340,
+	325,1,0,0,0,340,326,1,0,0,0,340,329,1,0,0,0,340,336,1,0,0,0,340,337,1,0,
+	0,0,341,55,1,0,0,0,342,348,5,10,0,0,343,349,5,17,0,0,344,349,5,46,0,0,345,
+	346,5,6,0,0,346,347,5,46,0,0,347,349,5,6,0,0,348,343,1,0,0,0,348,344,1,
+	0,0,0,348,345,1,0,0,0,349,360,1,0,0,0,350,356,5,2,0,0,351,357,5,17,0,0,
+	352,357,5,46,0,0,353,354,5,6,0,0,354,355,5,46,0,0,355,357,5,6,0,0,356,351,
+	1,0,0,0,356,352,1,0,0,0,356,353,1,0,0,0,357,359,1,0,0,0,358,350,1,0,0,0,
+	359,362,1,0,0,0,360,358,1,0,0,0,360,361,1,0,0,0,361,363,1,0,0,0,362,360,
+	1,0,0,0,363,364,5,11,0,0,364,57,1,0,0,0,365,371,5,17,0,0,366,371,5,46,0,
+	0,367,368,5,6,0,0,368,369,5,46,0,0,369,371,5,6,0,0,370,365,1,0,0,0,370,
+	366,1,0,0,0,370,367,1,0,0,0,371,372,1,0,0,0,372,378,5,42,0,0,373,379,5,
+	17,0,0,374,379,5,46,0,0,375,376,5,6,0,0,376,377,5,46,0,0,377,379,5,6,0,
+	0,378,373,1,0,0,0,378,374,1,0,0,0,378,375,1,0,0,0,379,59,1,0,0,0,380,381,
+	3,62,31,0,381,382,5,1,0,0,382,387,3,46,23,0,383,384,5,2,0,0,384,386,3,46,
+	23,0,385,383,1,0,0,0,386,389,1,0,0,0,387,385,1,0,0,0,387,388,1,0,0,0,388,
+	390,1,0,0,0,389,387,1,0,0,0,390,391,5,3,0,0,391,61,1,0,0,0,392,393,7,2,
+	0,0,393,63,1,0,0,0,394,395,5,5,0,0,395,396,5,47,0,0,396,404,5,12,0,0,397,
+	398,5,13,0,0,398,399,5,47,0,0,399,404,5,5,0,0,400,401,5,5,0,0,401,402,5,
+	47,0,0,402,404,5,5,0,0,403,394,1,0,0,0,403,397,1,0,0,0,403,400,1,0,0,0,
+	404,65,1,0,0,0,50,70,72,79,85,88,94,97,106,109,119,123,126,133,139,146,
+	149,158,162,165,169,179,186,193,197,202,209,214,219,223,231,240,255,266,
+	268,277,288,297,305,312,314,322,334,340,348,356,360,370,378,387,403];
 
 	private static __ATN: ATN;
 	public static get _ATN(): ATN {
@@ -3324,6 +3326,9 @@ export class ConditionContext extends ParserRuleContext {
 	}
 	public comparison(): ComparisonContext {
 		return this.getTypedRuleContext(ComparisonContext, 0) as ComparisonContext;
+	}
+	public HCL_VAR(): TerminalNode {
+		return this.getToken(PolicyParser.HCL_VAR, 0);
 	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_condition;

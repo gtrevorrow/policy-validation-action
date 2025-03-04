@@ -12,7 +12,7 @@ export class RegexPolicyExtractor implements PolicyExtractor {
         
         this.pattern = new RegExp(
             pattern || defaultPattern,
-            'sg'
+            'sgi' // s: dot matches newline, g: global, i: case-insensitive
         );
         this.extractionStrategy = extractionStrategy || new DefaultExtractionStrategy();
     }
