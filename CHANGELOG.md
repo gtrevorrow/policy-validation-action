@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.4](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.3...v0.2.4) (2025-03-04)
+
+
+### Features
+
+* Improve policy extraction and add ANTLR parser generation ([e71aada](https://github.com/gtrevorrow/policy-validation-action/commit/e71aadabccced4b16ea38c03d20d15ea989bfc32))
+
+
+### Bug Fixes
+
+* **regex:** update RegexPolicyExtractor to handle Terraform HCL variables in policy statements ([126ab65](https://github.com/gtrevorrow/policy-validation-action/commit/126ab650661f79da0fc67532f481989f5a3d2174))
+
+
+### Refactors
+
+* enhance file finding capabilities and CLI interface ([97e77c6](https://github.com/gtrevorrow/policy-validation-action/commit/97e77c6eaf7f8244920e4e9eb5500ce153057521))
+
 ### [0.2.3](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.2...v0.2.3) (2025-02-27)
 
 
