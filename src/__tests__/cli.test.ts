@@ -61,7 +61,7 @@ describe('CLI', () => {
     }, 15000); // 15 second timeout
 
     test('using files option works correctly', async () => {
-        const cmd = 'node ./dist/index.js validate src/__tests__/fixtures --files valid.tf --verbose';
+        const cmd = 'node ./dist/index.js validate ./src/__tests__/fixtures --files valid.tf --verbose';
         
         try {
             const { stdout, stderr } = await execAsync(cmd);
