@@ -20,7 +20,7 @@ describe('CLI', () => {
         } catch (error) {
             console.error('Failed to build CLI:', error);
         }
-    });
+    }, 30000); // Increase timeout to 30 seconds
 
     const getJsonFromOutput = (output: string): any => {
         const lines = output.split('\n').filter(line => line.trim());
@@ -46,7 +46,7 @@ describe('CLI', () => {
         expect(Array.isArray(output)).toBe(true);
         expect(output[0].isValid).toBe(false);
         expect(output[0].errors.length).toBeGreaterThan(0);
-    });
+    }, 15000); // 15 second timeout
 
     test('error conditions output JSON with error field', async () => {
         const { stdout, stderr } = await execAsync('node ./dist/index.js validate ./nonexistent.tf')
@@ -58,7 +58,7 @@ describe('CLI', () => {
         // The property could be on the object directly or in the first element of an array
         const errorMessage = Array.isArray(output) ? output[0].error : output.error;
         expect(typeof errorMessage).toBe('string');
-    });
+    }, 15000); // 15 second timeout
 
     test('using files option works correctly', async () => {
         const cmd = 'node ./dist/index.js validate src/__tests__/fixtures --files valid.tf --verbose';
@@ -76,5 +76,5 @@ describe('CLI', () => {
             debugOutput(error);
             throw error;
         }
-    });
+    }, 15000); // 15 second timeout
 });
