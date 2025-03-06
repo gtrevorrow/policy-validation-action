@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.5](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.4...v0.2.5) (2025-03-06)
+
+
+### Bug Fixes
+
+* **tests:** increase timeout values for CLI tests to prevent failures in CI ([7d61675](https://github.com/gtrevorrow/policy-validation-action/commit/7d616756044d7ce0171237f0147b122b97652a40))
+
+
+### Maintenance
+
+* update version to 0.2.4 and increase timeouts in CLI tests ([71da5b1](https://github.com/gtrevorrow/policy-validation-action/commit/71da5b136b3e64bac40e617c4dc87228d349ec99))
+
+
+### Tests
+
+* enhance CLI test validation for JSON output structure ([4fedad8](https://github.com/gtrevorrow/policy-validation-action/commit/4fedad8fc0f7645b658318b0fbdf055aa938175b))
+* fix file path in CLI test command for correct execution ([1c2d45b](https://github.com/gtrevorrow/policy-validation-action/commit/1c2d45bad5da3761de46d27a851705008f2312d0))
+
 ### [0.2.4](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.3...v0.2.4) (2025-03-04)
 
 

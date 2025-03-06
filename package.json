@@ -1,6 +1,6 @@
 {
   "name": "@gtrevorrow/policy-validation-action",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "OCI Policy Validation Tool for Terraform files",
   "keywords": [
     "oci",
