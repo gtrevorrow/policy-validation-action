@@ -487,9 +487,15 @@ BREAKING CHANGE: new parser API is not backwards compatible
    npm run test:cli
    ```
 
-2. Create release:
+2. Create release based on conventional commit messages:
    ```bash
+   # For automatic version determination based on commit messages:
    npm run release
+   
+   # Or specify version bump explicitly:
+   npm run release:patch  # For bug fixes (0.0.x)
+   npm run release:minor  # For new features (0.x.0)
+   npm run release:major  # For breaking changes (x.0.0)
    ```
 
 3. Push the release:
