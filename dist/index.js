@@ -825,7 +825,7 @@ PolicyLexer._serializedATN = [4, 0, 47, 452, 6, -1, 2, 0,
     34, 69, 35, 71, 36, 73, 37, 75, 38, 77, 39, 79, 40, 81, 41, 83, 42, 85, 43, 87, 44, 89, 45, 91,
     46, 93, 47, 95, 0, 97, 0, 99, 0, 101, 0, 103, 0, 105, 0, 107, 0, 109, 0, 111, 0, 113, 0, 115, 0,
     117, 0, 119, 0, 121, 0, 123, 0, 125, 0, 127, 0, 129, 0, 131, 0, 133, 0, 135, 0, 137, 0, 139, 0,
-    1, 0, 26, 5, 0, 32, 32, 45, 46, 58, 58, 64, 64, 95, 95, 1, 0, 125, 125, 4, 0, 45, 46, 58, 58, 64,
+    1, 0, 26, 5, 0, 32, 32, 45, 47, 58, 58, 64, 64, 95, 95, 1, 0, 125, 125, 4, 0, 45, 46, 58, 58, 64,
     64, 95, 95, 2, 0, 65, 90, 97, 122, 1, 0, 48, 57, 2, 0, 65, 65, 97, 97, 2, 0, 76, 76, 108, 108, 2,
     0, 79, 79, 111, 111, 2, 0, 87, 87, 119, 119, 2, 0, 73, 73, 105, 105, 2, 0, 78, 78, 110, 110, 2,
     0, 84, 84, 116, 116, 2, 0, 69, 69, 101, 101, 2, 0, 82, 82, 114, 114, 2, 0, 72, 72, 104, 104, 2,
@@ -2124,23 +2124,59 @@ class PolicyParser extends antlr4_1.Parser {
             {
                 this.state = 275;
                 this.match(PolicyParser.DYNAMICGROUP);
-                this.state = 277;
+                this.state = 278;
+                this._errHandler.sync(this);
+                switch (this._input.LA(1)) {
+                    case 17:
+                    case 46:
+                    case 47:
+                        {
+                            this.state = 276;
+                            this.groupName();
+                        }
+                        break;
+                    case 45:
+                        {
+                            this.state = 277;
+                            this.groupID();
+                        }
+                        break;
+                    default:
+                        throw new antlr4_1.NoViableAltException(this);
+                }
+                this.state = 287;
                 this._errHandler.sync(this);
                 _la = this._input.LA(1);
-                if (_la === 45) {
+                while (_la === 2) {
                     {
-                        this.state = 276;
-                        this.match(PolicyParser.ID);
+                        {
+                            this.state = 280;
+                            this.match(PolicyParser.T__1);
+                            this.state = 283;
+                            this._errHandler.sync(this);
+                            switch (this._input.LA(1)) {
+                                case 17:
+                                case 46:
+                                case 47:
+                                    {
+                                        this.state = 281;
+                                        this.groupName();
+                                    }
+                                    break;
+                                case 45:
+                                    {
+                                        this.state = 282;
+                                        this.groupID();
+                                    }
+                                    break;
+                                default:
+                                    throw new antlr4_1.NoViableAltException(this);
+                            }
+                        }
                     }
-                }
-                this.state = 279;
-                _la = this._input.LA(1);
-                if (!(_la === 46 || _la === 47)) {
-                    this._errHandler.recoverInline(this);
-                }
-                else {
-                    this._errHandler.reportMatch(this);
-                    this.consume();
+                    this.state = 289;
+                    this._errHandler.sync(this);
+                    _la = this._input.LA(1);
                 }
             }
         }
@@ -2167,9 +2203,9 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 281;
+                this.state = 290;
                 this.match(PolicyParser.TENANCY);
-                this.state = 282;
+                this.state = 291;
                 _la = this._input.LA(1);
                 if (!(_la === 46 || _la === 47)) {
                     this._errHandler.recoverInline(this);
@@ -2202,30 +2238,30 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 288;
+                this.state = 297;
                 this._errHandler.sync(this);
                 switch (this._input.LA(1)) {
                     case 31:
                         {
-                            this.state = 284;
+                            this.state = 293;
                             this.groupSubject();
                         }
                         break;
                     case 30:
                         {
-                            this.state = 285;
+                            this.state = 294;
                             this.dynamicGroupSubject();
                         }
                         break;
                     case 32:
                         {
-                            this.state = 286;
+                            this.state = 295;
                             this.serviceSubject();
                         }
                         break;
                     case 34:
                         {
-                            this.state = 287;
+                            this.state = 296;
                             this.tenancySubject();
                         }
                         break;
@@ -2257,7 +2293,7 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 290;
+                this.state = 299;
                 _la = this._input.LA(1);
                 if (!(_la === 46 || _la === 47)) {
                     this._errHandler.recoverInline(this);
@@ -2291,7 +2327,7 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 292;
+                this.state = 301;
                 _la = this._input.LA(1);
                 if (!(_la === 46 || _la === 47)) {
                     this._errHandler.recoverInline(this);
@@ -2324,24 +2360,24 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 297;
+                this.state = 306;
                 this._errHandler.sync(this);
-                switch (this._interp.adaptivePredict(this._input, 36, this._ctx)) {
+                switch (this._interp.adaptivePredict(this._input, 38, this._ctx)) {
                     case 1:
                         {
-                            this.state = 294;
+                            this.state = 303;
                             this.comparisonList();
                         }
                         break;
                     case 2:
                         {
-                            this.state = 295;
+                            this.state = 304;
                             this.comparison();
                         }
                         break;
                     case 3:
                         {
-                            this.state = 296;
+                            this.state = 305;
                             this.match(PolicyParser.HCL_VAR);
                         }
                         break;
@@ -2370,34 +2406,34 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 299;
+                this.state = 308;
                 this.variable();
-                this.state = 300;
+                this.state = 309;
                 this.operator();
-                this.state = 305;
+                this.state = 314;
                 this._errHandler.sync(this);
-                switch (this._interp.adaptivePredict(this._input, 37, this._ctx)) {
+                switch (this._interp.adaptivePredict(this._input, 39, this._ctx)) {
                     case 1:
                         {
-                            this.state = 301;
+                            this.state = 310;
                             this.value();
                         }
                         break;
                     case 2:
                         {
-                            this.state = 302;
+                            this.state = 311;
                             this.valueList();
                         }
                         break;
                     case 3:
                         {
-                            this.state = 303;
+                            this.state = 312;
                             this.timeWindow();
                         }
                         break;
                     case 4:
                         {
-                            this.state = 304;
+                            this.state = 313;
                             this.patternMatch();
                         }
                         break;
@@ -2427,7 +2463,7 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 307;
+                this.state = 316;
                 _la = this._input.LA(1);
                 if (!(_la === 46 || _la === 47)) {
                     this._errHandler.recoverInline(this);
@@ -2436,20 +2472,20 @@ class PolicyParser extends antlr4_1.Parser {
                     this._errHandler.reportMatch(this);
                     this.consume();
                 }
-                this.state = 314;
+                this.state = 323;
                 this._errHandler.sync(this);
                 _la = this._input.LA(1);
                 if (_la === 7) {
                     {
-                        this.state = 310;
+                        this.state = 319;
                         this._errHandler.sync(this);
                         _la = this._input.LA(1);
                         do {
                             {
                                 {
-                                    this.state = 308;
+                                    this.state = 317;
                                     this.match(PolicyParser.T__6);
-                                    this.state = 309;
+                                    this.state = 318;
                                     _la = this._input.LA(1);
                                     if (!(_la === 46 || _la === 47)) {
                                         this._errHandler.recoverInline(this);
@@ -2460,7 +2496,7 @@ class PolicyParser extends antlr4_1.Parser {
                                     }
                                 }
                             }
-                            this.state = 312;
+                            this.state = 321;
                             this._errHandler.sync(this);
                             _la = this._input.LA(1);
                         } while (_la === 7);
@@ -2490,38 +2526,38 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 322;
+                this.state = 331;
                 this._errHandler.sync(this);
                 switch (this._input.LA(1)) {
                     case 8:
                         {
-                            this.state = 316;
+                            this.state = 325;
                             this.match(PolicyParser.T__7);
                         }
                         break;
                     case 9:
                         {
-                            this.state = 317;
+                            this.state = 326;
                             this.match(PolicyParser.T__8);
-                            this.state = 318;
+                            this.state = 327;
                             this.match(PolicyParser.T__7);
                         }
                         break;
                     case 14:
                         {
-                            this.state = 319;
+                            this.state = 328;
                             this.match(PolicyParser.BEFORE);
                         }
                         break;
                     case 27:
                         {
-                            this.state = 320;
+                            this.state = 329;
                             this.match(PolicyParser.IN);
                         }
                         break;
                     case 15:
                         {
-                            this.state = 321;
+                            this.state = 330;
                             this.match(PolicyParser.BETWEEN);
                         }
                         break;
@@ -2553,48 +2589,48 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 340;
+                this.state = 349;
                 this._errHandler.sync(this);
-                switch (this._interp.adaptivePredict(this._input, 42, this._ctx)) {
+                switch (this._interp.adaptivePredict(this._input, 44, this._ctx)) {
                     case 1:
                         {
-                            this.state = 324;
+                            this.state = 333;
                             this.match(PolicyParser.WORD);
                         }
                         break;
                     case 2:
                         {
-                            this.state = 325;
+                            this.state = 334;
                             this.match(PolicyParser.QUOTED_STRING);
                         }
                         break;
                     case 3:
                         {
-                            this.state = 326;
+                            this.state = 335;
                             this.match(PolicyParser.QUOTED_STRING);
-                            this.state = 327;
+                            this.state = 336;
                             this.match(PolicyParser.T__4);
-                            this.state = 328;
+                            this.state = 337;
                             this.match(PolicyParser.WORD);
                         }
                         break;
                     case 4:
                         {
-                            this.state = 329;
+                            this.state = 338;
                             this.match(PolicyParser.QUOTED_STRING);
-                            this.state = 332;
+                            this.state = 341;
                             this._errHandler.sync(this);
                             _la = this._input.LA(1);
                             do {
                                 {
                                     {
-                                        this.state = 330;
+                                        this.state = 339;
                                         this.match(PolicyParser.WS);
-                                        this.state = 331;
+                                        this.state = 340;
                                         this.match(PolicyParser.WORD);
                                     }
                                 }
-                                this.state = 334;
+                                this.state = 343;
                                 this._errHandler.sync(this);
                                 _la = this._input.LA(1);
                             } while (_la === 18);
@@ -2602,17 +2638,17 @@ class PolicyParser extends antlr4_1.Parser {
                         break;
                     case 5:
                         {
-                            this.state = 336;
+                            this.state = 345;
                             this.match(PolicyParser.HCL_VAR);
                         }
                         break;
                     case 6:
                         {
-                            this.state = 337;
+                            this.state = 346;
                             this.match(PolicyParser.T__5);
-                            this.state = 338;
+                            this.state = 347;
                             this.match(PolicyParser.HCL_VAR);
-                            this.state = 339;
+                            this.state = 348;
                             this.match(PolicyParser.T__5);
                         }
                         break;
@@ -2642,66 +2678,66 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 342;
+                this.state = 351;
                 this.match(PolicyParser.T__9);
-                this.state = 348;
+                this.state = 357;
                 this._errHandler.sync(this);
                 switch (this._input.LA(1)) {
                     case 17:
                         {
-                            this.state = 343;
+                            this.state = 352;
                             this.match(PolicyParser.QUOTED_STRING);
                         }
                         break;
                     case 46:
                         {
-                            this.state = 344;
+                            this.state = 353;
                             this.match(PolicyParser.HCL_VAR);
                         }
                         break;
                     case 6:
                         {
-                            this.state = 345;
+                            this.state = 354;
                             this.match(PolicyParser.T__5);
-                            this.state = 346;
+                            this.state = 355;
                             this.match(PolicyParser.HCL_VAR);
-                            this.state = 347;
+                            this.state = 356;
                             this.match(PolicyParser.T__5);
                         }
                         break;
                     default:
                         throw new antlr4_1.NoViableAltException(this);
                 }
-                this.state = 360;
+                this.state = 369;
                 this._errHandler.sync(this);
                 _la = this._input.LA(1);
                 while (_la === 2) {
                     {
                         {
-                            this.state = 350;
+                            this.state = 359;
                             this.match(PolicyParser.T__1);
-                            this.state = 356;
+                            this.state = 365;
                             this._errHandler.sync(this);
                             switch (this._input.LA(1)) {
                                 case 17:
                                     {
-                                        this.state = 351;
+                                        this.state = 360;
                                         this.match(PolicyParser.QUOTED_STRING);
                                     }
                                     break;
                                 case 46:
                                     {
-                                        this.state = 352;
+                                        this.state = 361;
                                         this.match(PolicyParser.HCL_VAR);
                                     }
                                     break;
                                 case 6:
                                     {
-                                        this.state = 353;
+                                        this.state = 362;
                                         this.match(PolicyParser.T__5);
-                                        this.state = 354;
+                                        this.state = 363;
                                         this.match(PolicyParser.HCL_VAR);
-                                        this.state = 355;
+                                        this.state = 364;
                                         this.match(PolicyParser.T__5);
                                     }
                                     break;
@@ -2710,11 +2746,11 @@ class PolicyParser extends antlr4_1.Parser {
                             }
                         }
                     }
-                    this.state = 362;
+                    this.state = 371;
                     this._errHandler.sync(this);
                     _la = this._input.LA(1);
                 }
-                this.state = 363;
+                this.state = 372;
                 this.match(PolicyParser.T__10);
             }
         }
@@ -2740,58 +2776,58 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 370;
+                this.state = 379;
                 this._errHandler.sync(this);
                 switch (this._input.LA(1)) {
                     case 17:
                         {
-                            this.state = 365;
+                            this.state = 374;
                             this.match(PolicyParser.QUOTED_STRING);
                         }
                         break;
                     case 46:
                         {
-                            this.state = 366;
+                            this.state = 375;
                             this.match(PolicyParser.HCL_VAR);
                         }
                         break;
                     case 6:
                         {
-                            this.state = 367;
+                            this.state = 376;
                             this.match(PolicyParser.T__5);
-                            this.state = 368;
+                            this.state = 377;
                             this.match(PolicyParser.HCL_VAR);
-                            this.state = 369;
+                            this.state = 378;
                             this.match(PolicyParser.T__5);
                         }
                         break;
                     default:
                         throw new antlr4_1.NoViableAltException(this);
                 }
-                this.state = 372;
+                this.state = 381;
                 this.match(PolicyParser.AND);
-                this.state = 378;
+                this.state = 387;
                 this._errHandler.sync(this);
                 switch (this._input.LA(1)) {
                     case 17:
                         {
-                            this.state = 373;
+                            this.state = 382;
                             this.match(PolicyParser.QUOTED_STRING);
                         }
                         break;
                     case 46:
                         {
-                            this.state = 374;
+                            this.state = 383;
                             this.match(PolicyParser.HCL_VAR);
                         }
                         break;
                     case 6:
                         {
-                            this.state = 375;
+                            this.state = 384;
                             this.match(PolicyParser.T__5);
-                            this.state = 376;
+                            this.state = 385;
                             this.match(PolicyParser.HCL_VAR);
-                            this.state = 377;
+                            this.state = 386;
                             this.match(PolicyParser.T__5);
                         }
                         break;
@@ -2823,29 +2859,29 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 380;
+                this.state = 389;
                 this.logicalCombine();
-                this.state = 381;
+                this.state = 390;
                 this.match(PolicyParser.T__0);
-                this.state = 382;
+                this.state = 391;
                 this.condition();
-                this.state = 387;
+                this.state = 396;
                 this._errHandler.sync(this);
                 _la = this._input.LA(1);
                 while (_la === 2) {
                     {
                         {
-                            this.state = 383;
+                            this.state = 392;
                             this.match(PolicyParser.T__1);
-                            this.state = 384;
+                            this.state = 393;
                             this.condition();
                         }
                     }
-                    this.state = 389;
+                    this.state = 398;
                     this._errHandler.sync(this);
                     _la = this._input.LA(1);
                 }
-                this.state = 390;
+                this.state = 399;
                 this.match(PolicyParser.T__2);
             }
         }
@@ -2872,7 +2908,7 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 392;
+                this.state = 401;
                 _la = this._input.LA(1);
                 if (!(_la === 41 || _la === 43)) {
                     this._errHandler.recoverInline(this);
@@ -2905,37 +2941,47 @@ class PolicyParser extends antlr4_1.Parser {
         try {
             this.enterOuterAlt(localctx, 1);
             {
-                this.state = 403;
+                this.state = 415;
                 this._errHandler.sync(this);
-                switch (this._interp.adaptivePredict(this._input, 49, this._ctx)) {
+                switch (this._interp.adaptivePredict(this._input, 51, this._ctx)) {
                     case 1:
                         {
-                            this.state = 394;
+                            this.state = 403;
                             this.match(PolicyParser.T__4);
-                            this.state = 395;
+                            this.state = 404;
                             this.match(PolicyParser.WORD);
-                            this.state = 396;
+                            this.state = 405;
                             this.match(PolicyParser.T__11);
                         }
                         break;
                     case 2:
                         {
-                            this.state = 397;
+                            this.state = 406;
                             this.match(PolicyParser.T__12);
-                            this.state = 398;
+                            this.state = 407;
                             this.match(PolicyParser.WORD);
-                            this.state = 399;
+                            this.state = 408;
                             this.match(PolicyParser.T__4);
                         }
                         break;
                     case 3:
                         {
-                            this.state = 400;
+                            this.state = 409;
                             this.match(PolicyParser.T__4);
-                            this.state = 401;
+                            this.state = 410;
                             this.match(PolicyParser.WORD);
-                            this.state = 402;
+                            this.state = 411;
                             this.match(PolicyParser.T__4);
+                        }
+                        break;
+                    case 4:
+                        {
+                            this.state = 412;
+                            this.match(PolicyParser.T__12);
+                            this.state = 413;
+                            this.match(PolicyParser.WORD);
+                            this.state = 414;
+                            this.match(PolicyParser.T__11);
                         }
                         break;
                 }
@@ -3089,7 +3135,7 @@ PolicyParser.ruleNames = [
     "comparison", "variable", "operator", "value", "valueList", "timeWindow",
     "comparisonList", "logicalCombine", "patternMatch",
 ];
-PolicyParser._serializedATN = [4, 1, 47, 406, 2, 0, 7, 0, 2,
+PolicyParser._serializedATN = [4, 1, 47, 418, 2, 0, 7, 0, 2,
     1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7, 4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 2, 9, 7, 9, 2,
     10, 7, 10, 2, 11, 7, 11, 2, 12, 7, 12, 2, 13, 7, 13, 2, 14, 7, 14, 2, 15, 7, 15, 2, 16, 7, 16, 2, 17,
     7, 17, 2, 18, 7, 18, 2, 19, 7, 19, 2, 20, 7, 20, 2, 21, 7, 21, 2, 22, 7, 22, 2, 23, 7, 23, 2, 24, 7,
@@ -3109,26 +3155,27 @@ PolicyParser._serializedATN = [4, 1, 47, 406, 2, 0, 7, 0, 2,
     13, 1, 13, 5, 13, 239, 8, 13, 10, 13, 12, 13, 242, 9, 13, 1, 14, 1, 14, 1, 14, 1, 14, 1, 14, 1, 14,
     1, 14, 1, 14, 1, 14, 1, 14, 1, 14, 1, 14, 3, 14, 256, 8, 14, 1, 15, 1, 15, 1, 15, 1, 15, 1, 15, 1,
     15, 1, 15, 1, 15, 1, 15, 4, 15, 267, 8, 15, 11, 15, 12, 15, 268, 1, 16, 1, 16, 1, 17, 1, 17, 1, 17,
-    1, 18, 1, 18, 3, 18, 278, 8, 18, 1, 18, 1, 18, 1, 19, 1, 19, 1, 19, 1, 20, 1, 20, 1, 20, 1, 20, 3,
-    20, 289, 8, 20, 1, 21, 1, 21, 1, 22, 1, 22, 1, 23, 1, 23, 1, 23, 3, 23, 298, 8, 23, 1, 24, 1, 24,
-    1, 24, 1, 24, 1, 24, 1, 24, 3, 24, 306, 8, 24, 1, 25, 1, 25, 1, 25, 4, 25, 311, 8, 25, 11, 25, 12,
-    25, 312, 3, 25, 315, 8, 25, 1, 26, 1, 26, 1, 26, 1, 26, 1, 26, 1, 26, 3, 26, 323, 8, 26, 1, 27, 1,
-    27, 1, 27, 1, 27, 1, 27, 1, 27, 1, 27, 1, 27, 4, 27, 333, 8, 27, 11, 27, 12, 27, 334, 1, 27, 1, 27,
-    1, 27, 1, 27, 3, 27, 341, 8, 27, 1, 28, 1, 28, 1, 28, 1, 28, 1, 28, 1, 28, 3, 28, 349, 8, 28, 1, 28,
-    1, 28, 1, 28, 1, 28, 1, 28, 1, 28, 3, 28, 357, 8, 28, 5, 28, 359, 8, 28, 10, 28, 12, 28, 362, 9,
-    28, 1, 28, 1, 28, 1, 29, 1, 29, 1, 29, 1, 29, 1, 29, 3, 29, 371, 8, 29, 1, 29, 1, 29, 1, 29, 1, 29,
-    1, 29, 1, 29, 3, 29, 379, 8, 29, 1, 30, 1, 30, 1, 30, 1, 30, 1, 30, 5, 30, 386, 8, 30, 10, 30, 12,
-    30, 389, 9, 30, 1, 30, 1, 30, 1, 31, 1, 31, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32,
-    1, 32, 3, 32, 404, 8, 32, 1, 32, 1, 268, 0, 33, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
+    1, 18, 1, 18, 1, 18, 3, 18, 279, 8, 18, 1, 18, 1, 18, 1, 18, 3, 18, 284, 8, 18, 5, 18, 286, 8, 18,
+    10, 18, 12, 18, 289, 9, 18, 1, 19, 1, 19, 1, 19, 1, 20, 1, 20, 1, 20, 1, 20, 3, 20, 298, 8, 20, 1,
+    21, 1, 21, 1, 22, 1, 22, 1, 23, 1, 23, 1, 23, 3, 23, 307, 8, 23, 1, 24, 1, 24, 1, 24, 1, 24, 1, 24,
+    1, 24, 3, 24, 315, 8, 24, 1, 25, 1, 25, 1, 25, 4, 25, 320, 8, 25, 11, 25, 12, 25, 321, 3, 25, 324,
+    8, 25, 1, 26, 1, 26, 1, 26, 1, 26, 1, 26, 1, 26, 3, 26, 332, 8, 26, 1, 27, 1, 27, 1, 27, 1, 27, 1,
+    27, 1, 27, 1, 27, 1, 27, 4, 27, 342, 8, 27, 11, 27, 12, 27, 343, 1, 27, 1, 27, 1, 27, 1, 27, 3, 27,
+    350, 8, 27, 1, 28, 1, 28, 1, 28, 1, 28, 1, 28, 1, 28, 3, 28, 358, 8, 28, 1, 28, 1, 28, 1, 28, 1, 28,
+    1, 28, 1, 28, 3, 28, 366, 8, 28, 5, 28, 368, 8, 28, 10, 28, 12, 28, 371, 9, 28, 1, 28, 1, 28, 1,
+    29, 1, 29, 1, 29, 1, 29, 1, 29, 3, 29, 380, 8, 29, 1, 29, 1, 29, 1, 29, 1, 29, 1, 29, 1, 29, 3, 29,
+    388, 8, 29, 1, 30, 1, 30, 1, 30, 1, 30, 1, 30, 5, 30, 395, 8, 30, 10, 30, 12, 30, 398, 9, 30, 1,
+    30, 1, 30, 1, 31, 1, 31, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32, 1, 32,
+    1, 32, 3, 32, 416, 8, 32, 1, 32, 1, 268, 0, 33, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
     28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 0, 3, 2, 0, 35, 37,
-    40, 40, 1, 0, 46, 47, 2, 0, 41, 41, 43, 43, 448, 0, 70, 1, 0, 0, 0, 2, 76, 1, 0, 0, 0, 4, 99, 1, 0,
+    40, 40, 1, 0, 46, 47, 2, 0, 41, 41, 43, 43, 463, 0, 70, 1, 0, 0, 0, 2, 76, 1, 0, 0, 0, 4, 99, 1, 0,
     0, 0, 6, 128, 1, 0, 0, 0, 8, 135, 1, 0, 0, 0, 10, 169, 1, 0, 0, 0, 12, 171, 1, 0, 0, 0, 14, 173, 1,
     0, 0, 0, 16, 197, 1, 0, 0, 0, 18, 202, 1, 0, 0, 0, 20, 209, 1, 0, 0, 0, 22, 211, 1, 0, 0, 0, 24, 226,
     1, 0, 0, 0, 26, 234, 1, 0, 0, 0, 28, 255, 1, 0, 0, 0, 30, 257, 1, 0, 0, 0, 32, 270, 1, 0, 0, 0, 34,
-    272, 1, 0, 0, 0, 36, 275, 1, 0, 0, 0, 38, 281, 1, 0, 0, 0, 40, 288, 1, 0, 0, 0, 42, 290, 1, 0, 0, 0,
-    44, 292, 1, 0, 0, 0, 46, 297, 1, 0, 0, 0, 48, 299, 1, 0, 0, 0, 50, 307, 1, 0, 0, 0, 52, 322, 1, 0,
-    0, 0, 54, 340, 1, 0, 0, 0, 56, 342, 1, 0, 0, 0, 58, 370, 1, 0, 0, 0, 60, 380, 1, 0, 0, 0, 62, 392,
-    1, 0, 0, 0, 64, 403, 1, 0, 0, 0, 66, 71, 3, 2, 1, 0, 67, 71, 3, 4, 2, 0, 68, 71, 3, 6, 3, 0, 69, 71,
+    272, 1, 0, 0, 0, 36, 275, 1, 0, 0, 0, 38, 290, 1, 0, 0, 0, 40, 297, 1, 0, 0, 0, 42, 299, 1, 0, 0, 0,
+    44, 301, 1, 0, 0, 0, 46, 306, 1, 0, 0, 0, 48, 308, 1, 0, 0, 0, 50, 316, 1, 0, 0, 0, 52, 331, 1, 0,
+    0, 0, 54, 349, 1, 0, 0, 0, 56, 351, 1, 0, 0, 0, 58, 379, 1, 0, 0, 0, 60, 389, 1, 0, 0, 0, 62, 401,
+    1, 0, 0, 0, 64, 415, 1, 0, 0, 0, 66, 71, 3, 2, 1, 0, 67, 71, 3, 4, 2, 0, 68, 71, 3, 6, 3, 0, 69, 71,
     3, 8, 4, 0, 70, 66, 1, 0, 0, 0, 70, 67, 1, 0, 0, 0, 70, 68, 1, 0, 0, 0, 70, 69, 1, 0, 0, 0, 71, 72, 1,
     0, 0, 0, 72, 70, 1, 0, 0, 0, 72, 73, 1, 0, 0, 0, 73, 74, 1, 0, 0, 0, 74, 75, 5, 0, 0, 1, 75, 1, 1, 0,
     0, 0, 76, 77, 5, 22, 0, 0, 77, 88, 3, 20, 10, 0, 78, 80, 5, 25, 0, 0, 79, 78, 1, 0, 0, 0, 79, 80, 1,
@@ -3184,46 +3231,50 @@ PolicyParser._serializedATN = [4, 1, 47, 406, 2, 0, 7, 0, 2,
     0, 0, 262, 263, 7, 1, 0, 0, 263, 264, 5, 5, 0, 0, 264, 265, 7, 1, 0, 0, 265, 267, 5, 6, 0, 0, 266,
     258, 1, 0, 0, 0, 266, 261, 1, 0, 0, 0, 267, 268, 1, 0, 0, 0, 268, 269, 1, 0, 0, 0, 268, 266, 1, 0,
     0, 0, 269, 31, 1, 0, 0, 0, 270, 271, 7, 1, 0, 0, 271, 33, 1, 0, 0, 0, 272, 273, 5, 45, 0, 0, 273,
-    274, 7, 1, 0, 0, 274, 35, 1, 0, 0, 0, 275, 277, 5, 30, 0, 0, 276, 278, 5, 45, 0, 0, 277, 276, 1,
-    0, 0, 0, 277, 278, 1, 0, 0, 0, 278, 279, 1, 0, 0, 0, 279, 280, 7, 1, 0, 0, 280, 37, 1, 0, 0, 0, 281,
-    282, 5, 34, 0, 0, 282, 283, 7, 1, 0, 0, 283, 39, 1, 0, 0, 0, 284, 289, 3, 22, 11, 0, 285, 289, 3,
-    36, 18, 0, 286, 289, 3, 26, 13, 0, 287, 289, 3, 38, 19, 0, 288, 284, 1, 0, 0, 0, 288, 285, 1, 0,
-    0, 0, 288, 286, 1, 0, 0, 0, 288, 287, 1, 0, 0, 0, 289, 41, 1, 0, 0, 0, 290, 291, 7, 1, 0, 0, 291,
-    43, 1, 0, 0, 0, 292, 293, 7, 1, 0, 0, 293, 45, 1, 0, 0, 0, 294, 298, 3, 60, 30, 0, 295, 298, 3, 48,
-    24, 0, 296, 298, 5, 46, 0, 0, 297, 294, 1, 0, 0, 0, 297, 295, 1, 0, 0, 0, 297, 296, 1, 0, 0, 0, 298,
-    47, 1, 0, 0, 0, 299, 300, 3, 50, 25, 0, 300, 305, 3, 52, 26, 0, 301, 306, 3, 54, 27, 0, 302, 306,
-    3, 56, 28, 0, 303, 306, 3, 58, 29, 0, 304, 306, 3, 64, 32, 0, 305, 301, 1, 0, 0, 0, 305, 302, 1,
-    0, 0, 0, 305, 303, 1, 0, 0, 0, 305, 304, 1, 0, 0, 0, 306, 49, 1, 0, 0, 0, 307, 314, 7, 1, 0, 0, 308,
-    309, 5, 7, 0, 0, 309, 311, 7, 1, 0, 0, 310, 308, 1, 0, 0, 0, 311, 312, 1, 0, 0, 0, 312, 310, 1, 0,
-    0, 0, 312, 313, 1, 0, 0, 0, 313, 315, 1, 0, 0, 0, 314, 310, 1, 0, 0, 0, 314, 315, 1, 0, 0, 0, 315,
-    51, 1, 0, 0, 0, 316, 323, 5, 8, 0, 0, 317, 318, 5, 9, 0, 0, 318, 323, 5, 8, 0, 0, 319, 323, 5, 14,
-    0, 0, 320, 323, 5, 27, 0, 0, 321, 323, 5, 15, 0, 0, 322, 316, 1, 0, 0, 0, 322, 317, 1, 0, 0, 0, 322,
-    319, 1, 0, 0, 0, 322, 320, 1, 0, 0, 0, 322, 321, 1, 0, 0, 0, 323, 53, 1, 0, 0, 0, 324, 341, 5, 47,
-    0, 0, 325, 341, 5, 17, 0, 0, 326, 327, 5, 17, 0, 0, 327, 328, 5, 5, 0, 0, 328, 341, 5, 47, 0, 0,
-    329, 332, 5, 17, 0, 0, 330, 331, 5, 18, 0, 0, 331, 333, 5, 47, 0, 0, 332, 330, 1, 0, 0, 0, 333,
-    334, 1, 0, 0, 0, 334, 332, 1, 0, 0, 0, 334, 335, 1, 0, 0, 0, 335, 341, 1, 0, 0, 0, 336, 341, 5, 46,
-    0, 0, 337, 338, 5, 6, 0, 0, 338, 339, 5, 46, 0, 0, 339, 341, 5, 6, 0, 0, 340, 324, 1, 0, 0, 0, 340,
-    325, 1, 0, 0, 0, 340, 326, 1, 0, 0, 0, 340, 329, 1, 0, 0, 0, 340, 336, 1, 0, 0, 0, 340, 337, 1, 0,
-    0, 0, 341, 55, 1, 0, 0, 0, 342, 348, 5, 10, 0, 0, 343, 349, 5, 17, 0, 0, 344, 349, 5, 46, 0, 0, 345,
-    346, 5, 6, 0, 0, 346, 347, 5, 46, 0, 0, 347, 349, 5, 6, 0, 0, 348, 343, 1, 0, 0, 0, 348, 344, 1,
-    0, 0, 0, 348, 345, 1, 0, 0, 0, 349, 360, 1, 0, 0, 0, 350, 356, 5, 2, 0, 0, 351, 357, 5, 17, 0, 0,
-    352, 357, 5, 46, 0, 0, 353, 354, 5, 6, 0, 0, 354, 355, 5, 46, 0, 0, 355, 357, 5, 6, 0, 0, 356, 351,
-    1, 0, 0, 0, 356, 352, 1, 0, 0, 0, 356, 353, 1, 0, 0, 0, 357, 359, 1, 0, 0, 0, 358, 350, 1, 0, 0, 0,
-    359, 362, 1, 0, 0, 0, 360, 358, 1, 0, 0, 0, 360, 361, 1, 0, 0, 0, 361, 363, 1, 0, 0, 0, 362, 360,
-    1, 0, 0, 0, 363, 364, 5, 11, 0, 0, 364, 57, 1, 0, 0, 0, 365, 371, 5, 17, 0, 0, 366, 371, 5, 46, 0,
-    0, 367, 368, 5, 6, 0, 0, 368, 369, 5, 46, 0, 0, 369, 371, 5, 6, 0, 0, 370, 365, 1, 0, 0, 0, 370,
-    366, 1, 0, 0, 0, 370, 367, 1, 0, 0, 0, 371, 372, 1, 0, 0, 0, 372, 378, 5, 42, 0, 0, 373, 379, 5,
-    17, 0, 0, 374, 379, 5, 46, 0, 0, 375, 376, 5, 6, 0, 0, 376, 377, 5, 46, 0, 0, 377, 379, 5, 6, 0,
-    0, 378, 373, 1, 0, 0, 0, 378, 374, 1, 0, 0, 0, 378, 375, 1, 0, 0, 0, 379, 59, 1, 0, 0, 0, 380, 381,
-    3, 62, 31, 0, 381, 382, 5, 1, 0, 0, 382, 387, 3, 46, 23, 0, 383, 384, 5, 2, 0, 0, 384, 386, 3, 46,
-    23, 0, 385, 383, 1, 0, 0, 0, 386, 389, 1, 0, 0, 0, 387, 385, 1, 0, 0, 0, 387, 388, 1, 0, 0, 0, 388,
-    390, 1, 0, 0, 0, 389, 387, 1, 0, 0, 0, 390, 391, 5, 3, 0, 0, 391, 61, 1, 0, 0, 0, 392, 393, 7, 2,
-    0, 0, 393, 63, 1, 0, 0, 0, 394, 395, 5, 5, 0, 0, 395, 396, 5, 47, 0, 0, 396, 404, 5, 12, 0, 0, 397,
-    398, 5, 13, 0, 0, 398, 399, 5, 47, 0, 0, 399, 404, 5, 5, 0, 0, 400, 401, 5, 5, 0, 0, 401, 402, 5,
-    47, 0, 0, 402, 404, 5, 5, 0, 0, 403, 394, 1, 0, 0, 0, 403, 397, 1, 0, 0, 0, 403, 400, 1, 0, 0, 0,
-    404, 65, 1, 0, 0, 0, 50, 70, 72, 79, 85, 88, 94, 97, 106, 109, 119, 123, 126, 133, 139, 146,
-    149, 158, 162, 165, 169, 179, 186, 193, 197, 202, 209, 214, 219, 223, 231, 240, 255, 266,
-    268, 277, 288, 297, 305, 312, 314, 322, 334, 340, 348, 356, 360, 370, 378, 387, 403];
+    274, 7, 1, 0, 0, 274, 35, 1, 0, 0, 0, 275, 278, 5, 30, 0, 0, 276, 279, 3, 28, 14, 0, 277, 279, 3,
+    34, 17, 0, 278, 276, 1, 0, 0, 0, 278, 277, 1, 0, 0, 0, 279, 287, 1, 0, 0, 0, 280, 283, 5, 2, 0, 0,
+    281, 284, 3, 28, 14, 0, 282, 284, 3, 34, 17, 0, 283, 281, 1, 0, 0, 0, 283, 282, 1, 0, 0, 0, 284,
+    286, 1, 0, 0, 0, 285, 280, 1, 0, 0, 0, 286, 289, 1, 0, 0, 0, 287, 285, 1, 0, 0, 0, 287, 288, 1, 0,
+    0, 0, 288, 37, 1, 0, 0, 0, 289, 287, 1, 0, 0, 0, 290, 291, 5, 34, 0, 0, 291, 292, 7, 1, 0, 0, 292,
+    39, 1, 0, 0, 0, 293, 298, 3, 22, 11, 0, 294, 298, 3, 36, 18, 0, 295, 298, 3, 26, 13, 0, 296, 298,
+    3, 38, 19, 0, 297, 293, 1, 0, 0, 0, 297, 294, 1, 0, 0, 0, 297, 295, 1, 0, 0, 0, 297, 296, 1, 0, 0,
+    0, 298, 41, 1, 0, 0, 0, 299, 300, 7, 1, 0, 0, 300, 43, 1, 0, 0, 0, 301, 302, 7, 1, 0, 0, 302, 45,
+    1, 0, 0, 0, 303, 307, 3, 60, 30, 0, 304, 307, 3, 48, 24, 0, 305, 307, 5, 46, 0, 0, 306, 303, 1,
+    0, 0, 0, 306, 304, 1, 0, 0, 0, 306, 305, 1, 0, 0, 0, 307, 47, 1, 0, 0, 0, 308, 309, 3, 50, 25, 0,
+    309, 314, 3, 52, 26, 0, 310, 315, 3, 54, 27, 0, 311, 315, 3, 56, 28, 0, 312, 315, 3, 58, 29, 0,
+    313, 315, 3, 64, 32, 0, 314, 310, 1, 0, 0, 0, 314, 311, 1, 0, 0, 0, 314, 312, 1, 0, 0, 0, 314, 313,
+    1, 0, 0, 0, 315, 49, 1, 0, 0, 0, 316, 323, 7, 1, 0, 0, 317, 318, 5, 7, 0, 0, 318, 320, 7, 1, 0, 0,
+    319, 317, 1, 0, 0, 0, 320, 321, 1, 0, 0, 0, 321, 319, 1, 0, 0, 0, 321, 322, 1, 0, 0, 0, 322, 324,
+    1, 0, 0, 0, 323, 319, 1, 0, 0, 0, 323, 324, 1, 0, 0, 0, 324, 51, 1, 0, 0, 0, 325, 332, 5, 8, 0, 0,
+    326, 327, 5, 9, 0, 0, 327, 332, 5, 8, 0, 0, 328, 332, 5, 14, 0, 0, 329, 332, 5, 27, 0, 0, 330, 332,
+    5, 15, 0, 0, 331, 325, 1, 0, 0, 0, 331, 326, 1, 0, 0, 0, 331, 328, 1, 0, 0, 0, 331, 329, 1, 0, 0,
+    0, 331, 330, 1, 0, 0, 0, 332, 53, 1, 0, 0, 0, 333, 350, 5, 47, 0, 0, 334, 350, 5, 17, 0, 0, 335,
+    336, 5, 17, 0, 0, 336, 337, 5, 5, 0, 0, 337, 350, 5, 47, 0, 0, 338, 341, 5, 17, 0, 0, 339, 340,
+    5, 18, 0, 0, 340, 342, 5, 47, 0, 0, 341, 339, 1, 0, 0, 0, 342, 343, 1, 0, 0, 0, 343, 341, 1, 0, 0,
+    0, 343, 344, 1, 0, 0, 0, 344, 350, 1, 0, 0, 0, 345, 350, 5, 46, 0, 0, 346, 347, 5, 6, 0, 0, 347,
+    348, 5, 46, 0, 0, 348, 350, 5, 6, 0, 0, 349, 333, 1, 0, 0, 0, 349, 334, 1, 0, 0, 0, 349, 335, 1,
+    0, 0, 0, 349, 338, 1, 0, 0, 0, 349, 345, 1, 0, 0, 0, 349, 346, 1, 0, 0, 0, 350, 55, 1, 0, 0, 0, 351,
+    357, 5, 10, 0, 0, 352, 358, 5, 17, 0, 0, 353, 358, 5, 46, 0, 0, 354, 355, 5, 6, 0, 0, 355, 356,
+    5, 46, 0, 0, 356, 358, 5, 6, 0, 0, 357, 352, 1, 0, 0, 0, 357, 353, 1, 0, 0, 0, 357, 354, 1, 0, 0,
+    0, 358, 369, 1, 0, 0, 0, 359, 365, 5, 2, 0, 0, 360, 366, 5, 17, 0, 0, 361, 366, 5, 46, 0, 0, 362,
+    363, 5, 6, 0, 0, 363, 364, 5, 46, 0, 0, 364, 366, 5, 6, 0, 0, 365, 360, 1, 0, 0, 0, 365, 361, 1,
+    0, 0, 0, 365, 362, 1, 0, 0, 0, 366, 368, 1, 0, 0, 0, 367, 359, 1, 0, 0, 0, 368, 371, 1, 0, 0, 0, 369,
+    367, 1, 0, 0, 0, 369, 370, 1, 0, 0, 0, 370, 372, 1, 0, 0, 0, 371, 369, 1, 0, 0, 0, 372, 373, 5, 11,
+    0, 0, 373, 57, 1, 0, 0, 0, 374, 380, 5, 17, 0, 0, 375, 380, 5, 46, 0, 0, 376, 377, 5, 6, 0, 0, 377,
+    378, 5, 46, 0, 0, 378, 380, 5, 6, 0, 0, 379, 374, 1, 0, 0, 0, 379, 375, 1, 0, 0, 0, 379, 376, 1,
+    0, 0, 0, 380, 381, 1, 0, 0, 0, 381, 387, 5, 42, 0, 0, 382, 388, 5, 17, 0, 0, 383, 388, 5, 46, 0,
+    0, 384, 385, 5, 6, 0, 0, 385, 386, 5, 46, 0, 0, 386, 388, 5, 6, 0, 0, 387, 382, 1, 0, 0, 0, 387,
+    383, 1, 0, 0, 0, 387, 384, 1, 0, 0, 0, 388, 59, 1, 0, 0, 0, 389, 390, 3, 62, 31, 0, 390, 391, 5,
+    1, 0, 0, 391, 396, 3, 46, 23, 0, 392, 393, 5, 2, 0, 0, 393, 395, 3, 46, 23, 0, 394, 392, 1, 0, 0,
+    0, 395, 398, 1, 0, 0, 0, 396, 394, 1, 0, 0, 0, 396, 397, 1, 0, 0, 0, 397, 399, 1, 0, 0, 0, 398, 396,
+    1, 0, 0, 0, 399, 400, 5, 3, 0, 0, 400, 61, 1, 0, 0, 0, 401, 402, 7, 2, 0, 0, 402, 63, 1, 0, 0, 0, 403,
+    404, 5, 5, 0, 0, 404, 405, 5, 47, 0, 0, 405, 416, 5, 12, 0, 0, 406, 407, 5, 13, 0, 0, 407, 408,
+    5, 47, 0, 0, 408, 416, 5, 5, 0, 0, 409, 410, 5, 5, 0, 0, 410, 411, 5, 47, 0, 0, 411, 416, 5, 5, 0,
+    0, 412, 413, 5, 13, 0, 0, 413, 414, 5, 47, 0, 0, 414, 416, 5, 12, 0, 0, 415, 403, 1, 0, 0, 0, 415,
+    406, 1, 0, 0, 0, 415, 409, 1, 0, 0, 0, 415, 412, 1, 0, 0, 0, 416, 65, 1, 0, 0, 0, 52, 70, 72, 79,
+    85, 88, 94, 97, 106, 109, 119, 123, 126, 133, 139, 146, 149, 158, 162, 165, 169, 179, 186,
+    193, 197, 202, 209, 214, 219, 223, 231, 240, 255, 266, 268, 278, 283, 287, 297, 306, 314,
+    321, 323, 331, 343, 349, 357, 365, 369, 379, 387, 396, 415];
 PolicyParser.DecisionsToDFA = PolicyParser._ATN.decisionToState.map((ds, index) => new antlr4_1.DFA(ds, index));
 exports["default"] = PolicyParser;
 class PolicyContext extends antlr4_1.ParserRuleContext {
@@ -4074,14 +4125,17 @@ class DynamicGroupSubjectContext extends antlr4_1.ParserRuleContext {
     DYNAMICGROUP() {
         return this.getToken(PolicyParser.DYNAMICGROUP, 0);
     }
-    WORD() {
-        return this.getToken(PolicyParser.WORD, 0);
+    groupName_list() {
+        return this.getTypedRuleContexts(GroupNameContext);
     }
-    HCL_VAR() {
-        return this.getToken(PolicyParser.HCL_VAR, 0);
+    groupName(i) {
+        return this.getTypedRuleContext(GroupNameContext, i);
     }
-    ID() {
-        return this.getToken(PolicyParser.ID, 0);
+    groupID_list() {
+        return this.getTypedRuleContexts(GroupIDContext);
+    }
+    groupID(i) {
+        return this.getTypedRuleContext(GroupIDContext, i);
     }
     get ruleIndex() {
         return PolicyParser.RULE_dynamicGroupSubject;
@@ -35530,7 +35584,7 @@ exports.suggestSimilar = suggestSimilar;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"@gtrevorrow/policy-validation-action","version":"0.2.4","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public","registry":"https://npm.pkg.github.com/gtrevorrow","scope":"@gtrevorrow"},"repository":{"type":"git","url":"git+https://github.com/gtrevorrow/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validation-action":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","test:cli:validator":"chmod +x ./scripts/test-validator.sh && ./scripts/test-validator.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","release:minor":"standard-version --release-as minor","release:major":"standard-version --release-as major","release:patch":"standard-version --release-as patch"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=18"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^6.0.0","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"},"standard-version":{"tag-prefix":"v","sign":false,"verify":false,"infile":"CHANGELOG.md","types":[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"chore","section":"Maintenance"},{"type":"docs","section":"Documentation"},{"type":"style","section":"Styling"},{"type":"refactor","section":"Refactors"},{"type":"perf","section":"Performance"},{"type":"test","section":"Tests"}]}}');
+module.exports = JSON.parse('{"name":"@gtrevorrow/policy-validation-action","version":"0.2.5","description":"OCI Policy Validation Tool for Terraform files","keywords":["oci","policy","terraform","validation","cli"],"publishConfig":{"access":"public","registry":"https://npm.pkg.github.com/gtrevorrow","scope":"@gtrevorrow"},"repository":{"type":"git","url":"git+https://github.com/gtrevorrow/policy-validation-action.git"},"main":"lib/Main.js","bin":{"policy-validation-action":"./dist/index.js"},"files":["lib","README.md","LICENSE"],"scripts":{"prebuild":"rm -rf lib dist","build":"tsc && ncc build lib/cli.js -o dist && chmod +x dist/index.js","test":"jest --ci --reporters=default --reporters=jest-junit","start":"node dist/index.js","test:watch":"jest --watch --verbose","test:coverage":"jest --coverage","prepare":"npm run build","prepublishOnly":"npm test","test:cli":"chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh","test:cli:validator":"chmod +x ./scripts/test-validator.sh && ./scripts/test-validator.sh","release":"standard-version","security:audit":"npm audit","security:audit:fix":"npm audit fix","security:report":"npm audit --json > security-report.json","release:minor":"standard-version --release-as minor","release:major":"standard-version --release-as major","release:patch":"standard-version --release-as patch"},"author":"Gordon Trevorrow","license":"UPL-1.0","engines":{"node":">=18"},"dependencies":{"@actions/core":"^1.10.0","@actions/github":"^6.0.0","@types/antlr4":"^4.11.6","antlr4":"^4.13.1","antlr4ts":"^0.5.0-alpha.4","commander":"^9.0.0","mkdirp":"^1.0.4","uuid":"^8.3.2","xml":"^1.0.1"},"devDependencies":{"@types/chalk":"^0.4.31","@types/commander":"^2.12.0","@types/jest":"^29.5.0","@types/node":"^16.18.0","@vercel/ncc":"^0.36.1","jest":"^29.5.0","jest-junit":"^15.0.0","standard-version":"^9.0.0","ts-jest":"^29.1.0","typescript":"^5.0.0"},"jest-junit":{"outputDirectory":"test-results","outputName":"test-results.xml","ancestorSeparator":" › ","uniqueOutputName":"false","suiteNameTemplate":"{filepath}","classNameTemplate":"{classname}","titleTemplate":"{title}"},"standard-version":{"tag-prefix":"v","sign":false,"verify":false,"infile":"CHANGELOG.md","types":[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"chore","section":"Maintenance"},{"type":"docs","section":"Documentation"},{"type":"style","section":"Styling"},{"type":"refactor","section":"Refactors"},{"type":"perf","section":"Performance"},{"type":"test","section":"Tests"}]}}');
 
 /***/ })
 
