@@ -13,9 +13,13 @@ test:
     - apt-get update && apt-get install -y jq
     
     # Configure npm to use GitHub Packages for @gtrevorrow scope
-    - echo "@gtrevorrow:registry=https://npm.pkg.github.com/" > .npmrc
+    # This is the critical part that was missing
+    - |
+      echo "registry=https://registry.npmjs.org/" > .npmrc
+      echo "@gtrevorrow:registry=https://npm.pkg.github.com/" >> .npmrc
     
-    # Install the public package from GitHub Packages
+    # Install the published package directly from GitHub Packages
+    # Using a specific version ensures we get a published version
     - npm install -g @gtrevorrow/policy-validation-action@0.2.6
     
     # Create test policies
