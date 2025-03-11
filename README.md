@@ -501,7 +501,7 @@ BREAKING CHANGE: new parser API is not backwards compatible
    ```bash
    git checkout main
    git merge --no-ff development
-   git push origin main
+   git push --follow-tags origin main
    ```
 
 5. Return to development:

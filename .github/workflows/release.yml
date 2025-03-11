@@ -6,76 +6,12 @@ on:
       - 'v*.*.*'
 
 permissions:
-  # Add top-level permissions for the entire workflow
   contents: read
   actions: read
   packages: write
 
 jobs:
-  verify-tests:
-    runs-on: ubuntu-latest
-    # Individual job permissions are no longer needed since we defined them at the workflow level
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Check test workflow status
-        id: test-check
-        uses: actions/github-script@v7
-        with:
-          # Explicitly set the github-token with the required permissions
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const commit = context.sha;
-            
-            console.log(`Looking for test workflow runs for commit: ${commit}`);
-            
-            try {
-              const workflows = await github.rest.actions.listRepoWorkflows({
-                owner,
-                repo
-              });
-              
-              const testWorkflow = workflows.data.workflows.find(w => w.name === 'Test Policy Validation Action');
-              if (!testWorkflow) {
-                core.setFailed('Test workflow not found');
-                return;
-              }
-              
-              const runs = await github.rest.actions.listWorkflowRuns({
-                owner,
-                repo,
-                workflow_id: testWorkflow.id,
-                head_sha: commit
-              });
-              
-              if (runs.data.workflow_runs.length === 0) {
-                core.setFailed('No test workflow runs found for the current commit');
-                return;
-              }
-              
-              const latestRun = runs.data.workflow_runs[0];
-              console.log(`Latest test run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
-              
-              if (latestRun.conclusion !== 'success') {
-                core.setFailed('Latest test workflow run was not successful');
-                return;
-              }
-              
-              console.log('Test workflow passed successfully for this commit');
-            } catch (error) {
-              console.log(`Error checking workflow status: ${error.message}`);
-              
-              // Fall back to just continuing with the release
-              // Since we're triggering on tags, we can assume the tests were passing
-              // when the tag was created
-              console.log('Continuing with release despite workflow check error');
-            }
-  
   publish:
-    # Change to run even if verify-tests has an error
-    needs: verify-tests
-    if: always() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

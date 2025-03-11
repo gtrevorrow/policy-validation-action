@@ -11,7 +11,12 @@ test:
   allow_failure: true  # Allow test failures without failing the pipeline
   script:
     - apt-get update && apt-get install -y jq
-    - npm install -g gtrevorrow/policy-validation-action#development
+    
+    # Configure npm to use GitHub Packages for @gtrevorrow scope
+    - echo "@gtrevorrow:registry=https://npm.pkg.github.com/" > .npmrc
+    
+    # Install the public package from GitHub Packages
+    - npm install -g @gtrevorrow/policy-validation-action@0.2.6
     
     # Create test policies
     - |

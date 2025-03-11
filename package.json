@@ -20,7 +20,7 @@
   },
   "main": "lib/Main.js",
   "bin": {
-    "policy-validation-action": "./dist/index.js"
+    "policy-validation-action": "dist/index.js"
   },
   "files": [
     "lib",
