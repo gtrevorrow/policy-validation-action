@@ -481,7 +481,7 @@ BREAKING CHANGE: new parser API is not backwards compatible
 
 ### Creating a Release
 
-1. Ensure tests pass:
+1. Ensure tests pass: 
    ```bash
    npm test
    npm run test:cli
