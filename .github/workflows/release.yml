@@ -5,13 +5,16 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  # Add top-level permissions for the entire workflow
+  contents: read
+  actions: read
+  packages: write
+
 jobs:
   verify-tests:
     runs-on: ubuntu-latest
-    # Add permissions needed to access workflow runs
-    permissions:
-      contents: read
-      actions: read
+    # Individual job permissions are no longer needed since we defined them at the workflow level
     steps:
       - uses: actions/checkout@v3
       
@@ -19,6 +22,8 @@ jobs:
         id: test-check
         uses: actions/github-script@v7
         with:
+          # Explicitly set the github-token with the required permissions
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
             const commit = context.sha;
@@ -72,9 +77,6 @@ jobs:
     needs: verify-tests
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v3
       

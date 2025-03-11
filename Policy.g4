@@ -44,7 +44,7 @@ grammar Policy;
 
  comparisonList      : logicalCombine '{' condition  (',' condition)* '}' ;
  logicalCombine      : ( ALL | ANY ) ;
- patternMatch        : ('/' WORD '*/'|'/*' WORD '/'| '/' WORD '/') ;
+ patternMatch        : ('/' WORD '*/'|'/*' WORD '/'| '/' WORD '/'|'/*' WORD '*/') ;
 
  /*
   * Lexer Rules
