@@ -23,7 +23,7 @@ grammar Policy;
  resourceSubjectId   : (WORD | HCL_VAR) ('\'' (WORD | HCL_VAR) '\'' | '\'' (WORD | HCL_VAR) '/' (WORD | HCL_VAR) '\'' )+?;
  serviceSubjectId    : (WORD | HCL_VAR);
  groupID             : ID (WORD | HCL_VAR);
- dynamicGroupSubject : DYNAMICGROUP ID? (WORD | HCL_VAR) ; // Updated to support HCL variable interpolation
+ dynamicGroupSubject : DYNAMICGROUP (groupName| groupID) (','(groupName|groupID))* ;
  tenancySubject      : TENANCY (WORD | HCL_VAR);
  definedSubject      : (groupSubject | dynamicGroupSubject | serviceSubject | tenancySubject);
  defined             : (WORD | HCL_VAR);
@@ -52,7 +52,7 @@ grammar Policy;
  BEFORE              : B E F O R E ;
  BETWEEN             : B E T W E E N;
  NEWLINE             : ('\r'? '\n' | '\r')+ -> skip;
- QUOTED_STRING       : '\'' (LETTER | DIGIT | ' ' | '-' | '.' | ':' | '@' | '_')+ '\'' ;
+ QUOTED_STRING       : '\'' (LETTER | DIGIT | ' ' | '-' | '.' | ':' | '@' | '_' | '/')+ '\'' ;
  WS                  : ' '+  -> skip;
  ANYUSER             : A N Y '-' U S E R  ;
  ANYTENANCY          : A N Y '-' T E N A N C Y ;

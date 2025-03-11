@@ -215,7 +215,7 @@ When a policy statement is invalid, the action provides detailed error messages 
 - Expected syntax
 
 Example error output:
-```
+```text
 Failed to parse policy statement:
 Statement: "Allow BadSyntax manage"
 Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
