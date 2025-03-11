@@ -494,7 +494,7 @@ BREAKING CHANGE: new parser API is not backwards compatible
 
 3. Push the release:
    ```bash
-   git push --follow-tags origin main
+   git push --follow-tags origin development
    ```
 
 4. After successful release:
