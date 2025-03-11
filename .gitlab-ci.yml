@@ -12,15 +12,14 @@ test:
   script:
     - apt-get update && apt-get install -y jq
     
-    # Configure npm to use GitHub Packages for @gtrevorrow scope
-    # This is the critical part that was missing
-    - |
-      echo "registry=https://registry.npmjs.org/" > .npmrc
-      echo "@gtrevorrow:registry=https://npm.pkg.github.com/" >> .npmrc
-    
-    # Install the published package directly from GitHub Packages
-    # Using a specific version ensures we get a published version
-    - npm install -g @gtrevorrow/policy-validation-action@0.2.6
+    # Instead of trying to use GitHub Packages, let's clone and build locally
+    # This is more reliable for CI environments
+    - git clone https://github.com/gtrevorrow/policy-validation-action.git
+    - cd policy-validation-action
+    - npm ci
+    - npm run build
+    - npm link
+    - cd ..
     
     # Create test policies
     - |
