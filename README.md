@@ -215,7 +215,7 @@ When a policy statement is invalid, the action provides detailed error messages 
 - Expected syntax
 
 Example error output:
-```
+```text
 Failed to parse policy statement:
 Statement: "Allow BadSyntax manage"
 Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
@@ -481,7 +481,7 @@ BREAKING CHANGE: new parser API is not backwards compatible
 
 ### Creating a Release
 
-1. Ensure tests pass:
+1. Ensure tests pass: 
    ```bash
    npm test
    npm run test:cli
@@ -494,7 +494,7 @@ BREAKING CHANGE: new parser API is not backwards compatible
 
 3. Push the release:
    ```bash
-   git push --follow-tags origin main
+   git push --follow-tags origin development
    ```
 
 4. After successful release:

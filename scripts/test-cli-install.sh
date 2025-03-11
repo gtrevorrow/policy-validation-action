@@ -54,20 +54,18 @@ resource "oci_identity_policy" "test" {
 }
 EOL
 
-# Test CLI
+# Test CLI - Fixed command to use 'validate' subcommand
 echo "Testing CLI..."
-policy-validator --path ./policies/test.tf || {
+policy-validation-action validate ./policies/test.tf || {
     echo -e "${RED}CLI validation failed${NC}"
     exit 1
 }
 
 echo -e "${GREEN}All tests passed!${NC}"
 
-echo "Testing CLI installation..."
-
-# Set up test directory
-TEST_DIR=$(mktemp -d)
-cd "$TEST_DIR"
+# Set up test directory for additional tests
+TEST_DIR2=$(mktemp -d)
+cd "$TEST_DIR2"
 
 # Create a policy file for testing
 mkdir -p ./policies
@@ -83,11 +81,7 @@ resource "oci_identity_policy" "policy_example" {
 }
 EOF
 
-# Install the package locally
-echo "Installing package from local directory..."
-npm install -g ../
-
-# Test the CLI
+# Test the CLI with the validate subcommand
 echo "Running validation..."
 if ! RESULT=$(policy-validation-action validate ./policies/test-policy.tf); then
     echo "❌ Validation failed unexpectedly"
@@ -148,3 +142,4 @@ fi
 echo "✅ CLI tests passed!"
 cd -
 rm -rf "$TEST_DIR"
+rm -rf "$TEST_DIR2"

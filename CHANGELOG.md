@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.6](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.5...v0.2.6) (2025-03-11)
+
+
+### Bug Fixes
+
+* improve error handling in CLI validation and enhance test setup ([c719ed1](https://github.com/gtrevorrow/policy-validation-action/commit/c719ed1a73836cc320a26ae7af4529abffc925d0))
+* update CLI validation command and improve test directory setup ([b3a29fc](https://github.com/gtrevorrow/policy-validation-action/commit/b3a29fc60cbacdebe6284120021d1ef46154d04b))
+* update patternMatch rule in Policy grammar for improved matching ([73a7ce3](https://github.com/gtrevorrow/policy-validation-action/commit/73a7ce386080ebadc801407e0f40e03716297413))
+* update Policy grammar for dynamic group subject and quoted string handling ([a1846e7](https://github.com/gtrevorrow/policy-validation-action/commit/a1846e782bd7ccf409a378d60d88e40b41b1a314))
+
+
+### Maintenance
+
+* update GitHub Actions workflow to add permissions and improve error handling ([720406a](https://github.com/gtrevorrow/policy-validation-action/commit/720406afa93b8351a7dfaaa8f92e04c17a50c77d))
+
 ### [0.2.5](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.4...v0.2.5) (2025-03-06)
 
 
