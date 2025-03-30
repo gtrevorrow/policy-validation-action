@@ -32,7 +32,7 @@ This tool validates OCI policy statements in Terraform files, ensuring that your
 
 ## Prerequisites
 
-- Node.js 16 or higher.
+- Node.js 18 or higher.
 - For CI/CD usage, access to GitHub Actions, GitLab CI, or BitBucket Pipelines.
 - Terraform files containing OCI policy statements.
 
@@ -57,16 +57,16 @@ npm install -g policy-validation-action
 npm install --save-dev policy-validation-action
 
 # Validate with detailed output
-policy-validator --path ./policies --verbose
+policy-validation-action --path ./policies --verbose
 
 # Use custom pattern for policy extraction
-policy-validator --path ./policies --pattern "statements\s*=\s*\[(.*?)\]"
+policy-validation-action --path ./policies --pattern "statements\s*=\s*\[(.*?)\]"
 
 # Specify extractor type
-policy-validator --path ./policies --extractor regex
+policy-validation-action --path ./policies --extractor regex
 
 # Show help
-policy-validator --help
+policy-validation-action --help
 ```
 
 ### CLI Options
@@ -80,6 +80,14 @@ policy-validator --help
 | `--exitOnError`  |       | Exit immediately if validation fails                                | `true`  |
 | `--version`      |       | Show version number                                                 | n/a     |
 | `--help`         |       | Show help                                                           | n/a     |
+
+### Default Regex Pattern
+
+The default regex pattern for the `regex` extractor is:
+```regex
+statements\s*=\s*\[(.*?)\]
+```
+This pattern captures everything between the square brackets, including policy statements, newlines, comments, and variable interpolations.
 
 ### CLI Output Format
 
@@ -204,7 +212,7 @@ pipelines:
           # - npm install -g https://github.com/gtrevorrow/policy-validation-action
           # - npm ci
           # - npm run build # if your project requires a build step
-          - policy-validator --path ./terraform
+          - policy-validation-action --path ./terraform
 ```
 
 ### Error Messages
@@ -380,6 +388,7 @@ The `test-cli-install.sh` script verifies the CLI functionality by:
    - Tests command line parameters
    - Verifies JSON output
    - Checks error handling
+
 
 Example test policy:
 ```hcl
