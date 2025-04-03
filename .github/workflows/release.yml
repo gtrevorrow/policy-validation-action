@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          registry-url: ${{ github.ref == 'refs/heads/main' && 'https://registry.npmjs.org' || 'https://npm.pkg.github.com' }}
+          registry-url: https://npm.pkg.github.com
           scope: "@gtrevorrow"
           
       - run: npm ci
@@ -30,7 +30,9 @@ jobs:
       # Handle development branch pushes
       - name: Publish Test Package
         if: github.ref == 'refs/heads/development'
-        run: npm publish --tag beta
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm publish --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
