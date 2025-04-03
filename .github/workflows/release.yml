@@ -32,7 +32,11 @@ jobs:
         if: github.ref == 'refs/heads/development'
         run: |
           git fetch --tags
-          CURRENT_TAG=$(git describe --tags --abbrev=0 origin/development)
+          CURRENT_TAG=$(git tag --sort=-creatordate | head -n 1)
+          if [ -z "$CURRENT_TAG" ]; then
+            echo "No tags found, defaulting to v0.0.0"
+            CURRENT_TAG="v0.0.0"
+          fi
           echo "Current tag on development branch: $CURRENT_TAG"
 
       - name: Bump Version for Development
