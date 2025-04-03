@@ -39,6 +39,12 @@ jobs:
           fi
           echo "Current tag on development branch: $CURRENT_TAG"
 
+      - name: Configure Git User
+        if: github.ref == 'refs/heads/development'
+        run: |
+          git config --global user.name "gtrevorrow"
+          git config --global user.email "gordon.trevorrow@oracle.com"
+
       - name: Bump Version for Development
         if: github.ref == 'refs/heads/development'
         run: |
