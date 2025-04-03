@@ -54,8 +54,8 @@ policy-validation-action --path ./policies --pattern "statements\s*=\s*\[(.*?)\]
 # Specify extractor type
 policy-validation-action --path ./policies --extractor regex
 
-# Show help
-policy-validation-action --help
+# Validate specific files
+policy-validation-action --path ./policies --files "file1.tf,file2.tf" --verbose
 ```
 
 ### CLI Options
@@ -66,9 +66,34 @@ policy-validation-action --help
 | `--verbose`      | `-v`  | Enable verbose output                                               | false   |
 | `--extractor`    |       | Policy extractor type (regex)                                       | `regex` |
 | `--pattern`      |       | Custom regex pattern for policy extraction                          | System default |
-| `--exitOnError`  |       | Exit immediately if validation fails                                | `true`  |
-| `--version`      |       | Show version number                                                 | n/a     |
-| `--help`         |       | Show help                                                           | n/a     |
+| `--files`        |       | Comma-separated list of specific files to process                  | n/a     |
+| `--exit-on-error`|       | Exit immediately if validation fails                                | `true`  |
+
+### Environment Variables
+
+CLI options can also be set via environment variables. These are useful in CI/CD pipelines where options are passed dynamically.
+
+| Environment Variable       | Corresponding CLI Option | Description                                  |
+|----------------------------|--------------------------|----------------------------------------------|
+| `POLICY_PATH`              | `--path`                | Path to policy file or directory             |
+| `POLICY_VERBOSE`           | `--verbose`             | Enable verbose output                        |
+| `POLICY_EXTRACTOR`         | `--extractor`           | Policy extractor type (regex)                |
+| `POLICY_PATTERN`           | `--pattern`             | Custom regex pattern for policy extraction   |
+| `POLICY_FILES`             | `--files`               | Comma-separated list of specific files       |
+| `POLICY_EXIT_ON_ERROR`     | `--exit-on-error`       | Exit immediately if validation fails         |
+
+### Example with Environment Variables
+
+```bash
+export POLICY_PATH=./policies
+export POLICY_VERBOSE=true
+export POLICY_EXTRACTOR=regex
+export POLICY_PATTERN="statements\\s*=\\s*\\[(.*?)\\]"
+export POLICY_FILES="file1.tf,file2.tf"
+export POLICY_EXIT_ON_ERROR=true
+
+policy-validation-action
+```
 
 ### Default Regex Pattern
 
@@ -182,10 +207,13 @@ validate_policies:
     # - npm install -g https://github.com/gtrevorrow/policy-validation-action
     # - npm ci
     # - npm run build
+    # Set environment variables
+    - export POLICY_PATH=./terraform
+    - export POLICY_VERBOSE=true
+    - export POLICY_EXTRACTOR=regex
+    - export POLICY_EXIT_ON_ERROR=true
     # Run policy validation
-    #  node dist/index.js --path ./terraform
-    - policy-validation-action --path ./terraform
-
+    - policy-validation-action
 ```
 
 ### BitBucket Pipelines example
@@ -203,7 +231,13 @@ pipelines:
           # - npm install -g https://github.com/gtrevorrow/policy-validation-action
           # - npm ci
           # - npm run build # if your project requires a build step
-          - policy-validation-action --path ./terraform
+          # Set environment variables
+          - export POLICY_PATH=./terraform
+          - export POLICY_VERBOSE=true
+          - export POLICY_EXTRACTOR=regex
+          - export POLICY_EXIT_ON_ERROR=true
+          # Run policy validation
+          - policy-validation-action
 ```
 
 ### Error Messages
@@ -229,8 +263,8 @@ The tool supports pluggable policy extractors for different file formats:
 
 ### Available Extractors
 
-- `regex` (default): Uses regular expressions to extract policies from HCL
-- `json`: (coming soon) Extracts policies from JSON format
+- `regex` (default): Uses regular expressions to extract policies from HCL.
+- `json`: Planned feature for extracting policies from JSON format.
 
 ### Regex Policy Extractor Policy Statement Pattern 
 
