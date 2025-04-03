@@ -5,21 +5,19 @@ on:
     branches:
       - main
       - development
-    tags:
-      - 'v*.*.*'
 
 permissions:
-  contents: read
+  contents: write
   actions: read
   packages: write
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       
-      - name: Setup Node.js for publishing
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
@@ -28,13 +26,61 @@ jobs:
           
       - run: npm ci
       - run: npm run build
-          
-      - name: Publish Package
+
+      # Handle development branch pushes
+      - name: Get Tag from Development Branch
+        if: github.ref == 'refs/heads/development'
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          git fetch --tags
+          CURRENT_TAG=$(git describe --tags --abbrev=0 origin/development)
+          echo "Current tag on development branch: $CURRENT_TAG"
+
+      - name: Bump Version for Development
+        if: github.ref == 'refs/heads/development'
+        run: |
+          npx standard-version --prerelease devel --skip.tag
+          TAG_NAME=$(node -p "require('./package.json').version")
+          echo "Bumped version to: $TAG_NAME"
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore(release): $TAG_NAME"
+          git push origin development
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Test Package
+        if: github.ref == 'refs/heads/development'
+        run: npm publish --tag beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Handle main branch pushes with a -devel tag
+      - name: Retag and Publish Production Package
+        if: github.ref == 'refs/heads/main'
+        run: |
+          CURRENT_TAG=$(git describe --tags --abbrev=0)
+          if [[ "$CURRENT_TAG" == *-devel ]]; then
+            NEW_TAG=${CURRENT_TAG%-devel}
+            echo "Retagging $CURRENT_TAG to $NEW_TAG"
+            git tag -d "$CURRENT_TAG"
+            git tag "$NEW_TAG"
+            git push origin "$NEW_TAG"
             npm publish --access public
-          elif [[ "${{ github.ref }}" == "refs/heads/development" ]]; then
-            npm publish --tag beta
+          else
+            echo "No -devel tag found, skipping retagging and publishing."
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        run: |
+          CURRENT_TAG=$(git describe --tags --abbrev=0)
+          if [[ "$CURRENT_TAG" == *-devel ]]; then
+            NEW_TAG=${CURRENT_TAG%-devel}
+            echo "Creating GitHub release for tag: $NEW_TAG"
+            gh release create "$NEW_TAG" --title "Release $NEW_TAG" --notes-file ./CHANGELOG.md
+          else
+            echo "No -devel tag found, skipping GitHub release creation."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

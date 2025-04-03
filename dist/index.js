@@ -397,20 +397,28 @@ commander_1.program
     .option('--files <files>', 'Comma-separated list of specific files to process')
     .option('--exit-on-error', 'Exit with non-zero status if validation fails', true)
     .action(async (scanPath, options) => {
-    const resolvedPath = path.resolve(scanPath);
+    var _a, _b;
+    const resolvedPath = path.resolve(scanPath || process.env.POLICY_PATH || '.');
     const consoleLogger = {
         debug: (msg) => options.verbose && console.error(msg),
         info: (msg) => console.error(msg),
         warn: (msg) => console.error(msg),
         error: (msg) => console.error(msg)
     };
-    // Parse files option
-    const fileNames = options.files ? options.files.split(',').map((f) => f.trim()) : undefined;
+    // Parse options with fallback to environment variables
+    const fileNames = options.files
+        ? options.files.split(',').map((f) => f.trim())
+        : (_a = process.env.POLICY_FILES) === null || _a === void 0 ? void 0 : _a.split(',').map((f) => f.trim());
+    const pattern = options.pattern || process.env.POLICY_PATTERN;
+    const extractor = options.extractor || process.env.POLICY_EXTRACTOR || 'regex';
+    const exitOnError = (_b = options.exitOnError) !== null && _b !== void 0 ? _b : (process.env.POLICY_EXIT_ON_ERROR === 'true');
     // Debug log for troubleshooting
     if (options.verbose) {
         consoleLogger.debug(`Resolved path: ${resolvedPath}`);
-        consoleLogger.debug(`Using extractor: ${options.extractor}`);
+        consoleLogger.debug(`Using extractor: ${extractor}`);
         consoleLogger.debug(`Files filter: ${fileNames ? fileNames.join(', ') : 'none'}`);
+        consoleLogger.debug(`Custom pattern: ${pattern || 'none'}`);
+        consoleLogger.debug(`Exit on error: ${exitOnError}`);
     }
     const files = await (0, Main_1.findPolicyFiles)(resolvedPath, { fileNames }, consoleLogger);
     if (files.length === 0) {
@@ -421,7 +429,7 @@ commander_1.program
     let allOutputs = [];
     for (const file of files) {
         consoleLogger.info(`Validating policy statements for file ${file}`);
-        const expressions = await (0, Main_1.processFile)(file, options.pattern, options.extractor, consoleLogger);
+        const expressions = await (0, Main_1.processFile)(file, pattern, extractor, consoleLogger);
         if (expressions.length > 0) {
             const result = (0, Main_1.parsePolicy)((0, Main_1.formatPolicyStatements)(expressions), consoleLogger);
             if (!result.isValid) {
@@ -437,7 +445,7 @@ commander_1.program
                 statements: expressions,
                 errors: result.errors
             });
-            if (options.exitOnError && !result.isValid) {
+            if (exitOnError && !result.isValid) {
                 console.log(JSON.stringify(allOutputs));
                 process.exit(1);
             }

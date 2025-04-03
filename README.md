@@ -14,6 +14,8 @@ This tool validates OCI policy statements ensuring that the policies adhere to t
 - [ANTLR Parser](#antlr-parser)
 - [Testing](#testing)
 - [Development](#development)
+- [Development Workflow](#development-workflow)
+- [Version Bumping](#version-bumping)
 - [Release Process & Versioning](#release-process--versioning)
 - [License](#license)
 
@@ -448,8 +450,7 @@ resource "oci_identity_policy" "test" {
 
 ### Test Fixtures
 
-Test fixtures are located in `src/__tests__/fixtures/` and include:
-- `valid.tf`: Valid policy statements
+Test fixtures are located in `src/__tests__/fixtures/` and includes files to test the policy validation using some real world examples of OCI IAM policies embedded in Terraform file. 
 
 ### CI Test Workflow
 
@@ -481,23 +482,68 @@ npm run test:cli
 # 4. Clean up test files
 ```
 
-## ANTLR Parser
+## Development Workflow
 
-This project uses ANTLR (ANother Tool for Language Recognition) to parse and validate OCI policy statements. ANTLR is a powerful parser generator that allows us to define a grammar for the OCI policy language and automatically generate a parser that can check if a given policy statement conforms to that grammar.
+### Creating a Feature Branch
+1. Ensure you are on the `development` branch:
+   ```bash
+   git checkout development
+   git pull origin development
+   ```
+2. Create a new feature branch:
+   ```bash
+   git checkout -b feature/<feature-name>
+   ```
+3. Make your changes and commit them:
+   ```bash
+   git add .
+   git commit -m "feat: <brief description of the feature>"
+   ```
+4. Push your feature branch to the remote repository:
+   ```bash
+   git push origin feature/<feature-name>
+   ```
 
-### Grammar Definition
+### Merging into Development via Pull Request
+1. Open a pull request (PR) from your feature branch into the `development` branch.
+2. Ensure the following checks are completed before merging:
+   - All tests pass (e.g., `npm test`, `npm run test:cli`).  - Code review is approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) pass successfully.
+3. Once approved, merge the PR into the `development` branch:
+   - Optionally , use the "Squash and Merge" option to keep the commit history clean.
 
-The grammar for the OCI policy language is defined in the `src/generated/Policy.g4` file. This file specifies the syntax rules for OCI policy statements, including the keywords, operators, and data types that are allowed.
+### Preparing for a Production Release
+1. Ensure the `development` branch is up-to-date:
+   ```bash
+   git checkout development
+   git pull origin development
+   ```
+2. Run all tests locally to verify the code:
+   ```bash
+   npm test
+   npm run test:cli
+   ```
+3. Open a pull request from `development` into `main`:
+   - The workflow will detect the `-devel` tag (e.g., `v1.0.0-devel`) and handle retagging and publishing automatically.
+   - The pull request should be reviewed and approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) should pass successfully.
 
-### Parser Generation
+4. Merge the pull request into `main`:
+   - This will trigger the workflow to:
+     - Retag the `-devel` tag to a production tag (e.g., `v1.0.0`).
+     - Publish the production package to NPM.
+     - Create a GitHub release.
 
-The ANTLR parser is generated automatically from the `Policy.g4` file using the ANTLR tool. The generated parser code is located in the `src/generated` directory.
+5. Verify the release:
+   - Check the NPM registry for the production package.
+   - Check the GitHub repository for the release.
 
-### Validation Process
+### Summary of Branching Strategy
+- **Feature Branches**: For new features or bug fixes (`feature/<feature-name>`).
+- **Development Branch**: For integrating and testing features before production.
+- **Main Branch**: For production-ready code and releases.
 
-When the policy validation tool is run, it uses the ANTLR parser to check each policy statement against the grammar. If a statement does not conform to the grammar, the parser will generate an error message indicating the location and type of syntax error. These error messages are then displayed to the user to help them identify and fix the invalid policy statement.
-
-## Release Process & Versioning
+## Version Bumping
 
 This project follows [Semantic Versioning](https://semver.org/) with automated version management:
 
@@ -527,6 +573,42 @@ feat: migrate to new parser API
 BREAKING CHANGE: new parser API is not backwards compatible
 ```
 
+## ANTLR Parser
+
+This project uses ANTLR (ANother Tool for Language Recognition) to parse and validate OCI policy statements. ANTLR is a powerful parser generator that allows us to define a grammar for the OCI policy language and automatically generate a parser that can check if a given policy statement conforms to that grammar.
+
+### Grammar Definition
+
+The grammar for the OCI policy language is defined in the `src/generated/Policy.g4` file. This file specifies the syntax rules for OCI policy statements, including the keywords, operators, and data types that are allowed.
+
+### Parser Generation
+
+The ANTLR parser is generated automatically from the `Policy.g4` file using the ANTLR tool. The generated parser code is located in the `src/generated` directory.
+
+### Validation Process
+
+When the policy validation tool is run, it uses the ANTLR parser to check each policy statement against the grammar. If a statement does not conform to the grammar, the parser will generate an error message indicating the location and type of syntax error. These error messages are then displayed to the user to help them identify and fix the invalid policy statement.
+
+## Release Process & Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) with automated version management. The release workflow is designed to handle both development and production releases seamlessly.
+
+### Workflow Behavior
+
+#### Pushing to `development`:
+1. **Version Bump**:
+   - Automatically bumps the version to a format like `v.*.*.*-devel` using `standard-version` with the `--prerelease devel` flag.
+2. **Test Package Publishing**:
+   - Publishes a test package to NPM with the `beta` tag.
+
+#### Pushing to `main` with a `-devel` tag:
+1. **Retagging**:
+   - Retags the version by removing the `-devel` suffix (e.g., `v1.0.0-devel` becomes `v1.0.0`).
+2. **Production Package Publishing**:
+   - Publishes the package to NPM as a production version.
+3. **GitHub Release Creation**:
+   - Creates a GitHub release using the new tag and the `CHANGELOG.md` file as the release notes.
+
 ### Creating a Release
 
 1. Ensure tests pass: 
@@ -535,59 +617,25 @@ BREAKING CHANGE: new parser API is not backwards compatible
    npm run test:cli
    ```
 
-2. Create release based on conventional commit messages:
-   ```bash
-   # For automatic version determination based on commit messages:
-   npm run release
-   
-   # Or specify version bump explicitly:
-   npm run release:patch  # For bug fixes (0.0.x)
-   npm run release:minor  # For new features (0.x.0)
-   npm run release:major  # For breaking changes (x.0.0)
-   ```
+2. Open a pull request from your feature branch into the `development` branch:
+   - This will trigger the workflow to bump the version to `v.*.*.*-devel` and publish a test package.
+   - The pull request should be reviewed and approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) should pass successfully.
 
-3. Push the release:
-   ```bash
-   git push --follow-tags origin development
-   ```
+3. Open a pull request from `development` into `main`:
+   - The workflow will detect the `-devel` tag (e.g., `v1.0.0-devel`) and handle retagging and publishing automatically.
+   - The pull request should be reviewed and approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) should pass successfully.
 
-4. After successful release:
-   ```bash
-   git checkout main
-   git merge --no-ff development
-   git push --follow-tags origin main
-   ```
+4. Merge the pull request into `main`:
+   - This will trigger the workflow to:
+     - Retag the `-devel` tag to a production tag (e.g., `v1.0.0`).
+     - Publish the production package to NPM.
+     - Create a GitHub release.
 
-5. Return to development:
-   ```bash
-   git checkout development
-   ```
-
-The release workflow will automatically:
-- Update CHANGELOG.md based on commit messages
-- Bump version in package.json based on conventional commits
-- Create git tag
-- Build distribution files
-- Create GitHub release
-- Publish to npm 
-
-### Release Workflow
-
-The release process is integrated into CI pipelines:
-
-- GitHub Actions: Automated tests and npm publishing on tags
-- GitLab CI: Version validation and artifact generation
-- BitBucket Pipelines: Automated npm publishing via pipe
-
-### Publishing to npm
-
-```bash
-# Login to npm
-npm login
-
-# Publish package
-npm publish
-```
+5. Verify the release:
+   - Check the NPM registry for the production package.
+   - Check the GitHub repository for the release.
 
 ## License
 
