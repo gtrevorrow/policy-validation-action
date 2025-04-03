@@ -596,14 +596,14 @@ This project follows [Semantic Versioning](https://semver.org/) with automated v
 ### Workflow Behavior
 
 #### Pushing to `development`:
-1. **Version Bump**:
-   - Automatically bumps the version to a format like `v.*.*.*-devel` using `standard-version` with the `--prerelease devel` flag.
-2. **Test Package Publishing**:
+1. **Test Package Publishing**:
    - Publishes a test package to NPM with the `beta` tag.
+   - No version bumping or tagging occurs on the `development` branch.
 
-#### Pushing to `main` with a `-devel` tag:
-1. **Retagging**:
-   - Retags the version by removing the `-devel` suffix (e.g., `v1.0.0-devel` becomes `v1.0.0`).
+#### Pushing to `main`:
+1. **Version Bump and Tagging**:
+   - Automatically bumps the version using `standard-version` based on commit messages.
+   - Creates a Git tag for the new version (e.g., `v1.0.0`).
 2. **Production Package Publishing**:
    - Publishes the package to NPM as a production version.
 3. **GitHub Release Creation**:
@@ -611,31 +611,36 @@ This project follows [Semantic Versioning](https://semver.org/) with automated v
 
 ### Creating a Release
 
-1. Ensure tests pass: 
+1. Ensure tests pass:
    ```bash
    npm test
    npm run test:cli
    ```
 
 2. Open a pull request from your feature branch into the `development` branch:
-   - This will trigger the workflow to bump the version to `v.*.*.*-devel` and publish a test package.
+   - This will trigger the workflow to publish a test package with the `beta` tag.
    - The pull request should be reviewed and approved by at least one other team member.
    - CI pipelines (e.g., GitHub Actions) should pass successfully.
 
 3. Open a pull request from `development` into `main`:
-   - The workflow will detect the `-devel` tag (e.g., `v1.0.0-devel`) and handle retagging and publishing automatically.
+   - The workflow will handle version bumping, tagging, and publishing automatically.
    - The pull request should be reviewed and approved by at least one other team member.
    - CI pipelines (e.g., GitHub Actions) should pass successfully.
 
 4. Merge the pull request into `main`:
    - This will trigger the workflow to:
-     - Retag the `-devel` tag to a production tag (e.g., `v1.0.0`).
+     - Bump the version and create a Git tag.
      - Publish the production package to NPM.
      - Create a GitHub release.
 
 5. Verify the release:
    - Check the NPM registry for the production package.
    - Check the GitHub repository for the release.
+
+### Summary of Branching Strategy
+- **Feature Branches**: For new features or bug fixes (`feature/<feature-name>`).
+- **Development Branch**: For integrating and testing features before production.
+- **Main Branch**: For production-ready code and releases.
 
 ## License
 
