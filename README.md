@@ -279,10 +279,24 @@ If no pattern is specified, the action will use a default pattern that handles:
 
 **Important Considerations for the Regex Pattern:**
 
-*   **Capturing Group:** The regex pattern *must* include a capturing group (using parentheses `()`) that isolates the portion of the text containing the policy statements. This captured group will be passed to the `DefaultExtractionStrategy.ts` for further processing.
-*   **Handling Newlines and Whitespace:** The pattern should be able to handle newlines and varying amounts of whitespace within the policy statements block.
-*   **Comments and Other Syntax:** The pattern should be designed to ignore comments or other syntax that might be present within the policy statements block but are not part of the actual policy statements.
-*   **Matching the Entire Block:** The regex should match the entire block of policy statements, from the beginning of the `statements = [` to the end of the `]` (or equivalent delimiters in your file format).
+*   **Capturing Group:** The regex pattern *must* include a capturing group (using parentheses `()`) that isolates the portion of the text containing the policy statements. For example, in the default pattern:
+    ```regex
+    statements\s*=\s*\[\s*((?:[^[]*?(?:"(?:[^"\\]|\\.)*"|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]
+    ```
+    The capturing group isolates the content inside square brackets (`[...]`).
+
+*   **Handling Newlines and Whitespace:** The pattern should handle newlines and varying amounts of whitespace within the policy statements block. The default pattern uses the `s` flag (dot matches newlines) and `\s*` to match optional whitespace.
+
+*   **Comments and Other Syntax:** While the regex pattern itself does not handle comments, the `DefaultExtractionStrategy` removes comments (e.g., `#` or `//`) during preprocessing. Ensure that your pattern focuses on extracting valid statements and relies on preprocessing to handle comments.
+
+*   **Matching the Entire Block:** The regex should match the entire block of policy statements. For example:
+    ```terraform
+    statements = [
+        "Allow group Administrators to manage all-resources in tenancy",
+        "Allow group Developers to use instances in compartment dev"
+    ]
+    ```
+    The default pattern captures everything between the square brackets, including newlines and interpolations like `${var.name}`.
 
 **Example:**
 
@@ -301,7 +315,7 @@ resource "oci_identity_policy" "test" {
 }
 ```
 
-This pattern captures everything between the square brackets, including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to the DefaultExtractionStrategy.ts for processing.
+As discussed above regex pattern should captures everything between the square brackets ( in the example), including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to the DefaultExtractionStrategy.ts for processing.
 
 **Processing Steps:**
 1. **Split into lines:**  
