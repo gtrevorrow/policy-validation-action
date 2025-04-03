@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.7](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.6...v0.2.7) (2025-04-03)
+
+
+### Features
+
+* enhance CLI options with environment variable support and update README documentation ([429e3cd](https://github.com/gtrevorrow/policy-validation-action/commit/429e3cd22aae5aa183c0836a5dfb507687aa5b3c))
+* Enhance release workflow ([6b4ecdf](https://github.com/gtrevorrow/policy-validation-action/commit/6b4ecdfae132453104b755cf38c660971b316bc2))
+
+
+### Bug Fixes
+
+* **CI/CD:** Improve CI/CD workflow for cross-platform builds ([5085a6e](https://github.com/gtrevorrow/policy-validation-action/commit/5085a6e2695148745f64688348f37889b81feb09))
+* **CI/CD:** Properly configure GitHub Packages registry access ([7e09c7e](https://github.com/gtrevorrow/policy-validation-action/commit/7e09c7e07ec280b4e921c11b4bb29c20ef257350))
+* update README to correct the branch name for pushing releases ([1d181de](https://github.com/gtrevorrow/policy-validation-action/commit/1d181de79c88b341e6913781f693817354ab31c5))
+* update README to ensure proper formatting for release instructions ([ba2bb8b](https://github.com/gtrevorrow/policy-validation-action/commit/ba2bb8bc45fb2784aa5f529034b045ad62aada5f))
+* update release workflow for main and development branches, improve npm publishing logic, and enhance README documentation ([43a409f](https://github.com/gtrevorrow/policy-validation-action/commit/43a409f87694f82bd043e0ceae416a9fe92dfe30))
+
+
+### Refactors
+
+* **CI/CD:** Streamline workflows and improve package installation ([50ce320](https://github.com/gtrevorrow/policy-validation-action/commit/50ce3206ffb278f8603a67199b54d34d256d8b64))
+
+
+### Maintenance
+
+* update Node.js version requirement and CLI command references in README ([8221196](https://github.com/gtrevorrow/policy-validation-action/commit/82211963a9a7238ce767ded6159ac8b160cfb344))
+
+
+### Documentation
+
+* enhance regex pattern documentation in README for clarity and examples ([5662e2e](https://github.com/gtrevorrow/policy-validation-action/commit/5662e2e43189d29260fd0193b84f2d2da7b3f899))
+* update release instructions in README for conventional commits ([dfc350c](https://github.com/gtrevorrow/policy-validation-action/commit/dfc350c021f72c9cbb09c306e48ca199a900aa4a))
+
 ### [0.2.6](https://github.com/gtrevorrow/policy-validation-action/compare/v0.2.5...v0.2.6) (2025-03-11)
 
 
