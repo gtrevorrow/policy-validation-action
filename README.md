@@ -1,6 +1,6 @@
 # OCI Policy Validation Tool
 
-This tool validates OCI policy statements in Terraform files, ensuring that your policies adhere to the correct syntax. It supports multiple CI platforms and provides detailed error messages to help you quickly identify and fix any issues.
+This tool validates OCI policy statements ensuring that the policies adhere to the correct syntax. It supports multiple CI platforms and provides detailed error messages to help  quickly identify and fix syntax issues.
 
 <!-- Consider adding a Table of Contents for easier navigation -->
 ## Table of Contents
@@ -19,11 +19,11 @@ This tool validates OCI policy statements in Terraform files, ensuring that your
 
 ## Features
 
-- Validates OCI policy statements in Terraform files.
+- Validates OCI policy statements in Terraform HCL files.
 - Supports OCI Core Landing Zone IAM Policy Module
 - Supports multiple OCI policy expression types:
   - Allow, Define, Endorse, and Admit statements.
-- Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines, CLI).
+- Cross-platform support (GitHub Actions, CLI fpr GitLab CI  & BitBucket Pipelines).
 - Handles HCL variable interpolation (${var.name}) in policy statements.
 - Colored CLI output with verbose mode.
 - Recursive directory scanning.
@@ -33,18 +33,7 @@ This tool validates OCI policy statements in Terraform files, ensuring that your
 ## Prerequisites
 
 - Node.js 18 or higher.
-- For CI/CD usage, access to GitHub Actions, GitLab CI, or BitBucket Pipelines.
-- Terraform files containing OCI policy statements.
 
-### Publishing to npm
-
-```bash
-# Login to npm
-npm login
-
-# Publish package
-npm publish
-```
 ## CLI 
 
 The CLI tool provides validation for OCI policy statements:
@@ -84,6 +73,7 @@ policy-validation-action --help
 ### Default Regex Pattern
 
 The default regex pattern for the `regex` extractor is:
+
 ```regex
 statements\s*=\s*\[(.*?)\]
 ```
@@ -181,7 +171,7 @@ jobs:
 |-----------------------|------------------------------------------------------------------------------------|
 | `policy_expressions`  | List of all validated policy expressions (Allow, Define, Endorse, Admit)           |
 
-### GitLab CI
+### GitLab CI example
 
 ```yaml
 validate_policies:
@@ -193,14 +183,15 @@ validate_policies:
     # - npm ci
     # - npm run build
     # Run policy validation
-    - node dist/index.js --path ./terraform
+    #  node dist/index.js --path ./terraform
+    - policy-validation-action --path ./terraform
 
 ```
 
-### BitBucket Pipelines
+### BitBucket Pipelines example
 
 ```yaml
-image: node:16
+image: node:18
 
 pipelines:
   default:
@@ -539,6 +530,16 @@ The release process is integrated into CI pipelines:
 - GitHub Actions: Automated tests and npm publishing on tags
 - GitLab CI: Version validation and artifact generation
 - BitBucket Pipelines: Automated npm publishing via pipe
+
+### Publishing to npm
+
+```bash
+# Login to npm
+npm login
+
+# Publish package
+npm publish
+```
 
 ## License
 

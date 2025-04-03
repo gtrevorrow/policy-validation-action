@@ -350,10 +350,10 @@ describe('Main', () => {
             expect(validationResult.isValid).toBe(true);
         });
 
-        it('should extract and validate complex security compartment policies from OCI Core Landing Zone IAM module', async () => {
+        it('should extract and validate complex security policies from OCI Core Landing Zone IAM module', async () => {
             const fixturePath1 = path.join(__dirname, 'fixtures', 'security_cmp_policy.tf');
             const fixturePath2 = path.join(__dirname, 'fixtures', 'root_cmp_policy.tf');
-            
+            const fixturePath3 = path.join(__dirname, 'fixtures', 'network_cmp_policy.tf');
             // Use the pattern that was verified to work on regexr.com
             const comprehensivePattern = '\\s*\\[\\s*(?:\#?.*?)(["\'\`]\\s*(?:allow|define|endorse|admit).*?)\\s*\\]\\s*:\\s*\\[\\]';
             
@@ -374,9 +374,15 @@ describe('Main', () => {
                 mockLogger
             );
             
+            const policies3 = await processFile(
+                fixturePath3,
+                comprehensivePattern,
+                'regex' as ExtractorType,
+                mockLogger
+            );
             console.log(`Total policies extracted from security_cmp_policy.tf: ${policies1.length}`);
             console.log(`Total policies extracted from root_cmp_policy.tf: ${policies2.length}`);
-            
+            console.log(`Total policies extracted from network_cmp_policy.tf: ${policies3.length}`);
             // Check for specific storage policy in security_cmp_policy.tf
             const storagePolicy = policies1.find(p => 
                 p.toLowerCase().includes('allow group') && 
@@ -395,17 +401,28 @@ describe('Main', () => {
             expect(objectStoragePolicy).toBeDefined();
             console.log(`Found objectstorage policy: ${objectStoragePolicy}`);
             
+            // Check for specific network policy in network_cmp_policy.tf
+            const networkPolicy = policies3.find(p =>
+                p.toLowerCase().includes('allow group') &&
+                p.toLowerCase().includes('to manage virtual-network-family in compartment')
+            );
+            expect(networkPolicy).toBeDefined();
+            console.log(`Found network policy: ${networkPolicy}`);
+         
             // We expect to find EXACTLY 38 policies in security_cmp_policy.tf
             expect(policies1.length).toBe(38);
             // We expect to find EXACTLY 85 policies in root_cmp_policy.tf
             expect(policies2.length).toBe(76);
-            
+            // We expect to find EXACTLY 41 policies in network_cmp_policy.tf
+            expect(policies3.length).toBe(41);
+
             // Validate the extracted policies
             const result1 = parsePolicy(formatPolicyStatements(policies1), mockLogger);
             const result2 = parsePolicy(formatPolicyStatements(policies2), mockLogger);
-            
+            const result3 = parsePolicy(formatPolicyStatements(policies3), mockLogger);
             expect(result1.isValid).toBe(true);
             expect(result2.isValid).toBe(true);
+            expect(result3.isValid).toBe(true);
         });
     });
 });
