@@ -28,70 +28,40 @@ jobs:
       - run: npm run build
 
       # Handle development branch pushes
-      - name: Get Tag from Development Branch
-        if: github.ref == 'refs/heads/development'
-        run: |
-          git fetch --tags
-          CURRENT_TAG=$(git tag --sort=-creatordate | head -n 1)
-          if [ -z "$CURRENT_TAG" ]; then
-            echo "No tags found, defaulting to v0.0.0"
-            CURRENT_TAG="v0.0.0"
-          fi
-          echo "Current tag on development branch: $CURRENT_TAG"
-
-      - name: Configure Git User
-        if: github.ref == 'refs/heads/development'
-        run: |
-          git config --global user.name "gtrevorrow"
-          git config --global user.email "gordon.trevorrow@oracle.com"
-
-      - name: Bump Version for Development
-        if: github.ref == 'refs/heads/development'
-        run: |
-          npx standard-version --prerelease devel --skip.tag
-          TAG_NAME=$(node -p "require('./package.json').version")
-          echo "Bumped version to: $TAG_NAME"
-          git add package.json package-lock.json CHANGELOG.md
-          git reset node_modules/ --quiet
-          git commit -m "chore(release): $TAG_NAME"
-          git push origin development
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish Test Package
         if: github.ref == 'refs/heads/development'
         run: npm publish --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Handle main branch pushes with a -devel tag
-      - name: Retag and Publish Production Package
+      # Handle main branch pushes
+      - name: Configure Git User
         if: github.ref == 'refs/heads/main'
         run: |
-          CURRENT_TAG=$(git describe --tags --abbrev=0)
-          if [[ "$CURRENT_TAG" == *-devel ]]; then
-            NEW_TAG=${CURRENT_TAG%-devel}
-            echo "Retagging $CURRENT_TAG to $NEW_TAG"
-            git tag -d "$CURRENT_TAG"
-            git tag "$NEW_TAG"
-            git push origin "$NEW_TAG"
-            npm publish --access public
-          else
-            echo "No -devel tag found, skipping retagging and publishing."
-          fi
+          git config --global user.name "gtrevorrow"
+          git config --global user.email "gordon.trevorrow@oracle.com"
+
+      - name: Bump Version and Tag for Main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          npx standard-version
+          TAG_NAME=$(node -p "require('./package.json').version")
+          echo "Bumped version to: $TAG_NAME"
+          git push --follow-tags origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Production Package
+        if: github.ref == 'refs/heads/main'
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'
         run: |
-          CURRENT_TAG=$(git describe --tags --abbrev=0)
-          if [[ "$CURRENT_TAG" == *-devel ]]; then
-            NEW_TAG=${CURRENT_TAG%-devel}
-            echo "Creating GitHub release for tag: $NEW_TAG"
-            gh release create "$NEW_TAG" --title "Release $NEW_TAG" --notes-file ./CHANGELOG.md
-          else
-            echo "No -devel tag found, skipping GitHub release creation."
-          fi
+          TAG_NAME=$(node -p "require('./package.json').version")
+          echo "Creating GitHub release for tag: $TAG_NAME"
+          gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes-file ./CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
