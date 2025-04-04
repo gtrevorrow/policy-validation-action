@@ -22,26 +22,14 @@ echo "Checking Node.js environment..."
 node -v
 npm -v
 
-echo "Installing dependencies..."
-npm ci || {
-    echo -e "${RED}Failed to install dependencies${NC}"
-    exit 1
-}
-
-echo "Building package..."
-npm run build --verbose || {
-    echo -e "${RED}Build failed${NC}"
-    exit 1
-}
-
 echo "Creating test directory..."
 mkdir -p "$TEST_DIR/policies"
 cd "$TEST_DIR"
 
-# Rest of test script
-echo "Installing package globally..."
-npm link "$ORIGINAL_DIR" || {
-    echo -e "${RED}Failed to link package${NC}"
+# Install the latest beta version of the CLI from npmjs
+echo "Installing latest beta version of CLI from npmjs..."
+npm install -g @gtrevorrow/policy-validation-action@beta || {
+    echo -e "${RED}Failed to install CLI from npmjs${NC}"
     exit 1
 }
 

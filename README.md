@@ -69,34 +69,37 @@ The CLI tool provides validation for OCI policy statements:
 
 ```bash
 # Install globally
-npm install -g policy-validation-action
+npm install -g @gtrevorrow/policy-validation-action
 
 # Or install locally in your project
-npm install --save-dev policy-validation-action
+npm install --save-dev @gtrevorrow/policy-validation-action
 
 # Validate with detailed output
-policy-validation-action --path ./policies --verbose
+policy-validation-action validate ./policies --verbose
 
 # Use custom pattern for policy extraction
-policy-validation-action --path ./policies --pattern "statements\s*=\s*\[(.*?)\]"
+policy-validation-action validate ./policies --pattern "statements\\s*=\\s*\\[(.*?)\\]"
 
 # Specify extractor type
-policy-validation-action --path ./policies --extractor regex
+policy-validation-action validate ./policies --extractor regex
 
 # Validate specific files
-policy-validation-action --path ./policies --files "file1.tf,file2.tf" --verbose
+policy-validation-action validate ./policies --files "file1.tf,file2.tf" --verbose
+
+# Exit on error (default: true)
+policy-validation-action validate ./policies --exit-on-error false
 ```
 
 ### CLI Options
 
-| Option           | Alias | Description                                                         | Default |
-|------------------|-------|---------------------------------------------------------------------|---------|
-| `--path`         | `-p`  | Path to policy file or directory                                    | `.`     |
-| `--verbose`      | `-v`  | Enable verbose output                                               | false   |
-| `--extractor`    | `-e`  | Policy extractor type (regex)                                       | `regex` |
-| `--pattern`      |       | Custom regex pattern for policy extraction                          | System default |
-| `--files`        |       | Comma-separated list of specific files to process                  | n/a     |
-| `--exit-on-error`|       | Exit immediately if validation fails                                | `true`  |
+| Option               | Alias | Description                                                         | Default |
+|----------------------|-------|---------------------------------------------------------------------|---------|
+| `path`               |       | Path to a file or directory containing Terraform files              | `.`     |
+| `--verbose`          | `-v`  | Enable verbose output                                               | `false` |
+| `--pattern`          | `-p`  | Custom regex pattern for policy extraction                          | `none`  |
+| `--extractor`        | `-e`  | Policy extractor type (`regex` or `hcl`)                            | `regex` |
+| `--files`            |       | Comma-separated list of specific files to process                  | `none`  |
+| `--exit-on-error`    |       | Exit with non-zero status if validation fails                       | `true`  |
 
 ### Environment Variables
 
@@ -104,12 +107,12 @@ CLI options can also be set via environment variables. These are useful in CI/CD
 
 | Environment Variable       | Corresponding CLI Option | Description                                  |
 |----------------------------|--------------------------|----------------------------------------------|
-| `POLICY_PATH`              | `--path`                | Path to policy file or directory             |
+| `POLICY_PATH`              | `path`                  | Path to policy file or directory             |
 | `POLICY_VERBOSE`           | `--verbose`             | Enable verbose output                        |
-| `POLICY_EXTRACTOR`         | `--extractor`           | Policy extractor type (regex)                |
+| `POLICY_EXTRACTOR`         | `--extractor`           | Policy extractor type (`regex` or `hcl`)     |
 | `POLICY_PATTERN`           | `--pattern`             | Custom regex pattern for policy extraction   |
 | `POLICY_FILES`             | `--files`               | Comma-separated list of specific files       |
-| `POLICY_EXIT_ON_ERROR`     | `--exit-on-error`       | Exit immediately if validation fails         |
+| `POLICY_EXIT_ON_ERROR`     | `--exit-on-error`       | Exit with non-zero status if validation fails|
 
 ### Example with Environment Variables
 
@@ -121,7 +124,7 @@ export POLICY_PATTERN="statements\\s*=\\s*\\[(.*?)\\]"
 export POLICY_FILES="file1.tf,file2.tf"
 export POLICY_EXIT_ON_ERROR=true
 
-policy-validation-action
+policy-validation-action validate
 ```
 
 ### Default Regex Pattern
@@ -231,18 +234,14 @@ jobs:
 validate_policies:
   image: node:latest
   script:
-    - npm install -g policy-validation-action # Install the tool globally
-    # Alternatively, install directly from GitHub:
-    # - npm install -g https://github.com/gtrevorrow/policy-validation-action
-    # - npm ci
-    # - npm run build
+    - npm install -g @gtrevorrow/policy-validation-action # Install the tool globally
     # Set environment variables
     - export POLICY_PATH=./terraform
     - export POLICY_VERBOSE=true
     - export POLICY_EXTRACTOR=regex
     - export POLICY_EXIT_ON_ERROR=true
     # Run policy validation
-    - policy-validation-action
+    - policy-validation-action validate
 ```
 
 ### BitBucket Pipelines example
@@ -255,18 +254,14 @@ pipelines:
     - step:
         name: Validate Policies
         script:
-          - npm install -g policy-validation-action # Install the tool globally
-          # Alternatively, install directly from GitHub:
-          # - npm install -g https://github.com/gtrevorrow/policy-validation-action
-          # - npm ci
-          # - npm run build # if your project requires a build step
+          - npm install -g @gtrevorrow/policy-validation-action # Install the tool globally
           # Set environment variables
           - export POLICY_PATH=./terraform
           - export POLICY_VERBOSE=true
           - export POLICY_EXTRACTOR=regex
           - export POLICY_EXIT_ON_ERROR=true
           # Run policy validation
-          - policy-validation-action
+          - policy-validation-action validate
 ```
 
 ### Error Messages
@@ -282,7 +277,6 @@ Failed to parse policy statement:
 Statement: "Allow BadSyntax manage"
 Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
 ```
-
 
 ## Configuration
 
