@@ -1,7 +1,7 @@
 {
   "name": "@gtrevorrow/policy-validation-action",
   "version": "0.2.7",
-  "description": "OCI Policy Validation Tool for Terraform files",
+  "description": "A tool for validating ORACLE OCI IAM policy statements in Terraform HCL files.",
   "keywords": [
     "oci",
     "policy",

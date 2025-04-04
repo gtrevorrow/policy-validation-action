@@ -1,22 +1,49 @@
 # OCI Policy Validation Tool
 
-This tool validates OCI policy statements ensuring that the policies adhere to the correct syntax. It supports multiple CI platforms and provides detailed error messages to help  quickly identify and fix syntax issues.
+This tool validates OCI IAM policy statements ensuring that the policies adhere to the correct syntax. It supports multiple CI platforms and provides detailed error messages to help quickly identify and fix syntax issues.
 
 <!-- Consider adding a Table of Contents for easier navigation -->
 ## Table of Contents
 - [Features](#features)
 - [Prerequisites](#prerequisites)
-- [Usage in CI Platforms](#usage-in-ci-platforms)
 - [CLI](#cli)
+  - [CLI Options](#cli-options)
+  - [Environment Variables](#environment-variables)
+  - [Example with Environment Variables](#example-with-environment-variables)
+  - [Default Regex Pattern](#default-regex-pattern)
+  - [CLI Output Format](#cli-output-format)
+- [Usage in CI Platforms](#usage-in-ci-platforms)
+  - [GitHub Actions](#github-actions)
+  - [GitLab CI example](#gitlab-ci-example)
+  - [BitBucket Pipelines example](#bitbucket-pipelines-example)
+  - [Error Messages](#error-messages)
 - [Configuration](#configuration)
 - [Policy Extractors](#policy-extractors)
+  - [Available Extractors](#available-extractors)
+  - [Regex Policy Extractor Policy Statement Pattern](#regex-policy-extractor-policy-statement-pattern)
 - [OCI Core Landing Zone IAM Policy Module Support](#oci-core-landing-zone-iam-policy-module-support)
 - [ANTLR Parser](#antlr-parser)
+  - [Grammar Definition](#grammar-definition)
+  - [Parser Generation](#parser-generation)
+  - [Validation Process](#validation-process)
 - [Testing](#testing)
+  - [Running Tests](#running-tests)
+  - [CLI Installation Testing](#cli-installation-testing)
+  - [Test Structure](#test-structure)
+  - [Test Fixtures](#test-fixtures)
+  - [CI Test Workflow](#ci-test-workflow)
+  - [Coverage Requirements](#coverage-requirements)
 - [Development](#development)
+  - [Testing Local Installation](#testing-local-installation)
 - [Development Workflow](#development-workflow)
+  - [Creating a Feature Branch](#creating-a-feature-branch)
+  - [Merging into Development via Pull Request](#merging-into-development-via-pull-request)
+  - [Preparing for a Production Release](#preparing-for-a-production-release)
+  - [Summary of Branching Strategy](#summary-of-branching-strategy)
 - [Version Bumping](#version-bumping)
 - [Release Process & Versioning](#release-process--versioning)
+  - [Workflow Behavior](#workflow-behavior)
+  - [Creating a Release](#creating-a-release)
 - [License](#license)
 
 ## Features
@@ -25,7 +52,7 @@ This tool validates OCI policy statements ensuring that the policies adhere to t
 - Supports OCI Core Landing Zone IAM Policy Module
 - Supports multiple OCI policy expression types:
   - Allow, Define, Endorse, and Admit statements.
-- Cross-platform support (GitHub Actions, CLI fpr GitLab CI  & BitBucket Pipelines).
+- Cross-platform support (GitHub Actions, CLI for GitLab CI  & BitBucket Pipelines).
 - Handles HCL variable interpolation (${var.name}) in policy statements.
 - Colored CLI output with verbose mode.
 - Recursive directory scanning.
@@ -66,7 +93,7 @@ policy-validation-action --path ./policies --files "file1.tf,file2.tf" --verbose
 |------------------|-------|---------------------------------------------------------------------|---------|
 | `--path`         | `-p`  | Path to policy file or directory                                    | `.`     |
 | `--verbose`      | `-v`  | Enable verbose output                                               | false   |
-| `--extractor`    |       | Policy extractor type (regex)                                       | `regex` |
+| `--extractor`    | `-e`  | Policy extractor type (regex)                                       | `regex` |
 | `--pattern`      |       | Custom regex pattern for policy extraction                          | System default |
 | `--files`        |       | Comma-separated list of specific files to process                  | n/a     |
 | `--exit-on-error`|       | Exit immediately if validation fails                                | `true`  |
