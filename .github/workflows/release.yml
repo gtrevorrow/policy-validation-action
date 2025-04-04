@@ -2,31 +2,75 @@ name: Release Package
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main
+      - development
 
 permissions:
-  contents: read
+  contents: write
   actions: read
   packages: write
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       
-      - name: Setup Node.js for publishing
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          registry-url: 'https://npm.pkg.github.com'
+          registry-url: https://registry.npmjs.org
           scope: "@gtrevorrow"
           
       - run: npm ci
       - run: npm run build
-          
-      - name: Publish to GitHub Packages
-        run: npm publish
+
+      # Handle development branch pushes
+      - name: Publish Test Package
+        if: github.ref == 'refs/heads/development'
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          TIMESTAMP=$(date +%s)
+          BETA_VERSION="${CURRENT_VERSION}-beta.${TIMESTAMP}"
+          echo "Updating version to ${BETA_VERSION}"
+          npm version "${BETA_VERSION}" --no-git-tag-version
+          npm publish --tag beta
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Handle main branch pushes
+      - name: Configure Git User
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --global user.name "gtrevorrow"
+          git config --global user.email "gordon.trevorrow@oracle.com"
+
+      - name: Bump Version and Tag for Main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          npx standard-version
+          TAG_NAME=$(node -p "require('./package.json').version")
+          echo "Bumped version to: $TAG_NAME"
+          git push --follow-tags origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Production Package
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        run: |
+          TAG_NAME=$(node -p "require('./package.json').version")
+          echo "Creating GitHub release for tag: $TAG_NAME"
+          gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes-file ./CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

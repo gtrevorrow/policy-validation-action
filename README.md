@@ -1,29 +1,58 @@
 # OCI Policy Validation Tool
 
-This tool validates OCI policy statements in Terraform files, ensuring that your policies adhere to the correct syntax. It supports multiple CI platforms and provides detailed error messages to help you quickly identify and fix any issues.
+This tool validates OCI IAM policy statements ensuring that the policies adhere to the correct syntax. It supports multiple CI platforms and provides detailed error messages to help quickly identify and fix syntax issues.
 
 <!-- Consider adding a Table of Contents for easier navigation -->
 ## Table of Contents
 - [Features](#features)
 - [Prerequisites](#prerequisites)
-- [Usage in CI Platforms](#usage-in-ci-platforms)
 - [CLI](#cli)
+  - [CLI Options](#cli-options)
+  - [Environment Variables](#environment-variables)
+  - [Example with Environment Variables](#example-with-environment-variables)
+  - [Default Regex Pattern](#default-regex-pattern)
+  - [CLI Output Format](#cli-output-format)
+- [Usage in CI Platforms](#usage-in-ci-platforms)
+  - [GitHub Actions](#github-actions)
+  - [GitLab CI example](#gitlab-ci-example)
+  - [BitBucket Pipelines example](#bitbucket-pipelines-example)
+  - [Error Messages](#error-messages)
 - [Configuration](#configuration)
 - [Policy Extractors](#policy-extractors)
+  - [Available Extractors](#available-extractors)
+  - [Regex Policy Extractor Policy Statement Pattern](#regex-policy-extractor-policy-statement-pattern)
 - [OCI Core Landing Zone IAM Policy Module Support](#oci-core-landing-zone-iam-policy-module-support)
 - [ANTLR Parser](#antlr-parser)
+  - [Grammar Definition](#grammar-definition)
+  - [Parser Generation](#parser-generation)
+  - [Validation Process](#validation-process)
 - [Testing](#testing)
+  - [Running Tests](#running-tests)
+  - [CLI Installation Testing](#cli-installation-testing)
+  - [Test Structure](#test-structure)
+  - [Test Fixtures](#test-fixtures)
+  - [CI Test Workflow](#ci-test-workflow)
+  - [Coverage Requirements](#coverage-requirements)
 - [Development](#development)
+  - [Testing Local Installation](#testing-local-installation)
+- [Development Workflow](#development-workflow)
+  - [Creating a Feature Branch](#creating-a-feature-branch)
+  - [Merging into Development via Pull Request](#merging-into-development-via-pull-request)
+  - [Preparing for a Production Release](#preparing-for-a-production-release)
+  - [Summary of Branching Strategy](#summary-of-branching-strategy)
+- [Version Bumping](#version-bumping)
 - [Release Process & Versioning](#release-process--versioning)
+  - [Workflow Behavior](#workflow-behavior)
+  - [Creating a Release](#creating-a-release)
 - [License](#license)
 
 ## Features
 
-- Validates OCI policy statements in Terraform files.
+- Validates OCI policy statements in Terraform HCL files.
 - Supports OCI Core Landing Zone IAM Policy Module
 - Supports multiple OCI policy expression types:
   - Allow, Define, Endorse, and Admit statements.
-- Cross-platform support (GitHub Actions, GitLab CI, BitBucket Pipelines, CLI).
+- Cross-platform support (GitHub Actions, CLI for GitLab CI  & BitBucket Pipelines).
 - Handles HCL variable interpolation (${var.name}) in policy statements.
 - Colored CLI output with verbose mode.
 - Recursive directory scanning.
@@ -32,54 +61,103 @@ This tool validates OCI policy statements in Terraform files, ensuring that your
 
 ## Prerequisites
 
-- Node.js 16 or higher.
-- For CI/CD usage, access to GitHub Actions, GitLab CI, or BitBucket Pipelines.
-- Terraform files containing OCI policy statements.
+- Node.js 18 or higher.
 
-### Publishing to npm
-
-```bash
-# Login to npm
-npm login
-
-# Publish package
-npm publish
-```
 ## CLI 
 
 The CLI tool provides validation for OCI policy statements:
 
 ```bash
 # Install globally
-npm install -g policy-validation-action
+npm install -g @gtrevorrow/policy-validation-action
 
 # Or install locally in your project
-npm install --save-dev policy-validation-action
+npm install --save-dev @gtrevorrow/policy-validation-action
 
 # Validate with detailed output
-policy-validator --path ./policies --verbose
+policy-validation-action validate ./policies --verbose
 
 # Use custom pattern for policy extraction
-policy-validator --path ./policies --pattern "statements\s*=\s*\[(.*?)\]"
+policy-validation-action validate ./policies --pattern "statements\\s*=\\s*\\[(.*?)\\]"
 
 # Specify extractor type
-policy-validator --path ./policies --extractor regex
+policy-validation-action validate ./policies --extractor regex
 
-# Show help
-policy-validator --help
+# Validate specific files
+policy-validation-action validate ./policies --files "file1.tf,file2.tf" --verbose
+
+# Exit on error (default: true)
+policy-validation-action validate ./policies --exit-on-error false
 ```
+
+### Running the CLI Directly from the GitHub Repository
+
+You can also source and execute the CLI directly from the GitHub repository without installing it via npm. This is useful for testing or using the latest version of the CLI.
+
+```bash
+# Clone the repository
+git clone https://github.com/gtrevorrow/policy-validation-action.git
+
+# Navigate to the project directory
+cd policy-validation-action
+
+# Install dependencies
+npm ci
+
+# Build the CLI
+npm run build
+
+# Run the CLI
+node dist/index.js validate ./policies --verbose
+```
+
+This approach allows you to use the CLI directly from the source code without publishing or installing it globally.
 
 ### CLI Options
 
-| Option           | Alias | Description                                                         | Default |
-|------------------|-------|---------------------------------------------------------------------|---------|
-| `--path`         | `-p`  | Path to policy file or directory                                    | `.`     |
-| `--verbose`      | `-v`  | Enable verbose output                                               | false   |
-| `--extractor`    |       | Policy extractor type (regex)                                       | `regex` |
-| `--pattern`      |       | Custom regex pattern for policy extraction                          | System default |
-| `--exitOnError`  |       | Exit immediately if validation fails                                | `true`  |
-| `--version`      |       | Show version number                                                 | n/a     |
-| `--help`         |       | Show help                                                           | n/a     |
+| Option               | Alias | Description                                                         | Default |
+|----------------------|-------|---------------------------------------------------------------------|---------|
+| `path`               |       | Path to a file or directory containing Terraform files              | `.`     |
+| `--verbose`          | `-v`  | Enable verbose output                                               | `false` |
+| `--pattern`          | `-p`  | Custom regex pattern for policy extraction                          | `none`  |
+| `--extractor`        | `-e`  | Policy extractor type (`regex` or `hcl`)                            | `regex` |
+| `--files`            |       | Comma-separated list of specific files to process                  | `none`  |
+| `--exit-on-error`    |       | Exit with non-zero status if validation fails                       | `true`  |
+
+### Environment Variables
+
+CLI options can also be set via environment variables. These are useful in CI/CD pipelines where options are passed dynamically.
+
+| Environment Variable       | Corresponding CLI Option | Description                                  |
+|----------------------------|--------------------------|----------------------------------------------|
+| `POLICY_PATH`              | `path`                  | Path to policy file or directory             |
+| `POLICY_VERBOSE`           | `--verbose`             | Enable verbose output                        |
+| `POLICY_EXTRACTOR`         | `--extractor`           | Policy extractor type (`regex` or `hcl`)     |
+| `POLICY_PATTERN`           | `--pattern`             | Custom regex pattern for policy extraction   |
+| `POLICY_FILES`             | `--files`               | Comma-separated list of specific files       |
+| `POLICY_EXIT_ON_ERROR`     | `--exit-on-error`       | Exit with non-zero status if validation fails|
+
+### Example with Environment Variables
+
+```bash
+export POLICY_PATH=./policies
+export POLICY_VERBOSE=true
+export POLICY_EXTRACTOR=regex
+export POLICY_PATTERN="statements\\s*=\\s*\\[(.*?)\\]"
+export POLICY_FILES="file1.tf,file2.tf"
+export POLICY_EXIT_ON_ERROR=true
+
+policy-validation-action validate
+```
+
+### Default Regex Pattern
+
+The default regex pattern for the `regex` extractor is:
+
+```regex
+statements\s*=\s*\[(.*?)\]
+```
+This pattern captures everything between the square brackets, including policy statements, newlines, comments, and variable interpolations.
 
 ### CLI Output Format
 
@@ -173,38 +251,40 @@ jobs:
 |-----------------------|------------------------------------------------------------------------------------|
 | `policy_expressions`  | List of all validated policy expressions (Allow, Define, Endorse, Admit)           |
 
-### GitLab CI
+### GitLab CI example
 
 ```yaml
 validate_policies:
   image: node:latest
   script:
-    - npm install -g policy-validation-action # Install the tool globally
-    # Alternatively, install directly from GitHub:
-    # - npm install -g https://github.com/gtrevorrow/policy-validation-action
-    # - npm ci
-    # - npm run build
+    - npm install -g @gtrevorrow/policy-validation-action # Install the tool globally
+    # Set environment variables
+    - export POLICY_PATH=./terraform
+    - export POLICY_VERBOSE=true
+    - export POLICY_EXTRACTOR=regex
+    - export POLICY_EXIT_ON_ERROR=true
     # Run policy validation
-    - node dist/index.js --path ./terraform
-
+    - policy-validation-action validate
 ```
 
-### BitBucket Pipelines
+### BitBucket Pipelines example
 
 ```yaml
-image: node:16
+image: node:18
 
 pipelines:
   default:
     - step:
         name: Validate Policies
         script:
-          - npm install -g policy-validation-action # Install the tool globally
-          # Alternatively, install directly from GitHub:
-          # - npm install -g https://github.com/gtrevorrow/policy-validation-action
-          # - npm ci
-          # - npm run build # if your project requires a build step
-          - policy-validator --path ./terraform
+          - npm install -g @gtrevorrow/policy-validation-action # Install the tool globally
+          # Set environment variables
+          - export POLICY_PATH=./terraform
+          - export POLICY_VERBOSE=true
+          - export POLICY_EXTRACTOR=regex
+          - export POLICY_EXIT_ON_ERROR=true
+          # Run policy validation
+          - policy-validation-action validate
 ```
 
 ### Error Messages
@@ -221,7 +301,6 @@ Statement: "Allow BadSyntax manage"
 Position:       ^ mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
 ```
 
-
 ## Configuration
 
 ## Policy Extractors
@@ -230,8 +309,8 @@ The tool supports pluggable policy extractors for different file formats:
 
 ### Available Extractors
 
-- `regex` (default): Uses regular expressions to extract policies from HCL
-- `json`: (coming soon) Extracts policies from JSON format
+- `regex` (default): Uses regular expressions to extract policies from HCL.
+- `json`: Planned feature for extracting policies from JSON format.
 
 ### Regex Policy Extractor Policy Statement Pattern 
 
@@ -246,10 +325,24 @@ If no pattern is specified, the action will use a default pattern that handles:
 
 **Important Considerations for the Regex Pattern:**
 
-*   **Capturing Group:** The regex pattern *must* include a capturing group (using parentheses `()`) that isolates the portion of the text containing the policy statements. This captured group will be passed to the `DefaultExtractionStrategy.ts` for further processing.
-*   **Handling Newlines and Whitespace:** The pattern should be able to handle newlines and varying amounts of whitespace within the policy statements block.
-*   **Comments and Other Syntax:** The pattern should be designed to ignore comments or other syntax that might be present within the policy statements block but are not part of the actual policy statements.
-*   **Matching the Entire Block:** The regex should match the entire block of policy statements, from the beginning of the `statements = [` to the end of the `]` (or equivalent delimiters in your file format).
+*   **Capturing Group:** The regex pattern *must* include a capturing group (using parentheses `()`) that isolates the portion of the text containing the policy statements. For example, in the default pattern:
+    ```regex
+    statements\s*=\s*\[\s*((?:[^[]*?(?:"(?:[^"\\]|\\.)*"|\$\{(?:[^{}]|\{[^{}]*\})*\})?)*)\s*\]
+    ```
+    The capturing group isolates the content inside square brackets (`[...]`).
+
+*   **Handling Newlines and Whitespace:** The pattern should handle newlines and varying amounts of whitespace within the policy statements block. The default pattern uses the `s` flag (dot matches newlines) and `\s*` to match optional whitespace.
+
+*   **Comments and Other Syntax:** While the regex pattern itself does not handle comments, the `DefaultExtractionStrategy` removes comments (e.g., `#` or `//`) during preprocessing. Ensure that your pattern focuses on extracting valid statements and relies on preprocessing to handle comments.
+
+*   **Matching the Entire Block:** The regex should match the entire block of policy statements. For example:
+    ```terraform
+    statements = [
+        "Allow group Administrators to manage all-resources in tenancy",
+        "Allow group Developers to use instances in compartment dev"
+    ]
+    ```
+    The default pattern captures everything between the square brackets, including newlines and interpolations like `${var.name}`.
 
 **Example:**
 
@@ -268,7 +361,7 @@ resource "oci_identity_policy" "test" {
 }
 ```
 
-This pattern captures everything between the square brackets, including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to the DefaultExtractionStrategy.ts for processing.
+As discussed above regex pattern should captures everything between the square brackets ( in the example), including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to the DefaultExtractionStrategy.ts for processing.
 
 **Processing Steps:**
 1. **Split into lines:**  
@@ -381,6 +474,7 @@ The `test-cli-install.sh` script verifies the CLI functionality by:
    - Verifies JSON output
    - Checks error handling
 
+
 Example test policy:
 ```hcl
 resource "oci_identity_policy" "test" {
@@ -400,8 +494,7 @@ resource "oci_identity_policy" "test" {
 
 ### Test Fixtures
 
-Test fixtures are located in `src/__tests__/fixtures/` and include:
-- `valid.tf`: Valid policy statements
+Test fixtures are located in `src/__tests__/fixtures/` and includes files to test the policy validation using some real world examples of OCI IAM policies embedded in Terraform file. 
 
 ### CI Test Workflow
 
@@ -433,6 +526,99 @@ npm run test:cli
 # 4. Clean up test files
 ```
 
+## Development Workflow
+
+### Creating a Feature Branch
+1. Ensure you are on the `development` branch:
+   ```bash
+   git checkout development
+   git pull origin development
+   ```
+2. Create a new feature branch:
+   ```bash
+   git checkout -b feature/<feature-name>
+   ```
+3. Make your changes and commit them:
+   ```bash
+   git add .
+   git commit -m "feat: <brief description of the feature>"
+   ```
+4. Push your feature branch to the remote repository:
+   ```bash
+   git push origin feature/<feature-name>
+   ```
+
+### Merging into Development via Pull Request
+1. Open a pull request (PR) from your feature branch into the `development` branch.
+2. Ensure the following checks are completed before merging:
+   - All tests pass (e.g., `npm test`, `npm run test:cli`).  - Code review is approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) pass successfully.
+3. Once approved, merge the PR into the `development` branch:
+   - Optionally , use the "Squash and Merge" option to keep the commit history clean.
+
+### Preparing for a Production Release
+1. Ensure the `development` branch is up-to-date:
+   ```bash
+   git checkout development
+   git pull origin development
+   ```
+2. Run all tests locally to verify the code:
+   ```bash
+   npm test
+   npm run test:cli
+   ```
+3. Open a pull request from `development` into `main`:
+   - The workflow will detect the `-devel` tag (e.g., `v1.0.0-devel`) and handle retagging and publishing automatically.
+   - The pull request should be reviewed and approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) should pass successfully.
+
+4. Merge the pull request into `main`:
+   - This will trigger the workflow to:
+     - Retag the `-devel` tag to a production tag (e.g., `v1.0.0`).
+     - Publish the production package to NPM.
+     - Create a GitHub release.
+
+5. Verify the release:
+   - Check the NPM registry for the production package.
+   - Check the GitHub repository for the release.
+
+### Summary of Branching Strategy
+- **Feature Branches**: For new features or bug fixes (`feature/<feature-name>`).
+- **Development Branch**: For integrating and testing features before production.
+- **Main Branch**: For production-ready code and releases.
+
+## Version Bumping
+
+Versions are automatically determined from commit messages using conventional commits. The following commit types are supported:
+
+| Commit Type          | Description                                             | Version Bump |
+|----------------------|---------------------------------------------------------|--------------|
+| `feat:`              | A new feature                                           | MINOR        |
+| `fix:`               | A bug fix                                               | PATCH        |
+| `docs:`              | Documentation only changes                              | No bump      |
+| `chore:`             | Maintenance tasks                                       | No bump      |
+| `style:`             | Code style changes (e.g., formatting)                   | No bump      |
+| `refactor:`          | Code refactoring without changing functionality         | No bump      |
+| `perf:`              | Performance improvements                                | No bump      |
+| `test:`              | Adding or updating tests                                | No bump      |
+
+#### Breaking Changes
+A **major version bump** occurs when the `BREAKING CHANGE` keyword is included in the body of a commit message. This can be applied to any commit type.
+
+Example commit messages:
+```bash
+# Minor bump
+feat: add support for JSON policy extraction
+
+# Patch bump
+fix: resolve issue with variable interpolation in policies
+
+# Major bump due to breaking change
+feat: migrate to new parser API
+
+BREAKING CHANGE: The new parser API is not backward compatible with the previous version.
+```
+
 ## ANTLR Parser
 
 This project uses ANTLR (ANother Tool for Language Recognition) to parse and validate OCI policy statements. ANTLR is a powerful parser generator that allows us to define a grammar for the OCI policy language and automatically generate a parser that can check if a given policy statement conforms to that grammar.
@@ -451,79 +637,56 @@ When the policy validation tool is run, it uses the ANTLR parser to check each p
 
 ## Release Process & Versioning
 
-This project follows [Semantic Versioning](https://semver.org/) with automated version management:
+This project follows [Semantic Versioning](https://semver.org/) with automated version management. The release workflow is designed to handle both development and production releases seamlessly.
 
-### Version Bumping
+### Workflow Behavior
 
-Versions are automatically determined from commit messages using conventional commits:
+#### Pushing to `development`:
+1. **Test Package Publishing**:
+   - Publishes a test package to NPM with the `beta` tag.
+   - No version bumping or tagging occurs on the `development` branch.
 
-| Commit Type          | Description                                             | Version Bump |
-|----------------------|---------------------------------------------------------|--------------|
-| `feat:`              | A new feature                                           | MINOR        |
-| `fix:`               | A bug fix                                               | PATCH        |
-| `docs:`              | Documentation only changes                              | No bump      |
-| `chore:`             | Maintenance tasks                                       | No bump      |
-| `BREAKING CHANGE:`   | Breaking API changes (in commit body)                   | MAJOR        |
-
-Example commit messages:
-```bash
-# Patch bump
-fix: correct policy parsing error
-
-# Minor bump
-feat: add new JSON extractor
-
-# Major bump
-feat: migrate to new parser API
-
-BREAKING CHANGE: new parser API is not backwards compatible
-```
+#### Pushing to `main`:
+1. **Version Bump and Tagging**:
+   - Automatically bumps the version using `standard-version` based on commit messages.
+   - Creates a Git tag for the new version (e.g., `v1.0.0`).
+2. **Production Package Publishing**:
+   - Publishes the package to NPM as a production version.
+3. **GitHub Release Creation**:
+   - Creates a GitHub release using the new tag and the `CHANGELOG.md` file as the release notes.
 
 ### Creating a Release
 
-1. Ensure tests pass: 
+1. Ensure tests pass:
    ```bash
    npm test
    npm run test:cli
    ```
 
-2. Create release:
-   ```bash
-   npm run release
-   ```
+2. Open a pull request from your feature branch into the `development` branch:
+   - This will trigger the workflow to publish a test package with the `beta` tag.
+   - The pull request should be reviewed and approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) should pass successfully.
 
-3. Push the release:
-   ```bash
-   git push --follow-tags origin development
-   ```
+3. Open a pull request from `development` into `main`:
+   - The workflow will handle version bumping, tagging, and publishing automatically.
+   - The pull request should be reviewed and approved by at least one other team member.
+   - CI pipelines (e.g., GitHub Actions) should pass successfully.
 
-4. After successful release:
-   ```bash
-   git checkout main
-   git merge --no-ff development
-   git push --follow-tags origin main
-   ```
+4. Merge the pull request into `main`:
+   - This will trigger the workflow to:
+     - Bump the version and create a Git tag.
+     - Publish the production package to NPM.
+     - Create a GitHub release.
 
-5. Return to development:
-   ```bash
-   git checkout development
-   ```
+5. Verify the release:
+   - Check the NPM registry for the production package.
+   - Check the GitHub repository for the release.
 
-The release workflow will automatically:
-- Update CHANGELOG.md based on commit messages
-- Bump version in package.json based on conventional commits
-- Create git tag
-- Build distribution files
-- Create GitHub release
-- Publish to npm 
-
-### Release Workflow
-
-The release process is integrated into CI pipelines:
-
-- GitHub Actions: Automated tests and npm publishing on tags
-- GitLab CI: Version validation and artifact generation
-- BitBucket Pipelines: Automated npm publishing via pipe
+### Summary of Branching Strategy
+- **Feature Branches**: For new features or bug fixes (`feature/<feature-name>`).
+- **Development Branch**: For integrating and testing features before production.
+- **Main Branch**: For production-ready code and releases.
 
 ## License
 

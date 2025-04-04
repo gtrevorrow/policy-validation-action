@@ -22,26 +22,14 @@ echo "Checking Node.js environment..."
 node -v
 npm -v
 
-echo "Installing dependencies..."
-npm ci || {
-    echo -e "${RED}Failed to install dependencies${NC}"
-    exit 1
-}
-
-echo "Building package..."
-npm run build --verbose || {
-    echo -e "${RED}Build failed${NC}"
-    exit 1
-}
-
 echo "Creating test directory..."
 mkdir -p "$TEST_DIR/policies"
 cd "$TEST_DIR"
 
-# Rest of test script
-echo "Installing package globally..."
-npm link "$ORIGINAL_DIR" || {
-    echo -e "${RED}Failed to link package${NC}"
+# Install the latest beta version of the CLI from npmjs
+echo "Installing latest beta version of CLI from npmjs..."
+npm install -g @gtrevorrow/policy-validation-action@beta || {
+    echo -e "${RED}Failed to install CLI from npmjs${NC}"
     exit 1
 }
 
@@ -61,85 +49,139 @@ policy-validation-action validate ./policies/test.tf || {
     exit 1
 }
 
-echo -e "${GREEN}All tests passed!${NC}"
+echo -e "${GREEN}Basic CLI test passed!${NC}"
 
-# Set up test directory for additional tests
-TEST_DIR2=$(mktemp -d)
-cd "$TEST_DIR2"
-
-# Create a policy file for testing
-mkdir -p ./policies
-cat > ./policies/test-policy.tf << EOF
-resource "oci_identity_policy" "policy_example" {
-  compartment_id = var.tenancy_id
-  description = "Policy for example"
-  name = "policy-example"
+# Set up additional test policies
+cat > policies/valid.tf << EOF
+resource "oci_identity_policy" "test_policy" {
   statements = [
     "Allow group Administrators to manage all-resources in tenancy",
-    "Allow group Developers to use instances in compartment dev"
+    "Allow group Developers to use instances in compartment dev",
+    "Define tenancy Acceptor as ocid1.tenancy.oc1..aaaaaa",
+    "Endorse group NetworkAdmins to manage virtual-network-family in tenancy foo",
+    "Admit group ServiceAdmins of tenancy accountFoo to manage instances in tenancy"
   ]
 }
 EOF
 
-# Test the CLI with the validate subcommand
-echo "Running validation..."
-if ! RESULT=$(policy-validation-action validate ./policies/test-policy.tf); then
-    echo "❌ Validation failed unexpectedly"
-    exit 1
-fi
-
-# Verify JSON output
-echo "$RESULT" | jq . > /dev/null 2>&1 || {
-    echo "❌ Output is not valid JSON:"
-    echo "$RESULT"
-    exit 1
-}
-
-echo "$RESULT" | jq -e '.[0].isValid == true' > /dev/null || {
-    echo "❌ Policy should be valid but was reported as invalid"
-    echo "$RESULT"
-    exit 1
-}
-
-# Create invalid policy
-cat > ./policies/invalid-policy.tf << EOF
+cat > policies/invalid.tf << EOF
 resource "oci_identity_policy" "invalid_policy" {
-  compartment_id = var.tenancy_id
-  description = "Invalid policy"
-  name = "policy-invalid"
   statements = [
-    "Allow BadSyntax manage"
+    "Allow BadSyntax manage",
+    "Allow groupDevelopers to use instances in compartment dev",
+    "Admit group ServiceAdmins of 123 to manage instances in tenancy"
   ]
 }
 EOF
 
-# Test with invalid policy - should fail but provide JSON output
-if RESULT=$(policy-validation-action validate ./policies/invalid-policy.tf); then
-    # Check if the JSON indicates failure
-    if ! echo "$RESULT" | jq -e '.[0].isValid == false' > /dev/null; then
-        echo "❌ Invalid policy was reported as valid"
-        echo "$RESULT"
-        exit 1
-    fi
-else
-    # Command failed but we should still have JSON output
-    RESULT=$(policy-validation-action validate ./policies/invalid-policy.tf 2>&1 || true)
-    if ! echo "$RESULT" | jq . > /dev/null 2>&1; then
-        echo "❌ Failed output is not valid JSON:"
-        echo "$RESULT"
-        exit 1
-    fi
-fi
+cat > policies/with-vars.tf << EOF
+resource "oci_identity_policy" "test_policy_vars" {
+  statements = [
+    "Allow group \${var.admin_group} to manage all-resources in tenancy",
+    "Define tenancy \${var.tenant_name} as \${var.tenant_ocid}",
+    "Allow any-user to use instances in compartment \${var.public_compartment} where request.time BETWEEN \${var.start_time} AND \${var.end_time}"
+  ]
+}
+EOF
 
-# Test with files option
-RESULT=$(policy-validation-action validate . --files test-policy.tf 2>&1 || true)
-if ! echo "$RESULT" | jq . > /dev/null 2>&1; then
-    echo "❌ Failed output with --files option is not valid JSON:"
-    echo "$RESULT"
+# Helper function to extract JSON from output
+extract_json() {
+    local output="$1"
+    echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1
+}
+
+# Test valid policy
+echo "Running validator on valid policy..."
+if ! OUTPUT=$(policy-validation-action validate ./policies/valid.tf 2>&1); then
+    echo -e "${RED}Validation of valid policy failed unexpectedly${NC}"
+    echo "$OUTPUT"
     exit 1
 fi
 
-echo "✅ CLI tests passed!"
+JSON_RESULT=$(extract_json "$OUTPUT")
+if [ -z "$JSON_RESULT" ] || ! echo "$JSON_RESULT" | jq . > /dev/null 2>&1; then
+    echo -e "${RED}Valid policy test failed: Invalid JSON output${NC}"
+    echo "$OUTPUT"
+    exit 1
+fi
+
+if ! echo "$JSON_RESULT" | jq -e '.[0].isValid == true' > /dev/null; then
+    echo -e "${RED}Valid policy was reported as invalid${NC}"
+    echo "$JSON_RESULT"
+    exit 1
+fi
+echo -e "${GREEN}Valid policy validation passed${NC}"
+
+# Test invalid policy
+echo "Running validator on invalid policy..."
+OUTPUT=$(policy-validation-action validate ./policies/invalid.tf 2>&1 || true)
+
+JSON_RESULT=$(extract_json "$OUTPUT")
+if [ -z "$JSON_RESULT" ] || ! echo "$JSON_RESULT" | jq . > /dev/null 2>&1; then
+    echo -e "${RED}Invalid policy test failed: Invalid JSON output${NC}"
+    echo "$OUTPUT"
+    exit 1
+fi
+
+if ! echo "$JSON_RESULT" | jq -e '.[0].isValid == false' > /dev/null; then
+    echo -e "${RED}Invalid policy was not reported as invalid${NC}"
+    echo "$JSON_RESULT"
+    exit 1
+fi
+echo -e "${GREEN}Invalid policy correctly identified${NC}"
+
+# Test variable interpolation
+echo "Running validator on policy with variables..."
+if ! OUTPUT=$(policy-validation-action validate ./policies/with-vars.tf 2>&1); then
+    echo -e "${RED}Validation of policy with variables failed unexpectedly${NC}"
+    echo "$OUTPUT"
+    exit 1
+fi
+
+JSON_RESULT=$(extract_json "$OUTPUT")
+if [ -z "$JSON_RESULT" ] || ! echo "$JSON_RESULT" | jq . > /dev/null 2>&1; then
+    echo -e "${RED}Variable interpolation test failed: Invalid JSON output${NC}"
+    echo "$OUTPUT"
+    exit 1
+fi
+
+if ! echo "$JSON_RESULT" | jq -e '.[0].isValid == true' > /dev/null; then
+    echo -e "${RED}Policy with variables was reported as invalid${NC}"
+    echo "$JSON_RESULT"
+    exit 1
+fi
+echo -e "${GREEN}Variable interpolation test passed${NC}"
+
+# Test with specific files option
+echo "Testing --files option..."
+OUTPUT=$(policy-validation-action validate ./policies --files valid.tf 2>&1 || true)
+
+JSON_RESULT=$(extract_json "$OUTPUT")
+if [ -z "$JSON_RESULT" ] || ! echo "$JSON_RESULT" | jq . > /dev/null 2>&1; then
+    echo -e "${RED}Files option test failed: Invalid JSON output${NC}"
+    echo "$OUTPUT"
+    exit 1
+fi
+echo -e "${GREEN}Files option test passed${NC}"
+
+# Test nonexistent file
+echo "Running validator with nonexistent file..."
+OUTPUT=$(policy-validation-action validate ./policies/nonexistent.tf 2>&1 || true)
+
+JSON_RESULT=$(extract_json "$OUTPUT")
+if [ -z "$JSON_RESULT" ] || ! echo "$JSON_RESULT" | jq . > /dev/null 2>&1; then
+    echo -e "${RED}Nonexistent file test failed: Invalid JSON output${NC}"
+    echo "$OUTPUT"
+    exit 1
+fi
+
+if ! echo "$JSON_RESULT" | jq -e '.error' > /dev/null 2>&1; then
+    echo -e "${RED}Nonexistent file test failed: Missing expected error format${NC}"
+    echo "$JSON_RESULT"
+    exit 1
+fi
+echo -e "${GREEN}Nonexistent file correctly failed with error message${NC}"
+
+echo -e "${GREEN}✅ All tests passed!${NC}"
 cd -
 rm -rf "$TEST_DIR"
-rm -rf "$TEST_DIR2"
