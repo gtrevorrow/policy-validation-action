@@ -572,11 +572,7 @@ npm run test:cli
 
 ## Version Bumping
 
-This project follows [Semantic Versioning](https://semver.org/) with automated version management:
-
-### Version Bumping
-
-Versions are automatically determined from commit messages using conventional commits:
+Versions are automatically determined from commit messages using conventional commits. The following commit types are supported:
 
 | Commit Type          | Description                                             | Version Bump |
 |----------------------|---------------------------------------------------------|--------------|
@@ -584,20 +580,26 @@ Versions are automatically determined from commit messages using conventional co
 | `fix:`               | A bug fix                                               | PATCH        |
 | `docs:`              | Documentation only changes                              | No bump      |
 | `chore:`             | Maintenance tasks                                       | No bump      |
-| `BREAKING CHANGE:`   | Breaking API changes (in commit body)                   | MAJOR        |
+| `style:`             | Code style changes (e.g., formatting)                   | No bump      |
+| `refactor:`          | Code refactoring without changing functionality         | No bump      |
+| `perf:`              | Performance improvements                                | No bump      |
+| `test:`              | Adding or updating tests                                | No bump      |
+
+#### Breaking Changes
+A **major version bump** occurs when the `BREAKING CHANGE` keyword is included in the body of a commit message. This can be applied to any commit type.
 
 Example commit messages:
 ```bash
-# Patch bump
-fix: correct policy parsing error
-
 # Minor bump
-feat: add new JSON extractor
+feat: add support for JSON policy extraction
 
-# Major bump
+# Patch bump
+fix: resolve issue with variable interpolation in policies
+
+# Major bump due to breaking change
 feat: migrate to new parser API
 
-BREAKING CHANGE: new parser API is not backwards compatible
+BREAKING CHANGE: The new parser API is not backward compatible with the previous version.
 ```
 
 ## ANTLR Parser
