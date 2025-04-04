@@ -90,6 +90,29 @@ policy-validation-action validate ./policies --files "file1.tf,file2.tf" --verbo
 policy-validation-action validate ./policies --exit-on-error false
 ```
 
+### Running the CLI Directly from the GitHub Repository
+
+You can also source and execute the CLI directly from the GitHub repository without installing it via npm. This is useful for testing or using the latest version of the CLI.
+
+```bash
+# Clone the repository
+git clone https://github.com/gtrevorrow/policy-validation-action.git
+
+# Navigate to the project directory
+cd policy-validation-action
+
+# Install dependencies
+npm ci
+
+# Build the CLI
+npm run build
+
+# Run the CLI
+node dist/index.js validate ./policies --verbose
+```
+
+This approach allows you to use the CLI directly from the source code without publishing or installing it globally.
+
 ### CLI Options
 
 | Option               | Alias | Description                                                         | Default |
