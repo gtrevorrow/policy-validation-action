@@ -482,14 +482,27 @@ class DefaultExtractionStrategy {
         if (!raw || raw.trim() === '') {
             return [];
         }
+        // Preprocess to fix common issues
+        const preprocessed = this.preprocessStatement(raw);
         // Remove HCL comments first
-        const uncommentedText = this.removeHclComments(raw);
+        const uncommentedText = this.removeHclComments(preprocessed);
         // Split the input by commas, properly handling quotes and interpolation
         const statements = this.splitStatements(uncommentedText);
         // Clean and filter each statement
         return statements
             .map(statement => this.cleanStatement(statement))
             .filter(statement => statement && statement.trim() !== '');
+    }
+    /**
+     * Preprocesses statement to fix common issues before extraction
+     */
+    preprocessStatement(statement) {
+        let result = statement;
+        // Fix common issues with Terraform string concatenation
+        result = result.replace(/"\s*\+\s*"/g, '');
+        // Remove extraneous commas inside variable interpolation
+        result = result.replace(/(\${[^}]*),\s*([^}]*})/g, '$1 $2');
+        return result;
     }
     /**
      * Remove HCL comments (# and //) from the text
@@ -625,12 +638,13 @@ exports.ExtractorFactory = ExtractorFactory;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RegexPolicyExtractor = void 0;
 const DefaultExtractionStrategy_1 = __nccwpck_require__(5675);
+const types_1 = __nccwpck_require__(8164);
 class RegexPolicyExtractor {
     constructor(pattern, extractionStrategy) {
-        // Default pattern is improved to handle various formats while being more specific
-        const defaultPattern = 'statements\\s*=\\s*\\[\\s*((?:[^\\[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]';
-        this.pattern = new RegExp(pattern || defaultPattern, 'sgi' // s: dot matches newline, g: global, i: case-insensitive
-        );
+        // Use existing pattern from types.ts or build a new one from the provided pattern
+        this.pattern = pattern
+            ? new RegExp(pattern, 'sgi')
+            : types_1.POLICY_STATEMENTS_REGEX;
         this.extractionStrategy = extractionStrategy || new DefaultExtractionStrategy_1.DefaultExtractionStrategy();
     }
     extract(text) {
@@ -642,26 +656,12 @@ class RegexPolicyExtractor {
         if (!matches || matches.length === 0) {
             return [];
         }
-        // Process each match 
-        const processedStatements = matches
+        // Get raw statements from regex matches and delegate all processing to the strategy
+        return matches
             .map(match => match[1]) // Get capturing group from each match
             .filter(Boolean) // Remove any undefined/null matches
-            .map(statement => this.preprocessStatement(statement)) // Clean up common issues
-            .flatMap(statement => this.extractionStrategy.extractStatements(statement));
-        return processedStatements
-            .filter(s => s && s.trim() !== '')
-            .map(s => s.replace(/"\s*\+\s*"/g, '')); // Fix string concatenation in the final output
-    }
-    /**
-     * Preprocesses statement to fix common issues before extraction
-     */
-    preprocessStatement(statement) {
-        let result = statement;
-        // Fix common issues with Terraform string concatenation
-        result = result.replace(/"\s*\+\s*"/g, '');
-        // Remove extraneous commas inside variable interpolation
-        result = result.replace(/(\${[^}]*),\s*([^}]*})/g, '$1 $2');
-        return result;
+            .flatMap(statement => this.extractionStrategy.extractStatements(statement))
+            .filter(s => s && s.trim() !== '');
     }
     name() {
         return 'regex';
@@ -4719,6 +4719,30 @@ class PatternMatchContext extends antlr4_1.ParserRuleContext {
     }
 }
 exports.PatternMatchContext = PatternMatchContext;
+
+
+/***/ }),
+
+/***/ 8164:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.POLICY_STATEMENTS_REGEX = exports.ExpressionType = void 0;
+var ExpressionType;
+(function (ExpressionType) {
+    ExpressionType["Allow"] = "Allow";
+    ExpressionType["Define"] = "Define";
+    ExpressionType["Endorse"] = "Endorse";
+    ExpressionType["Admit"] = "Admit";
+})(ExpressionType || (exports.ExpressionType = ExpressionType = {}));
+/**
+ * Get policy statements regex pattern from environment or use default
+ * This allows different CI platforms to configure their own pattern if needed
+ */
+exports.POLICY_STATEMENTS_REGEX = new RegExp(process.env.POLICY_STATEMENTS_PATTERN ||
+    'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]', 'sg');
 
 
 /***/ }),
