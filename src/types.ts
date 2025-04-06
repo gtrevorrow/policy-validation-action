@@ -42,6 +42,6 @@ export interface ValidationOutput {
  */
 export const POLICY_STATEMENTS_REGEX = new RegExp(
     process.env.POLICY_STATEMENTS_PATTERN || 
-    'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]',
+    'statements\\s*=\\s*\\[\\s*((?:[^\\[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]',
     'sg'
 );
