@@ -68,8 +68,14 @@ This tool validates OCI IAM policy statements ensuring that the policies adhere 
 The CLI tool provides validation for OCI policy statements:
 
 ```bash
-# Install globally
+# Install globally (latest version)
 npm install -g @gtrevorrow/policy-validation-action
+
+# Install a specific version
+npm install -g @gtrevorrow/policy-validation-action@0.2.7
+
+# Install the latest beta version
+npm install -g @gtrevorrow/policy-validation-action@beta
 
 # Or install locally in your project
 npm install --save-dev @gtrevorrow/policy-validation-action
