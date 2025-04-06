@@ -1,24 +1,31 @@
-name: 'OCI Policy Validator'
-description: 'Validates OCI policy statements in Terraform configurations'
+name: 'Policy Validation'
+description: 'Validate policy statements in Terraform files'
 inputs:
   path:
-    description: 'Path to policy file or directory'
+    description: 'Path to directory or file to scan'
     required: false
     default: '.'
   extractor:
-    description: 'Type of policy extractor to use (regex, json)'
+    description: 'Type of extractor to use (regex, json)'
     required: false
     default: 'regex'
   extractorPattern:
-    description: 'Custom pattern for the policy extractor'
+    description: 'Custom pattern for regex extractor'
     required: false
   exitOnError:
-    description: 'Exit with error code if any policy is invalid'
+    description: 'Exit immediately when an error is found'
     required: false
     default: 'true'
+  files:
+    description: 'Comma-separated list of specific files to scan'
+    required: false
+  validateCisBenchmark:
+    description: 'Enable validation against OCI CIS Benchmark v2.0'
+    required: false
+    default: 'false'
 outputs:
-  policy_expressions:
-    description: 'List of validated policy expressions (Allow, Define, Endorse, Admit) found in policies'
+  policy_validation:
+    description: 'Validation results in JSON format'
 runs:
-  using: 'node20'
-  main: 'lib/Main.js'
+  using: 'node16'
+  main: 'dist/index.js'

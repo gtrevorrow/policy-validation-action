@@ -1,27 +1,18 @@
 import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
-import { 
-    CharStreams, 
-    CommonTokenStream,
-    RecognitionException,
-    Recognizer,
-    Token,
-    Lexer
-} from 'antlr4';
 import { Logger, ParseResult, PolicyError, ValidationOutput } from './types';
-import  PolicyLexer from './generated/PolicyLexer';
-import  PolicyParser from './generated/PolicyParser';
 import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
-
-// Remove the redundant extractPolicyExpressions function since we now have PolicyExtractor
+import { ValidationPipeline } from './validators/ValidationPipeline';
+import { OciCisBenchmarkValidator } from './validators/OciCisBenchmarkValidator';
+import { OciSyntaxValidator } from './validators/OciSyntaxValidator';
 
 function formatPolicyStatements(expressions: string[]): string {
     // Ensure each statement is on its own line with proper separation
     return expressions.map(expr => expr.trim()).join('\n');
 }
 
- async function processFile(
+async function processFile(
     filePath: string,
     pattern: string | undefined,
     extractor: ExtractorType = 'regex',
@@ -161,56 +152,43 @@ async function findPolicyFiles(
     }
 }
 
-function parsePolicy(text: string, logger?: Logger): ParseResult {
+/**
+ * Validates policy statements syntax using the OciSyntaxValidator
+ * @param statements Policy statements to validate
+ * @param logger Optional logger
+ * @returns Parse result with validation info
+ */
+async function validatePolicySyntax(statements: string[], logger?: Logger): Promise<ParseResult> {
     try {
-        logger?.debug('Parsing policy text:');
-        logger?.debug(text);
+        const syntaxValidator = new OciSyntaxValidator(logger);
+        const validationReports = await syntaxValidator.validate(statements);
         
-        const statements = text.split('\n').filter(s => s.trim());
-        const errors: PolicyError[] = [];
-        
-        for (const statement of statements) {
-            const inputStream = CharStreams.fromString(statement);
-            const lexer = new PolicyLexer(inputStream) as unknown as Lexer;
-            const tokenStream = new CommonTokenStream(lexer);
-            const parser = new PolicyParser(tokenStream);
-            
-            parser.removeErrorListeners();
-            parser.addErrorListener({
-                syntaxError(
-                    recognizer: Recognizer<Token>,
-                    offendingSymbol: Token | undefined,
-                    line: number,
-                    charPositionInLine: number,
-                    msg: string,
-                    e: RecognitionException | undefined
-                ): void {
-                    logger?.error('Failed to parse policy statement:');
-                    logger?.error(`Statement: "${statement}"`);
-                    logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
-                    errors.push({
-                        statement,
-                        position: charPositionInLine,
-                        message: msg
-                    });
-                }
-            });
-            parser.policy();
+        // Convert validation reports to ParseResult format (for backward compatibility)
+        if (validationReports.length === 0) {
+            return { isValid: true, errors: [] };
         }
         
+        const syntaxReport = validationReports[0]; // We expect only one report from OciSyntaxValidator
+        
+        const errors: PolicyError[] = syntaxReport.issues.map(issue => ({
+            statement: issue.statement,
+            position: issue.message.includes('position') ? 
+                     parseInt(issue.message.split('position ')[1].split(':')[0]) : 0,
+            message: issue.message.includes(':') ? issue.message.split(':')[1].trim() : issue.message
+        }));
+        
         return {
-            isValid: errors.length === 0,
+            isValid: syntaxReport.passed,
             errors
         };
     } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        logger?.error(`Policy validation failed: ${errorMsg}`);
+        logger?.error(`Policy validation failed: ${error}`);
         return {
             isValid: false,
             errors: [{
-                statement: text,
+                statement: statements.join('\n'),
                 position: 0,
-                message: errorMsg
+                message: error instanceof Error ? error.message : String(error)
             }]
         };
     }
@@ -235,6 +213,7 @@ async function runAction(): Promise<void> {
         const pattern = core.getInput('extractorPattern');
         const exitOnError = core.getBooleanInput('exitOnError');
         const fileNames = core.getInput('files') ? core.getInput('files').split(',').map(f => f.trim()) : undefined;
+        const validateCisBenchmark = core.getBooleanInput('validateCisBenchmark') || false;
 
         actionLogger.debug(`Input path: ${inputPath}`);
         actionLogger.debug(`Resolved scan path: ${scanPath}`);
@@ -259,11 +238,22 @@ async function runAction(): Promise<void> {
                 }]
             }];
         } else {
+            // Track all policy statements across files for validation
+            const allPolicyStatements: string[] = [];
+            
             for (const file of tfFiles) {
                 actionLogger.info(`Validating policy statements for file ${file}`);
                 const expressions = await processFile(file, pattern, extractorType, actionLogger);
+                
+                // Collect all policy statements for validation
                 if (expressions.length > 0) {
-                    const result = parsePolicy(formatPolicyStatements(expressions), actionLogger);
+                    allPolicyStatements.push(...expressions);
+                }
+                
+                if (expressions.length > 0) {
+                    // Use the new validatePolicySyntax function instead of parsePolicy
+                    const result = await validatePolicySyntax(expressions, actionLogger);
+                    
                     if (!result.isValid) {
                         result.errors.forEach(error => {
                             actionLogger.error('Failed to parse policy statement:');
@@ -271,15 +261,67 @@ async function runAction(): Promise<void> {
                             actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
                         });
                     }
+                    
                     allOutputs.push({
                         file,
                         isValid: result.isValid,
                         statements: expressions,
                         errors: result.errors
                     });
+                    
                     if (exitOnError && !result.isValid) {
                         core.setFailed('Exiting due to policy validation errors');
                         break; // Exit the loop if exitOnError is true
+                    }
+                }
+            }
+            
+            // Set up the validation pipeline for both syntax and CIS benchmark checks
+            if (allPolicyStatements.length > 0) {
+                const validationPipeline = new ValidationPipeline(actionLogger);
+                
+                // Always add the syntax validator
+                validationPipeline.addValidator(new OciSyntaxValidator(actionLogger));
+                
+                // Conditionally add the CIS benchmark validator
+                if (validateCisBenchmark) {
+                    actionLogger.info('Running OCI CIS Benchmark validation...');
+                    validationPipeline.addValidator(new OciCisBenchmarkValidator(actionLogger));
+                }
+                
+                const results = await validationPipeline.validate(allPolicyStatements);
+                
+                // Process validation results
+                for (const validatorResult of results) {
+                    actionLogger.info(`Results from ${validatorResult.validatorName}:`);
+                    
+                    let hasIssues = false;
+                    for (const report of validatorResult.reports) {
+                        if (!report.passed) {
+                            hasIssues = true;
+                            actionLogger.warn(`❌ Check failed: ${report.checkId} - ${report.name}`);
+                            
+                            for (const issue of report.issues) {
+                                actionLogger.warn(`- ${issue.message}`);
+                                if (issue.statement) {
+                                    actionLogger.warn(`  Statement: ${issue.statement}`);
+                                }
+                                if (issue.recommendation) {
+                                    actionLogger.info(`  Recommendation: ${issue.recommendation}`);
+                                }
+                            }
+                        } else {
+                            actionLogger.info(`✓ Check passed: ${report.checkId} - ${report.name}`);
+                        }
+                    }
+                    
+                    // Add validation results to the first file output
+                    if (allOutputs.length > 0) {
+                        allOutputs[0].validationResults = results;
+                    }
+                    
+                    if (hasIssues && exitOnError) {
+                        core.setFailed(`${validatorResult.validatorName} validation found issues`);
                     }
                 }
             }
@@ -330,6 +372,6 @@ if (process.env.GITHUB_ACTION) {
 export {
     findPolicyFiles,
     processFile,
-    parsePolicy,
+    validatePolicySyntax,
     formatPolicyStatements
 };

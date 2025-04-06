@@ -22,6 +22,14 @@ This tool validates OCI IAM policy statements ensuring that the policies adhere 
   - [Available Extractors](#available-extractors)
   - [Regex Policy Extractor Policy Statement Pattern](#regex-policy-extractor-policy-statement-pattern)
 - [OCI Core Landing Zone IAM Policy Module Support](#oci-core-landing-zone-iam-policy-module-support)
+- [Validators Subsystem](#validators-subsystem)
+  - [PolicyValidator Interface](#policyvalidator-interface)
+  - [Validation Components](#validation-components)
+  - [Available Validators](#available-validators)
+  - [OciCisBenchmarkValidator](#ocicisbenchmarkvalidator)
+    - [CIS Benchmark Checks](#cis-benchmark-checks)
+    - [Validation Process](#validation-process-for-cis)
+- [Jest Testing Configuration](#jest-testing-configuration)
 - [ANTLR Parser](#antlr-parser)
   - [Grammar Definition](#grammar-definition)
   - [Parser Generation](#parser-generation)
@@ -641,6 +649,41 @@ The ANTLR parser is generated automatically from the `Policy.g4` file using the 
 
 When the policy validation tool is run, it uses the ANTLR parser to check each policy statement against the grammar. If a statement does not conform to the grammar, the parser will generate an error message indicating the location and type of syntax error. These error messages are then displayed to the user to help them identify and fix the invalid policy statement.
 
+## Jest Testing Configuration
+
+This project uses Jest for testing. The Jest configuration is maintained in a single file to avoid conflicts:
+
+- **Configuration File**: `jest.config.js` in the root directory
+- **Setup File**: `jest.setup.js` for global test setup
+
+**Important Notes:**
+- Do not configure Jest in both `package.json` and `jest.config.js` as this will cause conflicts
+- All Jest configuration should be in `jest.config.js`
+- Test files should follow the naming convention `*.test.ts`
+
+### Key Jest Configuration Options
+
+```js
+// jest.config.js
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  collectCoverageFrom: [
+    "src/**/*.ts",
+    "!src/generated/**"
+  ],
+  testMatch: [
+    "**/__tests__/**/*.test.ts"
+  ]
+}
+```
+
+### Troubleshooting Common Jest Issues
+
+- **Multiple Configuration Files**: If you encounter "Multiple configurations found" errors, ensure Jest is only configured in `jest.config.js` and not in `package.json`.
+- **Test Files Not Found**: Ensure test files follow the naming pattern in `testMatch` (e.g., `*.test.ts`).
+- **TypeScript Errors**: The preset `ts-jest` handles TypeScript compilation during tests.
+
 ## Release Process & Versioning
 
 This project follows [Semantic Versioning](https://semver.org/) with automated version management. The release workflow is designed to handle both development and production releases seamlessly.
@@ -693,6 +736,255 @@ This project follows [Semantic Versioning](https://semver.org/) with automated v
 - **Feature Branches**: For new features or bug fixes (`feature/<feature-name>`).
 - **Development Branch**: For integrating and testing features before production.
 - **Main Branch**: For production-ready code and releases.
+
+## Validators Subsystem
+
+The policy validation tool includes a flexible validators subsystem that checks OCI policy statements against various compliance frameworks and best practices. The subsystem is designed to be extensible, allowing for new validators to be added as needed.
+
+### PolicyValidator Interface
+
+The validators subsystem is built around the `PolicyValidator` interface, which defines the contract for all validators:
+
+```typescript
+export interface PolicyValidator {
+  /**
+   * Returns the name of this validator
+   */
+  name(): string;
+  
+  /**
+   * Returns the description of this validator
+   */
+  description(): string;
+  
+  /**
+   * Returns all validation checks this validator can perform
+   */
+  getChecks(): ValidationCheck[];
+  
+  /**
+   * Validates a list of policy statements
+   * @param statements The policy statements to validate
+   * @returns A list of validation reports
+   */
+  validate(statements: string[]): Promise<ValidationReport[]>;
+}
+```
+
+### Validation Components
+
+The validators subsystem uses several key interfaces to structure the validation process:
+
+1. **ValidationCheck**: Defines a specific check or rule to validate against
+   ```typescript
+   interface ValidationCheck {
+     id: string;         // Unique identifier for the check
+     name: string;       // Display name for the check
+     description: string; // Description of what the check validates
+   }
+   ```
+
+2. **ValidationIssue**: Represents a specific issue found during validation
+   ```typescript
+   interface ValidationIssue {
+     checkId: string;     // ID of the check that identified the issue
+     statement: string;   // The policy statement with the issue
+     message: string;     // Description of the issue
+     recommendation?: string; // Suggested fix
+     severity: 'info' | 'warning' | 'error'; // Issue severity level
+   }
+   ```
+
+3. **ValidationReport**: A comprehensive report for a specific check
+   ```typescript
+   interface ValidationReport {
+     checkId: string;     // ID of the check
+     name: string;        // Name of the check
+     description: string; // Description of the check
+     passed: boolean;     // Whether the check passed
+     issues: ValidationIssue[]; // List of issues if the check failed
+   }
+   ```
+
+### Available Validators
+
+The validators subsystem includes the following validators:
+
+- **OciSyntaxValidator**: Validates the syntax of OCI policy statements according to the grammar rules
+- **OciCisBenchmarkValidator**: Validates policies against the CIS Benchmark for Oracle Cloud Infrastructure
+- **ValidationPipeline**: A pipeline that can run multiple validators in sequence
+
+### OciSyntaxValidator
+
+The `OciSyntaxValidator` is responsible for validating the syntax of OCI policy statements according to the grammar rules defined in the ANTLR parser. It provides detailed error messages with position indicators to help users quickly identify and fix syntax issues.
+
+#### Syntax Validation Process
+
+The OciSyntaxValidator follows these steps for validation:
+
+1. **Parse each policy statement**:
+   - Uses the ANTLR-generated parser to analyze each policy statement
+   - Identifies any syntax errors according to the OCI policy grammar
+
+2. **Detailed Error Reporting**:
+   - Provides exact position information for each error
+   - Generates visual position indicators (^ symbol) pointing to the exact location of syntax errors
+   - Includes descriptive error messages explaining what was expected at the error location
+
+3. **Example Error Output**:
+   ```
+   Failed to parse policy statement:
+   Statement: "Allow Administrators_without_group to manage all-resources in tenancy"
+   Position:       ^ mismatched input 'Administrators_without_group' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}
+   ```
+
+4. **Usage in Code**:
+   ```typescript
+   import { OciSyntaxValidator } from '@gtrevorrow/policy-validation-action';
+   
+   // Create a validator instance
+   const validator = new OciSyntaxValidator();
+   
+   // Define policy statements to validate
+   const policyStatements = [
+     "Allow group Administrators to manage all-resources in tenancy",
+     "Allow BadSyntax manage all-resources in tenancy"  // Invalid syntax
+   ];
+   
+   // Validate the policies
+   const results = await validator.validate(policyStatements);
+   
+   // Process the validation reports
+   results.forEach(report => {
+     if (!report.passed) {
+       console.log(`Invalid syntax in policy: ${report.issues[0].statement}`);
+       console.log(`Error: ${report.issues[0].message}`);
+     }
+   });
+   ```
+
+### OciCisBenchmarkValidator
+
+The `OciCisBenchmarkValidator` is specialized for validating OCI IAM policies against the CIS (Center for Internet Security) Benchmark version 2.0 controls.
+
+#### CIS Benchmark Checks
+
+The validator implements six key CIS benchmark checks:
+
+1. **CIS-OCI-1.1: Service-Level Admins**
+   - *Description*: Ensures service level admins are created to manage resources of particular services
+   - *Critical Services*: Compute, Database, Storage, Network
+   - *Validation Logic*: Checks for service-specific admin policies for each critical service
+
+2. **CIS-OCI-1.2: Least Privilege**
+   - *Description*: Ensures permissions on all resources are given only to groups that need them
+   - *Validation Logic*: Flags "manage all-resources" policies without appropriate conditions as overly permissive
+
+3. **CIS-OCI-1.3: Admin Group Restrictions**
+   - *Description*: Ensures IAM administrators cannot update the tenancy Administrators group
+   - *Validation Logic*: Checks for "where target.group.name != 'Administrators'" conditions in group management policies
+
+4. **CIS-OCI-1.5: Compartment-level Admins**
+   - *Description*: Ensures compartment level admins are used to manage resources in compartments
+   - *Validation Logic*: Verifies the existence of compartment-scoped admin policies
+
+5. **CIS-OCI-1.13: MFA Enforcement**
+   - *Description*: Ensures multi-factor authentication is enforced for users with console access
+   - *Validation Logic*: Checks for "where request.user.mfachallenged == 'true'" conditions in security policies
+
+6. **CIS-OCI-5.2: Network Security Groups**
+   - *Description*: Ensures security lists/NSGs are properly configured to restrict access
+   - *Validation Logic*: Verifies that network security group policies include appropriate "where" conditions
+
+#### Validation Process for CIS
+
+The validation process in OciCisBenchmarkValidator follows these steps:
+
+1. **Parsing & Analysis**:
+   - Initializes an `OciCisListener` to collect policy attributes
+   - Uses the ANTLR parser to parse each policy statement
+   - Walks the parse tree to identify policy characteristics
+
+2. **Check Execution**:
+   - For each CIS check, analyzes the policy characteristics
+   - Determines if the policy statements meet the requirements
+   - Generates a `ValidationReport` with `passed` status and any issues
+
+3. **Issue Reporting**:
+   - For failed checks, provides specific guidance on what's missing
+   - Includes recommendations for remediation
+   - Assigns appropriate severity levels to issues
+
+4. **Error Handling**:
+   - Gracefully handles parsing errors
+   - Logs issues for debugging
+   - Provides clear error messages for syntax problems
+
+### Using Validators in Code
+
+Validators can be used directly in your code:
+
+```typescript
+import { OciCisBenchmarkValidator } from '@gtrevorrow/policy-validation-action';
+
+// Create a validator instance
+const validator = new OciCisBenchmarkValidator();
+
+// Define policy statements to validate
+const policyStatements = [
+  "Allow group Administrators to manage all-resources in tenancy",
+  "Allow group NetworkAdmins to manage virtual-network-family in tenancy"
+];
+
+// Validate the policies
+const reports = await validator.validate(policyStatements);
+
+// Process the validation reports
+reports.forEach(report => {
+  console.log(`Check: ${report.name} - ${report.passed ? 'PASSED' : 'FAILED'}`);
+  if (!report.passed) {
+    report.issues.forEach(issue => {
+      console.log(`- Issue: ${issue.message}`);
+      console.log(`  Recommendation: ${issue.recommendation}`);
+    });
+  }
+});
+```
+
+### Extending with Custom Validators
+
+You can create custom validators by implementing the `PolicyValidator` interface. This allows you to define your own validation rules and checks:
+
+```typescript
+import { PolicyValidator, ValidationCheck, ValidationReport } from '@gtrevorrow/policy-validation-action';
+
+export class CustomValidator implements PolicyValidator {
+  name(): string {
+    return 'Custom Validator';
+  }
+  
+  description(): string {
+    return 'Custom validation for organization-specific requirements';
+  }
+  
+  getChecks(): ValidationCheck[] {
+    return [
+      {
+        id: 'CUSTOM-1',
+        name: 'Custom Check',
+        description: 'Organization-specific policy check'
+      }
+    ];
+  }
+  
+  async validate(statements: string[]): Promise<ValidationReport[]> {
+    // Implement your custom validation logic here
+    // ...
+    
+    return reports;
+  }
+}
+```
 
 ## License
 

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { 
     findPolicyFiles, 
-    parsePolicy, 
+    validatePolicySyntax, 
     processFile, 
     formatPolicyStatements 
 } from '../Main';
@@ -166,16 +166,16 @@ describe('Main', () => {
     });
 
     describe('parsePolicy', () => {
-        it('should validate a correct policy', () => {
-            const policyText = 'Allow group Admins to manage all-resources in tenancy';
-            const result = parsePolicy(policyText, mockLogger);
+        it('should validate a correct policy', async () => {
+            const policyText = ['Allow group Admins to manage all-resources in tenancy'];
+            const result = await validatePolicySyntax(policyText, mockLogger);
             expect(result.isValid).toBe(true);
             expect(result.errors).toHaveLength(0);
         });
 
-        it('should reject an invalid policy', () => {
-            const policyText = 'Allw group Admins to manage all-resources in tenancy';
-            const result = parsePolicy(policyText, mockLogger);
+        it('should reject an invalid policy', async () => {
+            const policyText = ['Allw group Admins to manage all-resources in tenancy'];
+            const result = await validatePolicySyntax(policyText, mockLogger);
             expect(result.isValid).toBe(false);
             expect(result.errors.length).toBeGreaterThan(0);
         });
@@ -185,7 +185,7 @@ describe('Main', () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
             const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
             
-            const result = parsePolicy(formatPolicyStatements(statements), mockLogger);
+            const result = await validatePolicySyntax(statements, mockLogger);
             expect(result.isValid).toBe(true);
             expect(result.errors).toHaveLength(0);
         });
@@ -195,7 +195,7 @@ describe('Main', () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'invalid.tf');
             const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
             
-            const result = parsePolicy(formatPolicyStatements(statements), mockLogger);
+            const result = await validatePolicySyntax(statements, mockLogger);
             expect(result.isValid).toBe(false);
             expect(result.errors.length).toBeGreaterThan(0);
         });
@@ -280,7 +280,7 @@ describe('Main', () => {
                 expect(expressions.length).toBeGreaterThan(0);
                 
                 // Test validation on the extracted policies
-                const result = parsePolicy(formatPolicyStatements(expressions), mockLogger);
+                const result = await validatePolicySyntax(expressions, mockLogger);
                 expect(typeof result.isValid).toBe('boolean');
             }
         });
@@ -309,7 +309,7 @@ describe('Main', () => {
                 expect(expressions.length).toBeGreaterThan(0);
                 
                 // Policy validation should work for all extracted statements
-                const result = parsePolicy(formatPolicyStatements(expressions), mockLogger);
+                const result = await validatePolicySyntax(expressions, mockLogger);
                 expect(typeof result.isValid).toBe('boolean');
             }
         });
@@ -346,7 +346,7 @@ describe('Main', () => {
             expect(expressions).not.toContain('allow group vision-cred-admin-group to manage groups in tenancy');
             
             // Validate extracted policies
-            const validationResult = parsePolicy(formatPolicyStatements(expressions), mockLogger);
+            const validationResult = await validatePolicySyntax(expressions, mockLogger);
             expect(validationResult.isValid).toBe(true);
         });
 
@@ -411,15 +411,15 @@ describe('Main', () => {
          
             // We expect to find EXACTLY 38 policies in security_cmp_policy.tf
             expect(policies1.length).toBe(38);
-            // We expect to find EXACTLY 85 policies in root_cmp_policy.tf
+            // We expect to find EXACTLY 76 policies in root_cmp_policy.tf
             expect(policies2.length).toBe(76);
             // We expect to find EXACTLY 41 policies in network_cmp_policy.tf
             expect(policies3.length).toBe(41);
 
             // Validate the extracted policies
-            const result1 = parsePolicy(formatPolicyStatements(policies1), mockLogger);
-            const result2 = parsePolicy(formatPolicyStatements(policies2), mockLogger);
-            const result3 = parsePolicy(formatPolicyStatements(policies3), mockLogger);
+            const result1 = await validatePolicySyntax(policies1, mockLogger);
+            const result2 = await validatePolicySyntax(policies2, mockLogger);
+            const result3 = await validatePolicySyntax(policies3, mockLogger);
             expect(result1.isValid).toBe(true);
             expect(result2.isValid).toBe(true);
             expect(result3.isValid).toBe(true);

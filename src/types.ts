@@ -34,6 +34,29 @@ export interface ValidationOutput {
     isValid: boolean;
     statements: string[];
     errors: any[];
+    validationResults?: ValidationPipelineResult[];
+}
+
+export interface ValidationPipelineResult {
+    validatorName: string;
+    validatorDescription: string;
+    reports: ValidationReport[];
+}
+
+export interface ValidationReport {
+    checkId: string;
+    name: string;
+    description: string;
+    passed: boolean;
+    issues: ValidationIssue[];
+}
+
+export interface ValidationIssue {
+    checkId: string;
+    statement: string;
+    message: string;
+    recommendation?: string;
+    severity: 'info' | 'warning' | 'error';
 }
 
 /**

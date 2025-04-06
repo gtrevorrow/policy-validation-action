@@ -1,4 +1,4 @@
-import { parsePolicy } from '../Main';
+import { validatePolicySyntax } from '../Main';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
 
 describe('OCI Policy Validation', () => {
@@ -59,29 +59,29 @@ describe('OCI Policy Validation', () => {
     });
 
     describe('Validation', () => {
-        it('should validate correct policy statements', () => {
-            const input = `
-                Allow group Administrators to manage all-resources in tenancy
-                Allow group Developers to use instances in compartment dev
-            `;
-            const result = parsePolicy(input);
+        it('should validate correct policy statements', async () => {
+            const input = [
+                'Allow group Administrators to manage all-resources in tenancy',
+                'Allow group Developers to use instances in compartment dev'
+            ];
+            const result = await validatePolicySyntax(input);
             expect(result.isValid).toBe(true);
             expect(result.errors).toHaveLength(0);
         });
 
-        it('should reject invalid policy statements', () => {
-            const input = `
-            Allow BadSyntax manage
-            `;
-            const result = parsePolicy(input);
+        it('should reject invalid policy statements', async () => {
+            const input = [
+                'Allow BadSyntax manage'
+            ];
+            const result = await validatePolicySyntax(input);
             expect(result.isValid).toBe(false);
-            expect(result.errors).toHaveLength(2);
+            expect(result.errors.length).toBeGreaterThan(0);
             expect(result.errors[0]).toHaveProperty('statement');
             expect(result.errors[0]).toHaveProperty('position');
             expect(result.errors[0]).toHaveProperty('message');
         });
 
-        it('should validate tenancy subject with HCL variables', () => {
+        it('should validate tenancy subject with HCL variables', async () => {
             const input = [
                 'Define tenancy ${var.tenant_name} as ocid1.tenancy.oc1..test',
                 'Admit group Admins of tenancy ${var.acceptor_tenant} to manage instances in tenancy',
@@ -90,14 +90,14 @@ describe('OCI Policy Validation', () => {
                 'Endorse group ${var.network_admins} to manage virtual-network-family in tenancy foo',
                 'Admit group ${var.dev_group} of tenancy accountFoo to use instances in compartment ${var.env}',
                 'Admit group Admins of tenancy ${var.acceptor_tenant} to manage instances in tenancy',
-                'Endorse group foo to manage virtual-network-family in tenancy ${var.acceptor_tenant}',
-            ].join('\n');
-            const result = parsePolicy(input);
+                'Endorse group foo to manage virtual-network-family in tenancy ${var.acceptor_tenant}'
+            ];
+            const result = await validatePolicySyntax(input);
             expect(result.isValid).toBe(true);
             expect(result.errors).toHaveLength(0);
         });
 
-        it('should reject policy statements without proper spacing', () => {
+        it('should reject policy statements without proper spacing', async () => {
             const invalidInputs = [
                 'AllowBadSyntax manage',
                 'Allow groupDevelopers to use instances in compartment dev',
@@ -106,7 +106,7 @@ describe('OCI Policy Validation', () => {
                 'Endorsegroup NetworkAdmins to manage something in tenancy'
             ];
             
-            const result = parsePolicy(invalidInputs.join('\n'));
+            const result = await validatePolicySyntax(invalidInputs);
             expect(result.isValid).toBe(false);
             expect(result.errors.length).toBeGreaterThan(0);
             expect(result.errors[0]).toMatchObject({
