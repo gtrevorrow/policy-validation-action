@@ -9,8 +9,11 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
             return [];
         }
 
+        // Preprocess to fix common issues
+        const preprocessed = this.preprocessStatement(raw);
+
         // Remove HCL comments first
-        const uncommentedText = this.removeHclComments(raw);
+        const uncommentedText = this.removeHclComments(preprocessed);
 
         // Split the input by commas, properly handling quotes and interpolation
         const statements = this.splitStatements(uncommentedText);
@@ -19,6 +22,21 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
         return statements
             .map(statement => this.cleanStatement(statement))
             .filter(statement => statement && statement.trim() !== '');
+    }
+
+    /**
+     * Preprocesses statement to fix common issues before extraction
+     */
+    private preprocessStatement(statement: string): string {
+        let result = statement;
+        
+        // Fix common issues with Terraform string concatenation
+        result = result.replace(/"\s*\+\s*"/g, '');
+        
+        // Remove extraneous commas inside variable interpolation
+        result = result.replace(/(\${[^}]*),\s*([^}]*})/g, '$1 $2');
+        
+        return result;
     }
 
     /**
@@ -126,6 +144,7 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
             (result.startsWith("'") && result.endsWith("'"))) {
             result = result.substring(1, result.length - 1).trim();
         }
+
         
         return result;
     }
