@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger, ParseResult, PolicyError, ValidationOutput } from './types';
+import { Logger, ParseResult, PolicyError, ValidationOutput, PlatformOperations, ValidationOptions } from './types';
 import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
 import { ValidationPipeline } from './validators/ValidationPipeline';
 import { OciCisBenchmarkValidator } from './validators/OciCisBenchmarkValidator';
@@ -49,11 +49,10 @@ function getWorkspacePath(): string {
 
 async function findPolicyFiles(
     dir: string, 
-    options?: { fileNames?: string[], fileExtension?: string }, 
+    options?: { fileNames?: string[], fileExtension?: string}, 
     logger?: Logger
 ): Promise<string[]> {
-    const fileExtension = options?.fileExtension || '.tf';
-    
+
     try {
         // First check if path exists and is accessible
         try {
@@ -75,8 +74,14 @@ async function findPolicyFiles(
                 return options.fileNames.includes(fileName) ? [dir] : [];
             }
             
-            // Otherwise, check file extension
-            return dir.endsWith(fileExtension) ? [dir] : [];
+            // If file extension is specified, check if file matches
+            if (options?.fileExtension && !dir.endsWith(options.fileExtension)) {
+                logger?.debug(`File ${dir} doesn't match extension ${options.fileExtension}, skipping`);
+                return [];
+            }
+            
+            // Include the file
+            return [dir];
         }
 
         if (!stats.isDirectory()) {
@@ -116,8 +121,14 @@ async function findPolicyFiles(
                     if (entry.isDirectory()) {
                         logger?.debug(`Recursing into directory: ${fullPath}`);
                         files.push(...await findPolicyFiles(fullPath, options, logger));
-                    } else if (entry.isFile() && entry.name.endsWith(fileExtension)) {
-                        logger?.debug(`Found policy file: ${fullPath}`);
+                    } else if (entry.isFile()) {
+                        // If file extension is specified, check if file matches
+                        if (options?.fileExtension && !entry.name.endsWith(options.fileExtension)) {
+                            logger?.debug(`File ${entry.name} doesn't match extension ${options.fileExtension}, skipping`);
+                            continue;
+                        }
+                        
+                        logger?.debug(`Found file: ${fullPath}`);
                         files.push(fullPath);
                     }
                 } catch (error) {
@@ -136,7 +147,14 @@ async function findPolicyFiles(
                     const entryStats = await fs.promises.stat(fullPath);
                     if (entryStats.isDirectory()) {
                         files.push(...await findPolicyFiles(fullPath, options, logger));
-                    } else if (name.endsWith(fileExtension)) {
+                    } else if (entryStats.isFile()) {
+                        // If file extension is specified, check if file matches
+                        if (options?.fileExtension && !name.endsWith(options.fileExtension)) {
+                            logger?.debug(`File ${name} doesn't match extension ${options.fileExtension}, skipping`);
+                            continue;
+                        }
+                        
+                        logger?.debug(`Found file: ${fullPath}`);
                         files.push(fullPath);
                     }
                 } catch (error) {
@@ -186,204 +204,6 @@ async function validatePolicySyntax(statements: string[], logger?: Logger): Prom
     };
 }
 
-// GitHub Action specific wrapper
-async function runAction(): Promise<void> {
-    const actionLogger: Logger = {
-        debug: (msg) => core.debug(msg),
-        info: (msg) => core.info(msg),
-        warn: (msg) => core.warning(msg),
-        error: (msg) => core.error(msg)
-    };
-
-    let inputPath: string = 'unknown'; 
-    let allOutputs: ValidationOutput[] = [];
-
-    try {
-        inputPath = core.getInput('path');
-        const scanPath = path.resolve(getWorkspacePath(), inputPath);
-        const extractorType = (core.getInput('extractor') || 'regex') as ExtractorType;
-        const pattern = core.getInput('extractorPattern');
-        const exitOnError = core.getBooleanInput('exitOnError');
-        const fileNames = core.getInput('files') ? core.getInput('files').split(',').map(f => f.trim()) : undefined;
-        const validateCisBenchmark = core.getBooleanInput('validateCisBenchmark') || false;
-
-        actionLogger.debug(`Input path: ${inputPath}`);
-        actionLogger.debug(`Resolved scan path: ${scanPath}`);
-        actionLogger.debug(`Using extractor: ${extractorType}`);
-        if (fileNames) {
-            actionLogger.debug(`Specific files to process: ${fileNames.join(', ')}`);
-        }
-        
-        const tfFiles = await findPolicyFiles(scanPath, { fileNames, fileExtension: '.tf' }, actionLogger);
-        core.debug(`Found ${tfFiles.length} policy files to validate`);
-        
-        if (tfFiles.length === 0) {
-            core.warning('No .tf files found');
-            allOutputs = [{
-                file: inputPath,
-                isValid: false,
-                statements: [],
-                errors: [{
-                    statement: '',
-                    position: 0,
-                    message: 'No .tf files found'
-                }]
-            }];
-        } else {
-            // Create the CIS benchmark validator if needed
-            let cisBenchmarkValidator: OciCisBenchmarkValidator | null = null;
-            if (validateCisBenchmark) {
-                cisBenchmarkValidator = new OciCisBenchmarkValidator(actionLogger);
-                actionLogger.info('CIS Benchmark validation enabled');
-            }
-            
-            // Track all policy statements for collective analysis if needed
-            const allPolicyStatements: string[] = [];
-            
-            for (const file of tfFiles) {
-                actionLogger.info(`Validating policy statements for file ${file}`);
-                const expressions = await processFile(file, pattern, extractorType, actionLogger);
-                
-                // Skip empty files
-                if (expressions.length === 0) {
-                    continue;
-                }
-                
-                // Collect all statements for potential cross-file analysis later
-                allPolicyStatements.push(...expressions);
-                
-                // Run syntax validation using the wrapper function
-                actionLogger.info(`Validating ${expressions.length} policy statements for syntax correctness`);
-                const syntaxResult = await validatePolicySyntax(expressions, actionLogger);
-                
-                // Add the validation results to our outputs
-                allOutputs.push({
-                    file,
-                    isValid: syntaxResult.isValid,
-                    statements: expressions,
-                    errors: syntaxResult.errors,
-                    // Include validator results in a format compatible with the rest of the code
-                    validationResults: [{
-                        validatorName: "OCI Policy Syntax Validator",
-                        validatorDescription: "Validates the syntax of OCI policy statements",
-                        reports: [{
-                            checkId: "SYNTAX-1",
-                            name: "Policy Syntax Validation",
-                            description: "Validates the syntax of OCI policy statements",
-                            passed: syntaxResult.isValid,
-                            issues: syntaxResult.errors.map(error => ({
-                                checkId: "SYNTAX-1",
-                                statement: error.statement,
-                                message: error.message,
-                                severity: "error"
-                            }))
-                        }]
-                    }]
-                });
-                
-                // Log errors for visibility
-                if (!syntaxResult.isValid) {
-                    for (const error of syntaxResult.errors) {
-                        actionLogger.error('Failed to parse policy statement:');
-                        actionLogger.error(`Statement: "${error.statement}"`);
-                        actionLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
-                    }
-                }
-                
-                // Exit early if validation failed and exitOnError is true
-                if (!syntaxResult.isValid && exitOnError) {
-                    core.setFailed('Exiting due to policy validation errors');
-                    break;
-                }
-            }
-            
-            // If CIS benchmark validation is enabled, run it on all policy statements combined
-            if (validateCisBenchmark && cisBenchmarkValidator && allPolicyStatements.length > 0) {
-                actionLogger.info('Running OCI CIS Benchmark validation on all policy statements...');
-                
-                const cisBenchmarkResults = await cisBenchmarkValidator.validate(allPolicyStatements);
-                
-                // Process CIS benchmark results
-                let hasIssues = false;
-                for (const report of cisBenchmarkResults) {
-                    if (!report.passed) {
-                        hasIssues = true;
-                        actionLogger.warn(`❌ CIS Benchmark check failed: ${report.checkId} - ${report.name}`);
-                        
-                        for (const issue of report.issues) {
-                            actionLogger.warn(`- ${issue.message}`);
-                            if (issue.statement) {
-                                actionLogger.warn(`  Statement: ${issue.statement}`);
-                            }
-                            if (issue.recommendation) {
-                                actionLogger.info(`  Recommendation: ${issue.recommendation}`);
-                            }
-                        }
-                    } else {
-                        actionLogger.info(`✓ CIS Benchmark check passed: ${report.checkId} - ${report.name}`);
-                    }
-                }
-                
-                // Add CIS benchmark results to the first file output if any files were processed
-                if (allOutputs.length > 0) {
-                    if (!allOutputs[0].validationResults) {
-                        allOutputs[0].validationResults = [];
-                    }
-                    allOutputs[0].validationResults.push({
-                        validatorName: cisBenchmarkValidator.name(),
-                        validatorDescription: "Validates compliance with OCI CIS Benchmark",
-                        reports: cisBenchmarkResults
-                    });
-                }
-                
-                // Exit if CIS benchmark issues were found and exitOnError is true
-                if (hasIssues && exitOnError) {
-                    core.setFailed('CIS Benchmark validation found issues');
-                }
-            }
-        }
-
-        if (allOutputs.length === 0 && tfFiles.length > 0) {
-            core.warning('No policy statements found');
-            allOutputs = [{
-                file: inputPath,
-                isValid: false,
-                statements: [],
-                errors: [{
-                    statement: '',
-                    position: 0,
-                    message: 'No policy statements found'
-                }]
-            }];
-        }
-
-        core.info('Policy validation successful');
-    } catch (error) {
-        allOutputs = [{
-            file: inputPath,
-            isValid: false,
-            statements: [],
-            errors: [{
-                statement: '',
-                position: 0,
-                message: error instanceof Error ? error.message : String(error)
-            }]
-        }];
-        core.setFailed(`Action failed: ${error}`);
-    } finally {
-        // Always set output before exiting
-        core.setOutput('policy_validation', JSON.stringify(allOutputs));
-        if (allOutputs.some(output => !output.isValid)) {
-            core.setFailed('Policy validation failed');
-        }
-    }
-}
-
-// Only run the action if we're in a GitHub Action environment
-if (process.env.GITHUB_ACTION) {
-    runAction();
-}
-
 // Single export statement at the end of the file
 export {
     findPolicyFiles,
@@ -391,3 +211,187 @@ export {
     validatePolicySyntax, // We keep this for backward compatibility with existing test files
     formatPolicyStatements
 };
+
+/**
+ * Main function to validate policies in given path with provided options
+ */
+export async function validatePolicies(
+  scanPath: string, 
+  options: ValidationOptions, 
+  logger: Logger
+): Promise<ValidationOutput[]> {
+  // Find all policy files
+  const filesToProcess = await findPolicyFiles(scanPath, { 
+    fileNames: options.fileNames, 
+    fileExtension: options.fileExtension,
+  }, logger);
+  
+  if (filesToProcess.length === 0) {
+    const message = options.fileExtension == undefined ? 
+      `No files found in ${scanPath}` : 
+      `No policy files found in ${scanPath}`;
+    throw new Error(message);
+  }
+
+  // Track all validation outputs
+  const allOutputs: ValidationOutput[] = [];
+  
+  // Track all policy statements for validation pipeline
+  const allPolicyStatements: string[] = [];
+  
+  // Process each file
+  for (const file of filesToProcess) {
+    logger.info(`Validating policy statements for file ${file}`);
+    const expressions = await processFile(file, options.pattern, options.extractorType as ExtractorType, logger);
+    
+    // Collect statements for validation pipeline
+    if (expressions.length > 0) {
+      allPolicyStatements.push(...expressions);
+    }
+    
+    // Validate syntax
+    if (expressions.length > 0) {
+      // Use the OciSyntaxValidator for validation
+      const result = await validatePolicySyntax(expressions, logger);
+      
+      // Add results to outputs
+      allOutputs.push({
+        file,
+        isValid: result.isValid,
+        statements: expressions,
+        errors: result.errors
+      });
+      
+      // Exit on first error if required
+      if (!result.isValid && options.exitOnError) {
+        return allOutputs;
+      }
+    }
+  }
+  
+  // Run the validation pipeline with all statements if requested
+  if (allPolicyStatements.length > 0 && options.runCisBenchmark) {
+    logger.info('Running validation pipeline...');
+    
+    // Set up validation pipeline
+    const validationPipeline = new ValidationPipeline(logger);
+    
+    // Add validators
+    validationPipeline.addValidator(new OciSyntaxValidator(logger));
+    validationPipeline.addValidator(new OciCisBenchmarkValidator(logger));
+    
+    // Run validation
+    const results = await validationPipeline.validate(allPolicyStatements);
+    
+    // Process results
+    let hasIssues = false;
+    for (const validatorResult of results) {
+      logger.info(`Results from ${validatorResult.validatorName}:`);
+      
+      for (const report of validatorResult.reports) {
+        if (!report.passed) {
+          hasIssues = true;
+          logger.warn(`Failed check: ${report.checkId} - ${report.name}`);
+          
+          for (const issue of report.issues) {
+            logger.warn(`- ${issue.message}`);
+          }
+        } else {
+          logger.info(`Passed check: ${report.checkId} - ${report.name}`);
+        }
+      }
+    }
+    
+    // Add validation results to output
+    if (allOutputs.length > 0) {
+      allOutputs[0].validationResults = results;
+    }
+    
+    // Return early if issues found and exitOnError is true
+    if (hasIssues && options.exitOnError) {
+      return allOutputs;
+    }
+  }
+  
+  logger.info('Policy validation completed');
+  return allOutputs;
+}
+
+/**
+ * Main entry point for running the policy validation
+ * This function serves both the CLI and GitHub Action
+ */
+export async function runAction(platform: PlatformOperations): Promise<void> {
+  const logger = platform.createLogger();
+  
+  try {
+    // Get inputs using the platform abstraction
+    const inputPath = platform.getInput('path') || '.';
+    const scanPath = resolvePath(inputPath);
+    logger.info(`Resolved path: ${scanPath}`);
+    
+    // Build options from inputs
+    const options: ValidationOptions = {
+      extractorType: platform.getInput('extractor') || 'regex',
+      pattern: platform.getInput('pattern'),
+      fileExtension: platform.getInput('file-extension'),
+      fileNames: platform.getInput('files') ? 
+        platform.getInput('files').split(',').map(f => f.trim()) : 
+        undefined,
+      exitOnError: platform.getInput('exit-on-error') === 'true',
+      runCisBenchmark: platform.getInput('cis-benchmark') === 'true'
+    };
+    
+    // Log options
+    logger.info(`Using extractor: ${options.extractorType}`);
+    logger.info(`File extension: ${options.fileExtension || 'not specified (scanning all files)'}`);
+    if (options.fileNames && options.fileNames.length > 0) {
+      logger.info(`Files filter: ${options.fileNames.join(', ')}`);
+    }
+    if (options.pattern) {
+      logger.info(`Custom pattern: ${options.pattern}`);
+    } else {
+      logger.info('Custom pattern: none');
+    }
+    logger.info(`Exit on error: ${options.exitOnError}`);
+    
+    // Check if path exists and is accessible
+    try {
+      await fs.promises.access(scanPath, fs.constants.R_OK);
+    } catch (error) {
+      const errorMsg = `Path ${scanPath} is not accessible: ${error}`;
+      logger.error(errorMsg);
+      platform.setOutput('error', errorMsg);
+      platform.setResult(false, errorMsg);
+      return;
+    }
+    
+    // Run validation
+    const results = await validatePolicies(scanPath, options, logger);
+    
+    // Set outputs
+    platform.setOutput('results', JSON.stringify(results));
+    
+    // Determine success/failure
+    const hasFailures = results.some(output => !output.isValid);
+    if (hasFailures) {
+      platform.setResult(!options.exitOnError, 'Policy validation failed');
+    } else {
+      platform.setResult(true, 'Policy validation succeeded');
+    }
+  } catch (error) {
+    logger.error(`Error: ${error}`);
+    platform.setOutput('error', `${error}`);
+    platform.setResult(false, `Error: ${error}`);
+  }
+}
+
+/**
+ * Helper function to resolve path
+ */
+function resolvePath(inputPath: string): string {
+  if (path.isAbsolute(inputPath)) {
+    return inputPath;
+  }
+  return path.resolve(process.cwd(), inputPath);
+}

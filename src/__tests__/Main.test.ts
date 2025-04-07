@@ -1,3 +1,17 @@
+/**
+ * Main.test.ts
+ * 
+ * This file contains tests for the core functionality of the policy validation tool.
+ * It tests the following key functions:
+ * - findPolicyFiles: Locates policy files in a directory or validates a single file path
+ * - formatPolicyStatements: Formats and normalizes policy statements
+ * - processFile: Extracts policy statements from files using different extraction strategies
+ * - validatePolicySyntax: Validates the syntax of extracted policy statements
+ * 
+ * The tests use a combination of mocked file system operations and real fixture files
+ * to ensure both unit test coverage and integration test validation.
+ */
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { 
@@ -35,6 +49,15 @@ describe('Main', () => {
         jest.clearAllMocks();
     });
 
+    /**
+     * Tests for findPolicyFiles function
+     * 
+     * These tests verify that the function correctly:
+     * - Finds and filters files based on extension (.tf by default)
+     * - Handles different directory structures and file types
+     * - Properly applies filtering options (ignoreExtension, fileExtension, fileNames)
+     * - Handles edge cases such as a single file path
+     */
     describe('findPolicyFiles', () => {
         it('should return an array of Terraform files', async () => {
             // Mock file system
@@ -66,9 +89,10 @@ describe('Main', () => {
                 { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
             ] as unknown as fs.Dirent[]);
             
-            const files = await findPolicyFiles('/test/dir');
+            // Instead of extensionFilter, use fileExtension
+            const files = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
             
-            // Verify correct files were found
+            // When fileExtension is '.tf', only .tf files should be included
             expect(files).toEqual([
                 '/test/dir/file1.tf',
                 '/test/dir/subdir/file3.tf'
@@ -123,7 +147,7 @@ describe('Main', () => {
             ]);
         });
 
-        it('should use custom file extension when provided', async () => {
+        it('should use custom file extension when specified', async () => {
             const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
             const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
             const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
@@ -148,8 +172,213 @@ describe('Main', () => {
             
             expect(files).toEqual(['/test/dir/file2.hcl']);
         });
+
+        it('should return all files by default and filter by extension when explicitly asked', async () => {
+            // Mock fs.promises.readdir
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            
+            mockAccess.mockResolvedValue(undefined);
+            
+            // Mock directory check for the first test (default behavior)
+            mockStat.mockResolvedValueOnce({
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockStat.mockResolvedValueOnce({
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            // Mock directory contents for first call (2 .tf files, 1 other)
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
+                { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
+                { name: 'subdir', isFile: () => false, isDirectory: () => true }
+            ] as unknown as fs.Dirent[]);
+            
+            // Mock subdirectory contents for first call (1 .tf file)
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
+            ] as unknown as fs.Dirent[]);
+            
+            // By default, it should include all files (ignoreExtension=true is default now)
+            const files = await findPolicyFiles('/test/dir');
+            
+            // Verify correct files were found - all files should be included
+            expect(files).toEqual([
+                '/test/dir/file1.tf',
+                '/test/dir/file2.txt',
+                '/test/dir/subdir/file3.tf'
+            ]);
+            
+            // Now let's reset the mocks for second call with extension filtering
+            jest.clearAllMocks();
+            mockAccess.mockResolvedValue(undefined);
+            
+            // Mock directory check for the filtered test
+            mockStat.mockResolvedValueOnce({
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockStat.mockResolvedValueOnce({
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            // Mock directory contents for second call
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
+                { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
+                { name: 'subdir', isFile: () => false, isDirectory: () => true }
+            ] as unknown as fs.Dirent[]);
+            
+            // Mock subdirectory contents for second call
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
+            ] as unknown as fs.Dirent[]);
+            
+            // Call with fileExtension explicitly set to filter by extension
+            const filteredFiles = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
+            
+            // Should only include .tf files when fileExtension is specified
+            expect(filteredFiles).toEqual([
+                '/test/dir/file1.tf',
+                '/test/dir/subdir/file3.tf'
+            ]);
+        });
+
+        it('should return all files by default (ignoreExtension=true)', async () => {
+            // Mock file system
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            
+            // Directory check
+            mockStat.mockResolvedValueOnce({ 
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
+                { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
+                { name: 'subdir', isFile: () => false, isDirectory: () => true }
+            ] as unknown as fs.Dirent[]);
+            
+            // Subdir check 
+            mockStat.mockResolvedValueOnce({ 
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
+            ] as unknown as fs.Dirent[]);
+            
+            const files = await findPolicyFiles('/test/dir');
+            
+            // Verify correct files were found - should include all files
+            expect(files).toEqual([
+                '/test/dir/file1.tf',
+                '/test/dir/file2.txt',
+                '/test/dir/subdir/file3.tf'
+            ]);
+        });
+
+        it('should return an array of Terraform files when extension is specified', async () => {
+            // Mock file system
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            
+            // Directory check
+            mockStat.mockResolvedValueOnce({ 
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
+                { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
+                { name: 'subdir', isFile: () => false, isDirectory: () => true }
+            ] as unknown as fs.Dirent[]);
+            
+            // Subdir check 
+            mockStat.mockResolvedValueOnce({ 
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
+            ] as unknown as fs.Dirent[]);
+            
+            // Use fileExtension to filter by .tf extension
+            const files = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
+            
+            // Verify correct files were found
+            expect(files).toEqual([
+                '/test/dir/file1.tf',
+                '/test/dir/subdir/file3.tf'
+            ]);
+        });
+
+        it('should return all files by default', async () => {
+            // Mock file system
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            
+            // Directory check
+            mockStat.mockResolvedValueOnce({ 
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
+                { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
+                { name: 'subdir', isFile: () => false, isDirectory: () => true }
+            ] as unknown as fs.Dirent[]);
+            
+            // Subdir check 
+            mockStat.mockResolvedValueOnce({ 
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
+            ] as unknown as fs.Dirent[]);
+            
+            const files = await findPolicyFiles('/test/dir');
+            
+            // Verify correct files were found - all files should be included with default behavior
+            expect(files).toEqual([
+                '/test/dir/file1.tf',
+                '/test/dir/file2.txt',
+                '/test/dir/subdir/file3.tf'
+            ]);
+        });
     });
     
+    /**
+     * Tests for formatPolicyStatements function
+     * 
+     * This section verifies that policy statements are correctly formatted:
+     * - Leading and trailing whitespace is trimmed
+     * - Statements are concatenated with newlines
+     */
     describe('formatPolicyStatements', () => {
         it('should format policy statements correctly', () => {
             const statements = [
@@ -165,21 +394,14 @@ describe('Main', () => {
         });
     });
 
-    describe('parsePolicy', () => {
-        it('should validate a correct policy', async () => {
-            const policyText = ['Allow group Admins to manage all-resources in tenancy'];
-            const result = await validatePolicySyntax(policyText, mockLogger);
-            expect(result.isValid).toBe(true);
-            expect(result.errors).toHaveLength(0);
-        });
-
-        it('should reject an invalid policy', async () => {
-            const policyText = ['Allw group Admins to manage all-resources in tenancy'];
-            const result = await validatePolicySyntax(policyText, mockLogger);
-            expect(result.isValid).toBe(false);
-            expect(result.errors.length).toBeGreaterThan(0);
-        });
-        
+    /**
+     * Tests for validatePolicySyntax function
+     * 
+     * These tests verify that the syntax validator correctly:
+     * - Accepts valid policy statements
+     * - Rejects invalid policy statements
+     * - Reports appropriate error messages
+     */
         it('should validate policies from fixture file', async () => {
             // Use the actual Main.ts method to process the file
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
@@ -199,8 +421,18 @@ describe('Main', () => {
             expect(result.isValid).toBe(false);
             expect(result.errors.length).toBeGreaterThan(0);
         });
-    });
+    
 
+    /**
+     * Tests for processFile function
+     * 
+     * This section tests the policy extraction functionality from various file formats:
+     * - Regular Terraform (.tf) files with standard policy syntax
+     * - Files with invalid policy syntax to ensure errors are handled properly
+     * - Files with variable interpolation in policy statements
+     * - Different regex extraction patterns for different file formats
+     * - Complex policy statements from real-world examples like OCI Core Landing Zone
+     */
     describe('processFile', () => {
         it('should extract policies from valid fixture file', async () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
@@ -427,6 +659,11 @@ describe('Main', () => {
     });
 });
 
+/**
+ * Additional tests for edge cases and error handling
+ * These tests ensure the library correctly handles missing files,
+ * inaccessible directories, and other error conditions.
+ */
 describe('Unit Tests', () => {
     it('should handle empty directory', async () => {
         const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;

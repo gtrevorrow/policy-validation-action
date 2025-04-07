@@ -129,27 +129,29 @@ This approach allows you to use the CLI directly from the source code without pu
 
 ### CLI Options
 
-| Option               | Alias | Description                                                         | Default |
-|----------------------|-------|---------------------------------------------------------------------|---------|
-| `path`               |       | Path to a file or directory containing Terraform files              | `.`     |
-| `--verbose`          | `-v`  | Enable verbose output                                               | `false` |
-| `--pattern`          | `-p`  | Custom regex pattern for policy extraction                          | `none`  |
-| `--extractor`        | `-e`  | Policy extractor type (`regex` or `hcl`)                            | `regex` |
-| `--files`            |       | Comma-separated list of specific files to process                  | `none`  |
-| `--exit-on-error`    |       | Exit with non-zero status if validation fails                       | `true`  |
+| Option                | Alias | Description                                                         | Default |
+|-----------------------|-------|---------------------------------------------------------------------|---------|
+| `path`                |       | Path to a file or directory containing Terraform files              | `.`     |
+| `--verbose`           | `-v`  | Enable verbose output                                               | `false` |
+| `--pattern`           | `-p`  | Custom regex pattern for policy extraction                          | `none`  |
+| `--extractor`         | `-e`  | Policy extractor type (`regex` or `hcl`)                            | `regex` |
+| `--files`             |       | Comma-separated list of specific files to process                  | `none`  |
+| `--exit-on-error`     |       | Exit with non-zero status if validation fails                       | `true`  |
+| `--extension-filter`  |       | Filter files by extension (.tf)                                     | `false` |
 
 ### Environment Variables
 
 CLI options can also be set via environment variables. These are useful in CI/CD pipelines where options are passed dynamically.
 
-| Environment Variable       | Corresponding CLI Option | Description                                  |
-|----------------------------|--------------------------|----------------------------------------------|
-| `POLICY_PATH`              | `path`                  | Path to policy file or directory             |
-| `POLICY_VERBOSE`           | `--verbose`             | Enable verbose output                        |
-| `POLICY_EXTRACTOR`         | `--extractor`           | Policy extractor type (`regex` or `hcl`)     |
-| `POLICY_PATTERN`           | `--pattern`             | Custom regex pattern for policy extraction   |
-| `POLICY_FILES`             | `--files`               | Comma-separated list of specific files       |
-| `POLICY_EXIT_ON_ERROR`     | `--exit-on-error`       | Exit with non-zero status if validation fails|
+| Environment Variable           | Corresponding CLI Option  | Description                                  |
+|--------------------------------|--------------------------|----------------------------------------------|
+| `POLICY_PATH`                  | `path`                   | Path to policy file or directory             |
+| `POLICY_VERBOSE`               | `--verbose`              | Enable verbose output                        |
+| `POLICY_EXTRACTOR`             | `--extractor`            | Policy extractor type (`regex` or `hcl`)     |
+| `POLICY_PATTERN`               | `--pattern`              | Custom regex pattern for policy extraction   |
+| `POLICY_FILES`                 | `--files`                | Comma-separated list of specific files       |
+| `POLICY_EXIT_ON_ERROR`         | `--exit-on-error`        | Exit with non-zero status if validation fails|
+| `POLICY_EXTENSION_FILTER`      | `--extension-filter`     | Filter files by extension (.tf)              |
 
 ### Example with Environment Variables
 

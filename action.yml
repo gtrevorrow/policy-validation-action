@@ -6,26 +6,31 @@ inputs:
     required: false
     default: '.'
   extractor:
-    description: 'Type of extractor to use (regex, json)'
+    description: 'Type of extractor to use (regex, hcl)'
     required: false
     default: 'regex'
-  extractorPattern:
-    description: 'Custom pattern for regex extractor'
+  pattern:
+    description: 'Custom regex pattern for policy extraction'
     required: false
-  exitOnError:
-    description: 'Exit immediately when an error is found'
+  exit-on-error:
+    description: 'Exit with non-zero status if validation fails'
     required: false
     default: 'true'
   files:
-    description: 'Comma-separated list of specific files to scan'
+    description: 'Comma-separated list of specific files to process'
     required: false
-  validateCisBenchmark:
-    description: 'Enable validation against OCI CIS Benchmark v2.0'
+  file-extension:
+    description: 'Filter files by specified extension (e.g., .tf)'
+    required: false
+  cis-benchmark:
+    description: 'Run CIS Benchmark validation'
     required: false
     default: 'false'
 outputs:
-  policy_validation:
+  results:
     description: 'Validation results in JSON format'
+  error:
+    description: 'Error message if the validation process fails'
 runs:
   using: 'node16'
   main: 'dist/index.js'
