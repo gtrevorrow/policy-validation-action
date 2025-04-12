@@ -53,10 +53,26 @@ const ExtractorFactory_1 = __nccwpck_require__(727);
 const ValidationPipeline_1 = __nccwpck_require__(220);
 const OciCisBenchmarkValidator_1 = __nccwpck_require__(122);
 const OciSyntaxValidator_1 = __nccwpck_require__(850);
+/**
+ * Function to format policy statements for output
+ * This function ensures that each statement is on its own line and properly formatted.
+ * It is used to prepare the output for better readability.
+ * @param expressions
+ * @returns  Formatted string of policy statements
+ * Each statement is separated by a newline character.
+ */
 function formatPolicyStatements(expressions) {
     // Ensure each statement is on its own line with proper separation
     return expressions.map(expr => expr.trim()).join('\n');
 }
+/**
+ * Function to process a file and extract policy statements
+ * @param filePath The path to the file to process
+ * @param pattern Optional regex pattern for extracting policy statements
+ * @param extractor The type of extractor to use (default: 'regex')
+ * @param logger Optional logger for recording diagnostic info
+ * @returns An array of extracted policy statements
+ */
 async function processFile(filePath, pattern, extractor = 'regex', logger) {
     try {
         const data = await fs.promises.readFile(filePath, 'utf8');
@@ -77,13 +93,16 @@ async function processFile(filePath, pattern, extractor = 'regex', logger) {
         return [];
     }
 }
-function getWorkspacePath() {
-    // Check each CI platform's environment variable
-    return process.env.GITHUB_WORKSPACE || // GitHub Actions
-        process.env.CI_PROJECT_DIR || // GitLab CI
-        process.env.BITBUCKET_CLONE_DIR || // BitBucket Pipelines
-        process.cwd(); // Fallback to current directory
-}
+/** Function to find policy files in a directory
+ This function will recursively search for files matching the specified criteria
+ and return their paths. It also handles both file and directory inputs.
+ @param dir The directory to search in
+ @param options Optional parameters for file names and extensions
+ @param logger Optional logger for recording diagnostic info
+ @returns An array of file paths that match the criteria
+ If no files are found, an empty array is returned.
+ If the path is not accessible, an error is logged and an empty array is returned.
+*/
 async function findPolicyFiles(dir, options, logger) {
     try {
         // First check if path exists and is accessible
@@ -229,6 +248,18 @@ async function validatePolicySyntax(statements, logger) {
 }
 /**
  * Main function to validate policies in given path with provided options
+ * This function will find all policy files, extract statements, validate syntax,
+ * and run the CIS benchmark validation if requested.
+ * @param scanPath The path to scan for policy files
+ * @param options Validation options including extractor type, pattern, file names, etc.
+ * @param logger Optional logger for recording diagnostic info
+ * @returns An array of validation outputs for each file processed
+ * Each output contains the file name, validity status, extracted statements, and any errors.
+ *
+ * If exitOnError is true and validation fails, the function will return early.
+ * If runCisBenchmark is true, the CIS benchmark validation will be performed..
+ * @throws Error if no files are found or if the path is not accessible
+ * @throws Error if any file is not accessible
  */
 async function validatePolicies(scanPath, options, logger) {
     // Find all policy files
@@ -313,6 +344,9 @@ async function validatePolicies(scanPath, options, logger) {
 /**
  * Main entry point for running the policy validation
  * This function serves both the CLI and GitHub Action
+ * @param platform The platform abstraction for handling inputs, outputs, and logging
+ * @returns A promise that resolves when the action is complete
+ * If an error occurs, it will be logged and the action will fail
  */
 async function runAction(platform) {
     const logger = platform.createLogger();
@@ -377,6 +411,10 @@ async function runAction(platform) {
 }
 /**
  * Helper function to resolve path
+ * This function checks if the path is absolute or relative
+ * If it's relative, it resolves it against the current working directory
+ * @param inputPath The input path to resolve
+ * @returns The resolved absolute path
  */
 function resolvePath(inputPath) {
     if (path.isAbsolute(inputPath)) {

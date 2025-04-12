@@ -7,11 +7,27 @@ import { ValidationPipeline } from './validators/ValidationPipeline';
 import { OciCisBenchmarkValidator } from './validators/OciCisBenchmarkValidator';
 import { OciSyntaxValidator } from './validators/OciSyntaxValidator';
 
+/**
+ * Function to format policy statements for output
+ * This function ensures that each statement is on its own line and properly formatted.
+ * It is used to prepare the output for better readability.
+ * @param expressions 
+ * @returns  Formatted string of policy statements
+ * Each statement is separated by a newline character.
+ */
 function formatPolicyStatements(expressions: string[]): string {
     // Ensure each statement is on its own line with proper separation
     return expressions.map(expr => expr.trim()).join('\n');
 }
 
+/**
+ * Function to process a file and extract policy statements
+ * @param filePath The path to the file to process
+ * @param pattern Optional regex pattern for extracting policy statements
+ * @param extractor The type of extractor to use (default: 'regex')
+ * @param logger Optional logger for recording diagnostic info
+ * @returns An array of extracted policy statements
+ */
 async function processFile(
     filePath: string,
     pattern: string | undefined,
@@ -39,14 +55,16 @@ async function processFile(
     }
 }
 
-function getWorkspacePath(): string {
-    // Check each CI platform's environment variable
-    return process.env.GITHUB_WORKSPACE ||    // GitHub Actions
-           process.env.CI_PROJECT_DIR ||      // GitLab CI
-           process.env.BITBUCKET_CLONE_DIR || // BitBucket Pipelines
-           process.cwd();                     // Fallback to current directory
-}
-
+/** Function to find policy files in a directory
+ This function will recursively search for files matching the specified criteria
+ and return their paths. It also handles both file and directory inputs.
+ @param dir The directory to search in
+ @param options Optional parameters for file names and extensions
+ @param logger Optional logger for recording diagnostic info
+ @returns An array of file paths that match the criteria
+ If no files are found, an empty array is returned.
+ If the path is not accessible, an error is logged and an empty array is returned. 
+*/  
 async function findPolicyFiles(
     dir: string, 
     options?: { fileNames?: string[], fileExtension?: string}, 
@@ -197,7 +215,6 @@ async function validatePolicySyntax(statements: string[], logger?: Logger): Prom
             });
         }
     }
-    
     return {
         isValid,
         errors
@@ -214,6 +231,18 @@ export {
 
 /**
  * Main function to validate policies in given path with provided options
+ * This function will find all policy files, extract statements, validate syntax,
+ * and run the CIS benchmark validation if requested.
+ * @param scanPath The path to scan for policy files
+ * @param options Validation options including extractor type, pattern, file names, etc.
+ * @param logger Optional logger for recording diagnostic info
+ * @returns An array of validation outputs for each file processed
+ * Each output contains the file name, validity status, extracted statements, and any errors.
+ * 
+ * If exitOnError is true and validation fails, the function will return early.
+ * If runCisBenchmark is true, the CIS benchmark validation will be performed..
+ * @throws Error if no files are found or if the path is not accessible
+ * @throws Error if any file is not accessible
  */
 export async function validatePolicies(
   scanPath: string, 
@@ -320,6 +349,9 @@ export async function validatePolicies(
 /**
  * Main entry point for running the policy validation
  * This function serves both the CLI and GitHub Action
+ * @param platform The platform abstraction for handling inputs, outputs, and logging
+ * @returns A promise that resolves when the action is complete
+ * If an error occurs, it will be logged and the action will fail
  */
 export async function runAction(platform: PlatformOperations): Promise<void> {
   const logger = platform.createLogger();
@@ -388,6 +420,10 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
 
 /**
  * Helper function to resolve path
+ * This function checks if the path is absolute or relative
+ * If it's relative, it resolves it against the current working directory
+ * @param inputPath The input path to resolve
+ * @returns The resolved absolute path
  */
 function resolvePath(inputPath: string): string {
   if (path.isAbsolute(inputPath)) {
