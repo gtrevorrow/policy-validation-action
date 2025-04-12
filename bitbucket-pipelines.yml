@@ -81,19 +81,38 @@ definitions:
               ]
             }
             EOL
-          # Updated verify_json with stricter type checking
+          # Updated verify_json with better JSON handling for nested results
           - |
             verify_json() {
               local output="$1"
-              echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1 | jq -e '
-                if type=="object" then
-                  (.error != null or (.isValid != null and (.errors|type)=="array"))
-                elif type=="array" then
-                  all(.[]; (type=="object" and (.isValid|type)=="boolean" and (.errors|type)=="array"))
-                else
-                  false
-                end
-              ' >/dev/null
+              # Extract the JSON part from potentially mixed output
+              local json_part=$(echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1)
+              
+              # Check if we have a results property (new format) or direct array/object (old format)
+              if echo "$json_part" | jq -e '.results != null' >/dev/null 2>&1; then
+                # New format with results property
+                echo "$json_part" | jq -e '
+                  .results != null and
+                  (
+                    (.results | fromjson | type == "array" and
+                     (.results | fromjson | all(.; .isValid != null and .errors != null)))
+                    or
+                    (.results | type == "array" and
+                     (.results | all(.; .isValid != null and .errors != null)))
+                  )
+                ' >/dev/null
+              else
+                # Original format (direct array or object)
+                echo "$json_part" | jq -e '
+                  if type=="object" then
+                    (.error != null or (.isValid != null and (.errors|type)=="array"))
+                  elif type=="array" then
+                    all(.[]; (type=="object" and (.isValid|type)=="boolean" and (.errors|type)=="array"))
+                  else
+                    false
+                  end
+                ' >/dev/null
+              fi
             }
             
             for file in valid.tf invalid.tf variable_interpolation.tf; do
@@ -104,12 +123,14 @@ definitions:
                   echo "$OUTPUT"
                   exit 1
                 fi
+                echo "✓ Validation successful"
               else
                 if ! verify_json "$OUTPUT"; then
                   echo "Invalid JSON output for failed case $file"
                   echo "$OUTPUT"
                   exit 1
                 fi
+                echo "✓ Expected failure detected properly"
               fi
             done
         
