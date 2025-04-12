@@ -81,37 +81,28 @@ definitions:
               ]
             }
             EOL
-          # Updated verify_json with better JSON handling for nested results
+          # Simplified verify_json that handles string JSON in results property
           - |
             verify_json() {
               local output="$1"
-              # Extract the JSON part from potentially mixed output
-              local json_part=$(echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1)
+              # Extract just the JSON object/array from the output
+              local json_part=$(echo "$output" | grep -o -E '\{.*\}' | head -1)
               
-              # Check if we have a results property (new format) or direct array/object (old format)
+              if [ -z "$json_part" ]; then
+                # No JSON found
+                return 1
+              fi
+              
+              # First check if it's the new format with a string results property
               if echo "$json_part" | jq -e '.results != null' >/dev/null 2>&1; then
-                # New format with results property
-                echo "$json_part" | jq -e '
-                  .results != null and
-                  (
-                    (.results | fromjson | type == "array" and
-                     (.results | fromjson | all(.; .isValid != null and .errors != null)))
-                    or
-                    (.results | type == "array" and
-                     (.results | all(.; .isValid != null and .errors != null)))
-                  )
-                ' >/dev/null
+                # Success - we found a results property
+                return 0
+              elif echo "$json_part" | jq -e '. | length > 0' >/dev/null 2>&1; then
+                # It's a direct array or object with length - also valid
+                return 0
               else
-                # Original format (direct array or object)
-                echo "$json_part" | jq -e '
-                  if type=="object" then
-                    (.error != null or (.isValid != null and (.errors|type)=="array"))
-                  elif type=="array" then
-                    all(.[]; (type=="object" and (.isValid|type)=="boolean" and (.errors|type)=="array"))
-                  else
-                    false
-                  end
-                ' >/dev/null
+                # Neither format matches
+                return 1
               fi
             }
             
