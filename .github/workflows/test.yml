@@ -228,15 +228,16 @@ jobs:
           # --- Verification ---
           errors=0
 
-          # Pass the step ID for logging and the actual output string
-          verify_output "test-valid" "true" "${{ steps.test-valid.outputs.results }}" || errors=$((errors + 1))
-          verify_output "test-invalid" "false" "${{ steps.test-invalid.outputs.results }}" || errors=$((errors + 1))
-          verify_output "test-vars" "true" "${{ steps.test-vars.outputs.results }}" || errors=$((errors + 1))
-          verify_output "test-conditions" "true" "${{ steps.test-conditions.outputs.results }}" || errors=$((errors + 1))
-          verify_output "test-expressions" "true" "${{ steps.test-expressions.outputs.results }}" || errors=$((errors + 1))
-          verify_output "test-custom-pattern" "true" "${{ steps.test-custom-pattern.outputs.results }}" || errors=$((errors + 1))
-          verify_output "test-custom-pattern-env-var" "true" "${{ steps.test-custom-pattern-env-var.outputs.results }}" || errors=$((errors + 1))
-          verify_output "test-fixtures" "false" "${{ steps.test-fixtures.outputs.results }}" || errors=$((errors + 1))
+          # Pass the step ID for logging and the actual output string using SINGLE quotes
+          # This prevents shell interpretation of internal quotes and ${...} sequences
+          verify_output "test-valid" "true" '${{ steps.test-valid.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-invalid" "false" '${{ steps.test-invalid.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-vars" "true" '${{ steps.test-vars.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-conditions" "true" '${{ steps.test-conditions.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-expressions" "true" '${{ steps.test-expressions.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-custom-pattern" "true" '${{ steps.test-custom-pattern.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-custom-pattern-env-var" "true" '${{ steps.test-custom-pattern-env-var.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-fixtures" "false" '${{ steps.test-fixtures.outputs.results }}' || errors=$((errors + 1))
 
           # --- Final Check ---
           if [ $errors -gt 0 ]; then
