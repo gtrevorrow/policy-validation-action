@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger, ParseResult, PolicyError, ValidationOutput, PlatformOperations, ValidationOptions } from './types';
+import { Logger, ParseResult, PolicyError, ValidationOutput, PlatformOperations, ValidationOptions, ValidationPipelineResult } from './types'; // Added ValidationPipelineResult
 import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
 import { ValidationPipeline } from './validators/ValidationPipeline';
 import { OciCisBenchmarkValidator } from './validators/OciCisBenchmarkValidator';
@@ -258,91 +258,127 @@ export async function validatePolicies(
   if (filesToProcess.length === 0) {
     const message = options.fileExtension == undefined ? 
       `No files found in ${scanPath}` : 
-      `No policy files found in ${scanPath}`;
-    throw new Error(message);
+      `No files matching criteria found in ${scanPath}`; // Adjusted message
+    // Don't throw an error, return empty array if no files match
+    logger.warn(message);
+    return [];
+    // throw new Error(message); // Original behavior
   }
 
   // Track all validation outputs
   const allOutputs: ValidationOutput[] = [];
-  
+
   // Track all policy statements for validation pipeline
   const allPolicyStatements: string[] = [];
   
   // Process each file
   for (const file of filesToProcess) {
-    logger.info(`Validating policy statements for file ${file}`);
+    logger.info(`Processing file ${file}`);
     const expressions = await processFile(file, options.pattern, options.extractorType as ExtractorType, logger);
-    
-    // Collect statements for validation pipeline
+
+    let fileIsValid = true;
+    let fileErrors: PolicyError[] = [];
+    let validationResults: ValidationPipelineResult[] | undefined = undefined; // Hold potential pipeline results per file if needed later
+
+    // Collect statements for overall validation pipeline
     if (expressions.length > 0) {
       allPolicyStatements.push(...expressions);
-    }
-    
-    // Validate syntax
-    if (expressions.length > 0) {
-      // Use the OciSyntaxValidator for validation
-      const result = await validatePolicySyntax(expressions, logger);
-      
-      // Add results to outputs
-      allOutputs.push({
-        file,
-        isValid: result.isValid,
-        statements: expressions,
-        errors: result.errors
-      });
-      
-      // Exit on first error if required
-      if (!result.isValid && options.exitOnError) {
+
+      // Validate syntax for this file's expressions
+      const syntaxResult = await validatePolicySyntax(expressions, logger);
+      fileIsValid = syntaxResult.isValid;
+      fileErrors = syntaxResult.errors;
+
+      // Exit on first error if required and this file has errors
+      if (!fileIsValid && options.exitOnError) {
+         // Add the current file's result before returning
+         allOutputs.push({
+           file,
+           isValid: fileIsValid,
+           statements: expressions,
+           errors: fileErrors,
+           // validationResults: undefined // No pipeline results yet
+         });
+        logger.error(`Validation failed for ${file} and exitOnError is true. Stopping.`);
         return allOutputs;
       }
+    } else {
+      logger.info(`No policy statements found in ${file}`);
+      // File is considered valid if no statements are found to be invalid
+      fileIsValid = true;
+      fileErrors = [];
     }
+
+    // Add an output entry for every processed file
+    allOutputs.push({
+      file,
+      isValid: fileIsValid,
+      statements: expressions,
+      errors: fileErrors,
+      // validationResults will be added later if pipeline runs
+    });
   }
-  
+
   // Run the validation pipeline with all statements if requested
   if (allPolicyStatements.length > 0 && options.runCisBenchmark) {
-    logger.info('Running validation pipeline...');
-    
+    logger.info('Running validation pipeline on all collected statements...');
+
     // Set up validation pipeline
     const validationPipeline = new ValidationPipeline(logger);
-    
+
     // Add validators
-    validationPipeline.addValidator(new OciSyntaxValidator(logger));
+    // validationPipeline.addValidator(new OciSyntaxValidator(logger)); // Syntax already checked per file
     validationPipeline.addValidator(new OciCisBenchmarkValidator(logger));
-    
+
     // Run validation
-    const results = await validationPipeline.validate(allPolicyStatements);
-    
-    // Process results
-    let hasIssues = false;
-    for (const validatorResult of results) {
-      logger.info(`Results from ${validatorResult.validatorName}:`);
-      
+    const pipelineResults = await validationPipeline.validate(allPolicyStatements);
+
+    // Process results and potentially update overall validity or add to outputs
+    let pipelineHasIssues = false;
+    for (const validatorResult of pipelineResults) {
+      logger.info(`Pipeline Results from ${validatorResult.validatorName}:`);
       for (const report of validatorResult.reports) {
         if (!report.passed) {
-          hasIssues = true;
+          pipelineHasIssues = true;
           logger.warn(`Failed check: ${report.checkId} - ${report.name}`);
-          
           for (const issue of report.issues) {
-            logger.warn(`- ${issue.message}`);
+            logger.warn(`- [${issue.severity.toUpperCase()}] ${issue.message} (Statement: "${issue.statement || 'N/A'}")`);
           }
         } else {
           logger.info(`Passed check: ${report.checkId} - ${report.name}`);
         }
       }
     }
-    
-    // Add validation results to output
+
+    // Add pipeline results to the first output object for simplicity in current structure
+    // A more robust approach might distribute results per file or have a separate output field
     if (allOutputs.length > 0) {
-      allOutputs[0].validationResults = results;
+       // Check if the first output already exists, otherwise create a placeholder if needed
+       if (!allOutputs[0]) {
+           allOutputs[0] = { file: "Pipeline Summary", isValid: !pipelineHasIssues, statements: [], errors: [] };
+       }
+       allOutputs[0].validationResults = pipelineResults;
+       // Optionally, mark the first file as invalid if the pipeline failed and exitOnError is true
+       if (pipelineHasIssues) {
+           allOutputs[0].isValid = false;
+       }
     }
-    
-    // Return early if issues found and exitOnError is true
-    if (hasIssues && options.exitOnError) {
-      return allOutputs;
+
+
+    // Return early if pipeline issues found and exitOnError is true
+    if (pipelineHasIssues && options.exitOnError) {
+       logger.error('Validation pipeline found issues and exitOnError is true. Stopping.');
+       // Ensure the overall status reflects the failure
+       const finalOutputs = allOutputs.map(o => ({...o, isValid: o.isValid && !pipelineHasIssues }));
+       return finalOutputs;
     }
   }
-  
-  logger.info('Policy validation completed');
+
+  logger.info('Policy validation processing completed');
+  // Ensure overall validity reflects pipeline results if run
+  const finalOverallValidity = !allOutputs.some(o => !o.isValid);
+  logger.info(`Overall validation status: ${finalOverallValidity ? 'Success' : 'Failed'}`);
+
   return allOutputs;
 }
 
@@ -365,27 +401,30 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
     // Build options from inputs
     const options: ValidationOptions = {
       extractorType: platform.getInput('extractor') || 'regex',
-      pattern: platform.getInput('pattern'),
+      pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN, // Use env var as fallback
       fileExtension: platform.getInput('file-extension'),
       fileNames: platform.getInput('files') ? 
         platform.getInput('files').split(',').map(f => f.trim()) : 
         undefined,
-      exitOnError: platform.getInput('exit-on-error') === 'true',
+      exitOnError: platform.getInput('exit-on-error') !== 'false', // Default to true unless explicitly 'false'
       runCisBenchmark: platform.getInput('cis-benchmark') === 'true'
     };
     
     // Log options
     logger.info(`Using extractor: ${options.extractorType}`);
-    logger.info(`File extension: ${options.fileExtension || 'not specified (scanning all files)'}`);
+    logger.info(`File extension: ${options.fileExtension || 'not specified'}`);
     if (options.fileNames && options.fileNames.length > 0) {
       logger.info(`Files filter: ${options.fileNames.join(', ')}`);
     }
-    if (options.pattern) {
+    if (options.pattern && options.pattern !== process.env.POLICY_STATEMENTS_PATTERN) { // Log if different from potential env var default
       logger.info(`Custom pattern: ${options.pattern}`);
+    } else if (process.env.POLICY_STATEMENTS_PATTERN) {
+       logger.info(`Using pattern from env var POLICY_STATEMENTS_PATTERN`);
     } else {
-      logger.info('Custom pattern: none');
+       logger.info('Using default pattern');
     }
     logger.info(`Exit on error: ${options.exitOnError}`);
+    logger.info(`Run CIS Benchmark: ${options.runCisBenchmark}`);
     
     // Check if path exists and is accessible
     try {
@@ -404,12 +443,15 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
     // Set outputs
     platform.setOutput('results', JSON.stringify(results));
     
-    // Determine success/failure
-    const hasFailures = results.some(output => !output.isValid);
-    if (hasFailures) {
-      platform.setResult(!options.exitOnError, 'Policy validation failed');
-    } else {
+    // Determine success/failure based on the isValid flag in the results array
+    const overallSuccess = results.every(output => output.isValid);
+
+    if (overallSuccess) {
       platform.setResult(true, 'Policy validation succeeded');
+    } else {
+      // Fail the step if any file is invalid, regardless of exitOnError option
+      // exitOnError only controls whether processing stops early
+      platform.setResult(false, 'Policy validation failed for one or more files/checks.');
     }
   } catch (error) {
     logger.error(`Error: ${error}`);

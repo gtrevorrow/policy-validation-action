@@ -134,7 +134,7 @@ jobs:
         with:
           path: './test/policies/valid.tf'
           extractor: 'regex'
-          extractorPattern: 'statements\s*=\s*\[(.*?)\]'
+          pattern: 'statements\s*=\s*\[(.*?)\]' # Changed extractorPattern to pattern
         env:
           GITHUB_ACTIONS: true
 
@@ -142,13 +142,15 @@ jobs:
         id: test-custom-pattern-env-var
         continue-on-error: true
         env:
+          # NOTE: The 'pattern' input takes precedence over this env var if both are set.
+          # This step tests if the action correctly falls back to the env var when 'pattern' input is NOT provided.
           POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
           GITHUB_ACTIONS: true
         uses: ./
         with:
           path: './test/policies/valid.tf'
           extractor: 'regex'
-
+          # No 'pattern' input here, relying on env var
 
       - name: Test action with fixtures
         id: test-fixtures
@@ -157,14 +159,14 @@ jobs:
         with:
           path: './src/__tests__/fixtures'
           extractor: 'regex'
-          extractorPattern: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+          pattern: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]" # Changed extractorPattern to pattern
         env:
           GITHUB_ACTIONS: true
 
       - name: Verify test results
         shell: bash
         env:
-          # Pass outputs directly to the script environment
+          # Pass outputs directly to the script environment - still needed for echo/jq debugging
           TEST_VALID_OUTPUT: ${{ steps.test-valid.outputs.results }}
           TEST_INVALID_OUTPUT: ${{ steps.test-invalid.outputs.results }}
           TEST_VARS_OUTPUT: ${{ steps.test-vars.outputs.results }}
@@ -176,60 +178,53 @@ jobs:
         run: |
           # Function to verify the JSON output and the 'isValid' flag
           verify_output() {
-            local step_name="$1"
+            local step_id="$1" # Use step ID directly (e.g., test-valid)
             local expected_validity="$2" # Expect 'true' or 'false'
-            local raw_output=""
-            
-            echo "Verifying output from step: $step_name"
-            
-            # Get the output based on step name
-            case "$step_name" in
-              "test-valid") raw_output="$TEST_VALID_OUTPUT" ;;
-              "test-invalid") raw_output="$TEST_INVALID_OUTPUT" ;;
-              "test-vars") raw_output="$TEST_VARS_OUTPUT" ;;
-              "test-conditions") raw_output="$TEST_CONDITIONS_OUTPUT" ;;
-              "test-expressions") raw_output="$TEST_EXPRESSIONS_OUTPUT" ;;
-              "test-custom-pattern") raw_output="$TEST_CUSTOM_PATTERN_OUTPUT" ;;
-              "test-custom-pattern-env-var") raw_output="$TEST_CUSTOM_PATTERN_ENV_VAR_OUTPUT" ;;
-              "test-fixtures") raw_output="$TEST_FIXTURES_OUTPUT" ;;
-              *) echo "Unknown step name: $step_name"; return 1 ;;
-            esac
-            
-            echo "Raw output value:"
+            local step_output_var_name="TEST_${step_id//-/}_OUTPUT" # e.g., TEST_VALID_OUTPUT
+            local raw_output="${!step_output_var_name}" # Get output from env var for logging
+
+            echo "Verifying output from step: $step_id"
+            echo "Raw output value (from env var for debug):"
             echo "$raw_output" | jq . # Pretty print JSON for debugging
-            
+
             if [ -z "$raw_output" ]; then
-              echo "::error::No output found for step $step_name"
+              echo "::error::No output found for step $step_id"
               return 1
             fi
-            
-            # Check if the output is valid JSON and get the first result's validity
-            local actual_validity=$(echo "$raw_output" | jq -r '
-              if type == "array" and length > 0 then 
-                .[0].isValid // "null" 
-              else 
-                "invalid_json" 
+
+            # Use direct step output injection with jq
+            # Note: This relies on Actions correctly handling the JSON string during injection.
+            local actual_validity=$(echo "${{ steps[step_id].outputs.results }}" | jq -r '
+              if type == "array" and length > 0 then
+                # Check the first element that has an 'isValid' property,
+                # in case some files didn't produce output entries (before fix)
+                map(select(.isValid != null)) | .[0].isValid // "null"
+              else
+                "invalid_json_or_empty"
               end
             ')
-            
-            if [[ "$actual_validity" == "invalid_json" ]]; then
-              echo "::error::Output for $step_name is not a valid JSON array or is empty."
+
+            echo "Extracted validity: $actual_validity" # Debugging line
+
+            if [[ "$actual_validity" == "invalid_json_or_empty" ]]; then
+              echo "::error::Output for $step_id is not a valid JSON array, is empty, or lacks 'isValid' in relevant elements."
               return 1
             elif [[ "$actual_validity" == "null" ]]; then
-              echo "::error::Output for $step_name is missing the 'isValid' property in the first element."
+              # This case might still occur if the first relevant element somehow lacks 'isValid'
+              echo "::error::Output for $step_id is missing the 'isValid' property in the first relevant element."
               return 1
             elif [[ "$actual_validity" != "$expected_validity" ]]; then
-              echo "::error::Expected validity '$expected_validity' but got '$actual_validity' for step $step_name."
+              echo "::error::Expected validity '$expected_validity' but got '$actual_validity' for step $step_id."
               return 1
             fi
-            
-            echo "✓ Output for $step_name verified successfully (isValid=$actual_validity)"
+
+            echo "✓ Output for $step_id verified successfully (isValid=$actual_validity)"
             return 0
           }
-          
+
           # --- Verification ---
           errors=0
-          
+
           verify_output "test-valid" "true" || errors=$((errors + 1))
           verify_output "test-invalid" "false" || errors=$((errors + 1))
           verify_output "test-vars" "true" || errors=$((errors + 1))
@@ -237,8 +232,9 @@ jobs:
           verify_output "test-expressions" "true" || errors=$((errors + 1))
           verify_output "test-custom-pattern" "true" || errors=$((errors + 1))
           verify_output "test-custom-pattern-env-var" "true" || errors=$((errors + 1))
+          # For test-fixtures, the overall result depends on the first file processed *with* statements, which is invalid.tf
           verify_output "test-fixtures" "false" || errors=$((errors + 1))
-          
+
           # --- Final Check ---
           if [ $errors -gt 0 ]; then
             echo "::error::$errors verification(s) failed."
