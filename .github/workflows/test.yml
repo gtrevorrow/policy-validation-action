@@ -91,6 +91,10 @@ jobs:
         env:
           GITHUB_ACTIONS: true
           
+      - name: Save test-valid output
+        if: always() # Run even if the previous step failed
+        run: echo '${{ steps.test-valid.outputs.results }}' > /tmp/test-valid-output.json
+
       - name: Test invalid policy
         id: test-invalid
         continue-on-error: true
@@ -100,6 +104,10 @@ jobs:
         env:
           GITHUB_ACTIONS: true
           
+      - name: Save test-invalid output
+        if: always()
+        run: echo '${{ steps.test-invalid.outputs.results }}' > /tmp/test-invalid-output.json
+
       - name: Test policy with variables
         id: test-vars
         continue-on-error: true
@@ -109,6 +117,10 @@ jobs:
         env:
           GITHUB_ACTIONS: true
           
+      - name: Save test-vars output
+        if: always()
+        run: echo '${{ steps.test-vars.outputs.results }}' > /tmp/test-vars-output.json
+
       - name: Test conditions with variables
         id: test-conditions
         continue-on-error: true
@@ -118,6 +130,10 @@ jobs:
         env:
           GITHUB_ACTIONS: true
           
+      - name: Save test-conditions output
+        if: always()
+        run: echo '${{ steps.test-conditions.outputs.results }}' > /tmp/test-conditions-output.json
+
       - name: Test all expressions
         id: test-expressions
         continue-on-error: true
@@ -127,6 +143,10 @@ jobs:
         env:
           GITHUB_ACTIONS: true
           
+      - name: Save test-expressions output
+        if: always()
+        run: echo '${{ steps.test-expressions.outputs.results }}' > /tmp/test-expressions-output.json
+
       - name: Test custom extractor pattern
         id: test-custom-pattern
         continue-on-error: true
@@ -137,6 +157,10 @@ jobs:
           pattern: 'statements\s*=\s*\[(.*?)\]' # Changed extractorPattern to pattern
         env:
           GITHUB_ACTIONS: true
+
+      - name: Save test-custom-pattern output
+        if: always()
+        run: echo '${{ steps.test-custom-pattern.outputs.results }}' > /tmp/test-custom-pattern-output.json
 
       - name: Test custom extractor pattern using env variable
         id: test-custom-pattern-env-var
@@ -152,6 +176,10 @@ jobs:
           extractor: 'regex'
           # No 'pattern' input here, relying on env var
 
+      - name: Save test-custom-pattern-env-var output
+        if: always()
+        run: echo '${{ steps.test-custom-pattern-env-var.outputs.results }}' > /tmp/test-custom-pattern-env-var-output.json
+
       - name: Test action with fixtures
         id: test-fixtures
         continue-on-error: true
@@ -163,59 +191,70 @@ jobs:
         env:
           GITHUB_ACTIONS: true
 
+      - name: Save test-fixtures output
+        if: always()
+        run: echo '${{ steps.test-fixtures.outputs.results }}' > /tmp/test-fixtures-output.json
+
       - name: Verify test results
+        if: always() # Ensure verification runs even if tests failed
         shell: bash
-        env:
-          # Keep only the original debug vars if needed for manual inspection
-          TEST_VALID_OUTPUT_DEBUG: ${{ steps.test-valid.outputs.results }}
-          TEST_INVALID_OUTPUT_DEBUG: ${{ steps.test-invalid.outputs.results }}
-          TEST_VARS_OUTPUT_DEBUG: ${{ steps.test-vars.outputs.results }}
-          TEST_CONDITIONS_OUTPUT_DEBUG: ${{ steps.test-conditions.outputs.results }}
-          TEST_EXPRESSIONS_OUTPUT_DEBUG: ${{ steps.test-expressions.outputs.results }}
-          TEST_CUSTOM_PATTERN_OUTPUT_DEBUG: ${{ steps.test-custom-pattern.outputs.results }}
-          TEST_CUSTOM_PATTERN_ENV_VAR_OUTPUT_DEBUG: ${{ steps.test-custom-pattern-env-var.outputs.results }}
-          TEST_FIXTURES_OUTPUT_DEBUG: ${{ steps.test-fixtures.outputs.results }}
+        # No env vars needed here for outputs
         run: |
           # Function to verify the JSON output and the 'isValid' flag
           verify_output() {
-            local step_id="$1"         # Step ID for logging purposes
+            local step_id="$1"           # Step ID for logging purposes
             local expected_validity="$2" # Expect 'true' or 'false'
-            local raw_output="$3"      # The actual JSON output string (passed as argument)
+            local filename="/tmp/${step_id}-output.json"
 
             echo "Verifying output from step: $step_id"
-            echo "Raw output value (passed as argument):"
-            # Log raw output carefully, avoid interpreting it
-            printf '%s\n' "$raw_output"
+
+            if [ ! -f "$filename" ]; then
+              echo "::error::Output file $filename not found for step $step_id."
+              return 1
+            fi
+
+            # Read the raw output from the file
+            local raw_output
+            raw_output=$(cat "$filename")
+
+            echo "Raw output value (from file $filename):"
+            # Log raw output carefully
+            printf '%s\n' "$raw_output" | jq . # Attempt to pretty print if it's JSON
 
             # Check if the raw_output is empty OR if it's the literal unevaluated expression string
-            # This happens if the source step failed and produced no output.
             if [ -z "$raw_output" ] || [[ "$raw_output" == \$\{\{*\}\} ]]; then
-              echo "::warning::Raw output argument was empty or unevaluated for step $step_id."
-              # Check the debug env var as a fallback for inspection
-              local debug_var_name="TEST_${step_id//-/}_OUTPUT_DEBUG"
-              local debug_output="${!debug_var_name}"
-              echo "Debug Env Var Content for $step_id:"
-              # Use printf for safer output of potentially complex strings
-              printf '%s\n' "$debug_output" | jq .
+              echo "::warning::Output file $filename was empty or contained unevaluated expression for step $step_id."
               echo "::error::No valid output found for step $step_id"
               return 1
             fi
 
-            # Use the raw_output argument which contains the JSON string
+            # Use the raw_output variable which contains the JSON string
             # Use process substitution with printf for safer input to jq
-            local actual_validity=$(jq -r '
+            local actual_validity
+            actual_validity=$(jq -r '
               if type == "array" and length > 0 then
                 # Check the first element that has an 'isValid' property
                 map(select(.isValid != null)) | .[0].isValid // "null"
+              elif type == "object" and (.isValid != null) then
+                 # Handle case where output might be a single object, not an array
+                 .isValid // "null"
               else
                 "invalid_json_or_empty"
               end
-            ' <(printf '%s' "$raw_output")) # Use printf and process substitution
+            ' <(printf '%s' "$raw_output") 2>/dev/null # Redirect jq errors to /dev/null
+
+            # Check jq exit status
+            if [ $? -ne 0 ]; then
+               echo "::error::jq failed to parse JSON content from $filename for step $step_id."
+               printf 'Problematic file content:\n%s\n' "$raw_output"
+               actual_validity="invalid_json_or_empty" # Force failure path
+            fi
+
 
             echo "Extracted validity: $actual_validity" # Debugging line
 
             if [[ "$actual_validity" == "invalid_json_or_empty" ]]; then
-              echo "::error::Output for $step_id is not a valid JSON array, is empty, or lacks 'isValid' in relevant elements."
+              echo "::error::Output for $step_id is not a valid JSON array/object, is empty, or lacks 'isValid' in relevant elements."
               printf 'Problematic JSON input:\n%s\n' "$raw_output" # Log the problematic input
               return 1
             elif [[ "$actual_validity" == "null" ]]; then
@@ -234,15 +273,15 @@ jobs:
           # --- Verification ---
           errors=0
 
-          # Pass the step ID for logging and the actual output string using SINGLE quotes
-          verify_output "test-valid" "true" '${{ steps.test-valid.outputs.results }}' || errors=$((errors + 1))
-          verify_output "test-invalid" "false" '${{ steps.test-invalid.outputs.results }}' || errors=$((errors + 1))
-          verify_output "test-vars" "true" '${{ steps.test-vars.outputs.results }}' || errors=$((errors + 1))
-          verify_output "test-conditions" "true" '${{ steps.test-conditions.outputs.results }}' || errors=$((errors + 1))
-          verify_output "test-expressions" "true" '${{ steps.test-expressions.outputs.results }}' || errors=$((errors + 1))
-          verify_output "test-custom-pattern" "true" '${{ steps.test-custom-pattern.outputs.results }}' || errors=$((errors + 1))
-          verify_output "test-custom-pattern-env-var" "true" '${{ steps.test-custom-pattern-env-var.outputs.results }}' || errors=$((errors + 1))
-          verify_output "test-fixtures" "false" '${{ steps.test-fixtures.outputs.results }}' || errors=$((errors + 1))
+          # Call verify_output with only step_id and expected validity
+          verify_output "test-valid" "true" || errors=$((errors + 1))
+          verify_output "test-invalid" "false" || errors=$((errors + 1))
+          verify_output "test-vars" "true" || errors=$((errors + 1))
+          verify_output "test-conditions" "true" || errors=$((errors + 1))
+          verify_output "test-expressions" "true" || errors=$((errors + 1))
+          verify_output "test-custom-pattern" "true" || errors=$((errors + 1))
+          verify_output "test-custom-pattern-env-var" "true" || errors=$((errors + 1))
+          verify_output "test-fixtures" "false" || errors=$((errors + 1))
 
           # --- Final Check ---
           if [ $errors -gt 0 ]; then
