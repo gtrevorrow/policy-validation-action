@@ -192,12 +192,10 @@ jobs:
               return 1
             fi
 
-            # Use direct step output injection with jq
-            # Note: This relies on Actions correctly handling the JSON string during injection.
-            local actual_validity=$(echo "${{ steps[step_id].outputs.results }}" | jq -r '
+            # Use the raw_output variable which contains the JSON string
+            local actual_validity=$(echo "$raw_output" | jq -r '
               if type == "array" and length > 0 then
-                # Check the first element that has an 'isValid' property,
-                # in case some files didn't produce output entries (before fix)
+                # Check the first element that has an 'isValid' property
                 map(select(.isValid != null)) | .[0].isValid // "null"
               else
                 "invalid_json_or_empty"
