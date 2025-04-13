@@ -166,16 +166,7 @@ jobs:
       - name: Verify test results
         shell: bash
         env:
-          # Pass outputs directly, escaped for shell usage
-          TEST_VALID_OUTPUT_ESCAPED: ${{ toJson(steps.test-valid.outputs.results) }}
-          TEST_INVALID_OUTPUT_ESCAPED: ${{ toJson(steps.test-invalid.outputs.results) }}
-          TEST_VARS_OUTPUT_ESCAPED: ${{ toJson(steps.test-vars.outputs.results) }}
-          TEST_CONDITIONS_OUTPUT_ESCAPED: ${{ toJson(steps.test-conditions.outputs.results) }}
-          TEST_EXPRESSIONS_OUTPUT_ESCAPED: ${{ toJson(steps.test-expressions.outputs.results) }}
-          TEST_CUSTOM_PATTERN_OUTPUT_ESCAPED: ${{ toJson(steps.test-custom-pattern.outputs.results) }}
-          TEST_CUSTOM_PATTERN_ENV_VAR_OUTPUT_ESCAPED: ${{ toJson(steps.test-custom-pattern-env-var.outputs.results) }}
-          TEST_FIXTURES_OUTPUT_ESCAPED: ${{ toJson(steps.test-fixtures.outputs.results) }}
-          # Keep original debug vars if needed
+          # Keep only the original debug vars if needed for manual inspection
           TEST_VALID_OUTPUT_DEBUG: ${{ steps.test-valid.outputs.results }}
           TEST_INVALID_OUTPUT_DEBUG: ${{ steps.test-invalid.outputs.results }}
           TEST_VARS_OUTPUT_DEBUG: ${{ steps.test-vars.outputs.results }}
@@ -187,46 +178,31 @@ jobs:
         run: |
           # Function to verify the JSON output and the 'isValid' flag
           verify_output() {
-            local step_id="$1"           # Step ID for logging purposes
+            local step_id="$1"         # Step ID for logging purposes
             local expected_validity="$2" # Expect 'true' or 'false'
-            local escaped_var_name="TEST_${step_id//-/}_OUTPUT_ESCAPED"
-            local escaped_output="${!escaped_var_name}" # Get the JSON string (already quoted/escaped by toJson)
+            local raw_output="$3"      # The actual JSON output string (passed as argument)
 
             echo "Verifying output from step: $step_id"
-            echo "Escaped output value (from env var):"
-            echo "$escaped_output" # Log the escaped string
+            echo "Raw output value (passed as argument):"
+            # Log raw output carefully, avoid interpreting it
+            printf '%s\n' "$raw_output"
 
-            # Safely evaluate the escaped JSON string into raw_output
-            # The output from toJson is already a valid JSON string literal
-            local raw_output
-            # Check if escaped_output is non-empty before eval
-            if [ -n "$escaped_output" ]; then
-               # Use jq to parse the JSON string from the env var
-               raw_output=$(jq -c . <<< "$escaped_output")
-               if [ $? -ne 0 ]; then
-                  echo "::error::Failed to parse JSON from env var for step $step_id"
-                  echo "Escaped value was: $escaped_output"
-                  return 1
-               fi
-            else
-               raw_output="" # Set to empty if env var was empty
-            fi
-
-            echo "Raw output value (after parsing):"
-            jq . <<< "$raw_output" # Pretty print JSON for debugging
-
-            if [ -z "$raw_output" ]; then
-              echo "::warning::Raw output was empty after parsing for step $step_id."
+            # Check if the raw_output is empty OR if it's the literal unevaluated expression string
+            # This happens if the source step failed and produced no output.
+            if [ -z "$raw_output" ] || [[ "$raw_output" == \$\{\{*\}\} ]]; then
+              echo "::warning::Raw output argument was empty or unevaluated for step $step_id."
               # Check the debug env var as a fallback for inspection
               local debug_var_name="TEST_${step_id//-/}_OUTPUT_DEBUG"
               local debug_output="${!debug_var_name}"
-              echo "Debug Env Var Content:"
-              echo "$debug_output" | jq .
-              echo "::error::No output found or parsed for step $step_id"
+              echo "Debug Env Var Content for $step_id:"
+              # Use printf for safer output of potentially complex strings
+              printf '%s\n' "$debug_output" | jq .
+              echo "::error::No valid output found for step $step_id"
               return 1
             fi
 
-            # Use the raw_output variable which contains the JSON string
+            # Use the raw_output argument which contains the JSON string
+            # Use process substitution with printf for safer input to jq
             local actual_validity=$(jq -r '
               if type == "array" and length > 0 then
                 # Check the first element that has an 'isValid' property
@@ -234,15 +210,17 @@ jobs:
               else
                 "invalid_json_or_empty"
               end
-            ' <<< "$raw_output") # Use <<< for jq input
+            ' <(printf '%s' "$raw_output")) # Use printf and process substitution
 
             echo "Extracted validity: $actual_validity" # Debugging line
 
             if [[ "$actual_validity" == "invalid_json_or_empty" ]]; then
               echo "::error::Output for $step_id is not a valid JSON array, is empty, or lacks 'isValid' in relevant elements."
+              printf 'Problematic JSON input:\n%s\n' "$raw_output" # Log the problematic input
               return 1
             elif [[ "$actual_validity" == "null" ]]; then
               echo "::error::Output for $step_id is missing the 'isValid' property in the first relevant element."
+              printf 'Problematic JSON input:\n%s\n' "$raw_output" # Log the problematic input
               return 1
             elif [[ "$actual_validity" != "$expected_validity" ]]; then
               echo "::error::Expected validity '$expected_validity' but got '$actual_validity' for step $step_id."
@@ -256,15 +234,15 @@ jobs:
           # --- Verification ---
           errors=0
 
-          # Call verify_output without the third argument
-          verify_output "test-valid" "true" || errors=$((errors + 1))
-          verify_output "test-invalid" "false" || errors=$((errors + 1))
-          verify_output "test-vars" "true" || errors=$((errors + 1))
-          verify_output "test-conditions" "true" || errors=$((errors + 1))
-          verify_output "test-expressions" "true" || errors=$((errors + 1))
-          verify_output "test-custom-pattern" "true" || errors=$((errors + 1))
-          verify_output "test-custom-pattern-env-var" "true" || errors=$((errors + 1))
-          verify_output "test-fixtures" "false" || errors=$((errors + 1))
+          # Pass the step ID for logging and the actual output string using SINGLE quotes
+          verify_output "test-valid" "true" '${{ steps.test-valid.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-invalid" "false" '${{ steps.test-invalid.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-vars" "true" '${{ steps.test-vars.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-conditions" "true" '${{ steps.test-conditions.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-expressions" "true" '${{ steps.test-expressions.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-custom-pattern" "true" '${{ steps.test-custom-pattern.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-custom-pattern-env-var" "true" '${{ steps.test-custom-pattern-env-var.outputs.results }}' || errors=$((errors + 1))
+          verify_output "test-fixtures" "false" '${{ steps.test-fixtures.outputs.results }}' || errors=$((errors + 1))
 
           # --- Final Check ---
           if [ $errors -gt 0 ]; then
