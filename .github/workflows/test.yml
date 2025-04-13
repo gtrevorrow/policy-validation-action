@@ -92,11 +92,14 @@ jobs:
           GITHUB_ACTIONS: true
           
       - name: Save test-valid output
+        uses: actions/github-script@v6
         if: always() # Run even if the previous step failed
-        run: |
-          echo "Debug output for test-valid:"
-          echo '${{ steps.test-valid.outputs.results }}'
-          echo '${{ steps.test-valid.outputs.results }}' > /tmp/test-valid-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-valid.outputs.results }}`;
+            core.info(`Debug output for test-valid:\n${output}`);
+            fs.writeFileSync('/tmp/test-valid-output.json', output);
 
       - name: Test invalid policy
         id: test-invalid
@@ -108,11 +111,14 @@ jobs:
           GITHUB_ACTIONS: true
           
       - name: Save test-invalid output
+        uses: actions/github-script@v6
         if: always()
-        run: |
-          echo "Debug output for test-invalid:"
-          echo '${{ steps.test-invalid.outputs.results }}'
-          echo '${{ steps.test-invalid.outputs.results }}' > /tmp/test-invalid-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-invalid.outputs.results }}`;
+            core.info(`Debug output for test-invalid:\n${output}`);
+            fs.writeFileSync('/tmp/test-invalid-output.json', output);
 
       - name: Test policy with variables
         id: test-vars
@@ -124,11 +130,14 @@ jobs:
           GITHUB_ACTIONS: true
           
       - name: Save test-vars output
+        uses: actions/github-script@v6
         if: always()
-        run: |
-          echo "Debug output for test-vars:"
-          echo '${{ steps.test-vars.outputs.results }}'
-          echo '${{ steps.test-vars.outputs.results }}' > /tmp/test-vars-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-vars.outputs.results }}`;
+            core.info(`Debug output for test-vars:\n${output}`);
+            fs.writeFileSync('/tmp/test-vars-output.json', output);
 
       - name: Test conditions with variables
         id: test-conditions
@@ -140,11 +149,14 @@ jobs:
           GITHUB_ACTIONS: true
           
       - name: Save test-conditions output
+        uses: actions/github-script@v6
         if: always()
-        run: |
-          echo "Debug output for test-conditions:"
-          echo '${{ steps.test-conditions.outputs.results }}'
-          echo '${{ steps.test-conditions.outputs.results }}' > /tmp/test-conditions-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-conditions.outputs.results }}`;
+            core.info(`Debug output for test-conditions:\n${output}`);
+            fs.writeFileSync('/tmp/test-conditions-output.json', output);
 
       - name: Test all expressions
         id: test-expressions
@@ -156,11 +168,14 @@ jobs:
           GITHUB_ACTIONS: true
           
       - name: Save test-expressions output
+        uses: actions/github-script@v6
         if: always()
-        run: |
-          echo "Debug output for test-expressions:"
-          echo '${{ steps.test-expressions.outputs.results }}'
-          echo '${{ steps.test-expressions.outputs.results }}' > /tmp/test-expressions-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-expressions.outputs.results }}`;
+            core.info(`Debug output for test-expressions:\n${output}`);
+            fs.writeFileSync('/tmp/test-expressions-output.json', output);
 
       - name: Test custom extractor pattern
         id: test-custom-pattern
@@ -174,11 +189,14 @@ jobs:
           GITHUB_ACTIONS: true
 
       - name: Save test-custom-pattern output
+        uses: actions/github-script@v6
         if: always()
-        run: |
-          echo "Debug output for test-custom-pattern:"
-          echo '${{ steps.test-custom-pattern.outputs.results }}'
-          echo '${{ steps.test-custom-pattern.outputs.results }}' > /tmp/test-custom-pattern-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-custom-pattern.outputs.results }}`;
+            core.info(`Debug output for test-custom-pattern:\n${output}`);
+            fs.writeFileSync('/tmp/test-custom-pattern-output.json', output);
 
       - name: Test custom extractor pattern using env variable
         id: test-custom-pattern-env-var
@@ -195,11 +213,14 @@ jobs:
           # No 'pattern' input here, relying on env var
 
       - name: Save test-custom-pattern-env-var output
+        uses: actions/github-script@v6
         if: always()
-        run: |
-          echo "Debug output for test-custom-pattern-env-var:"
-          echo '${{ steps.test-custom-pattern-env-var.outputs.results }}'
-          echo '${{ steps.test-custom-pattern-env-var.outputs.results }}' > /tmp/test-custom-pattern-env-var-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-custom-pattern-env-var.outputs.results }}`;
+            core.info(`Debug output for test-custom-pattern-env-var:\n${output}`);
+            fs.writeFileSync('/tmp/test-custom-pattern-env-var-output.json', output);
 
       - name: Test action with fixtures
         id: test-fixtures
@@ -213,11 +234,14 @@ jobs:
           GITHUB_ACTIONS: true
 
       - name: Save test-fixtures output
+        uses: actions/github-script@v6
         if: always()
-        run: |
-          echo "Debug output for test-fixtures:"
-          echo '${{ steps.test-fixtures.outputs.results }}'
-          echo '${{ steps.test-fixtures.outputs.results }}' > /tmp/test-fixtures-output.json
+        with:
+          script: |
+            const fs = require('fs');
+            const output = `${{ steps.test-fixtures.outputs.results }}`;
+            core.info(`Debug output for test-fixtures:\n${output}`);
+            fs.writeFileSync('/tmp/test-fixtures-output.json', output);
 
       - name: Verify test results
         if: always() # Ensure verification runs even if tests failed
