@@ -23,7 +23,8 @@ const debugOutput = (error: any) => {
 // Add or update this function to properly type the exec result
 function execWithStringOutput(command: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    // Increase maxBuffer to 10MB
+    exec( command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
       if (error && error.code !== 0) {
         // We still want the output even if the command fails
         resolve({ stdout: stdout.toString(), stderr: stderr.toString() });
