@@ -97,8 +97,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-valid.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-valid.outputs.results) }};
             core.info(`Debug output for test-valid:\n${output}`);
             fs.writeFileSync('/tmp/test-valid-output.json', output);
 
@@ -117,8 +117,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-invalid.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-invalid.outputs.results) }};
             core.info(`Debug output for test-invalid:\n${output}`);
             fs.writeFileSync('/tmp/test-invalid-output.json', output);
 
@@ -137,8 +137,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-vars.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-vars.outputs.results) }};
             core.info(`Debug output for test-vars:\n${output}`);
             fs.writeFileSync('/tmp/test-vars-output.json', output);
 
@@ -157,8 +157,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-conditions.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-conditions.outputs.results) }};
             core.info(`Debug output for test-conditions:\n${output}`);
             fs.writeFileSync('/tmp/test-conditions-output.json', output);
 
@@ -177,8 +177,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-expressions.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-expressions.outputs.results) }};
             core.info(`Debug output for test-expressions:\n${output}`);
             fs.writeFileSync('/tmp/test-expressions-output.json', output);
 
@@ -199,8 +199,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-custom-pattern.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-custom-pattern.outputs.results) }};
             core.info(`Debug output for test-custom-pattern:\n${output}`);
             fs.writeFileSync('/tmp/test-custom-pattern-output.json', output);
 
@@ -224,8 +224,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-custom-pattern-env-var.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-custom-pattern-env-var.outputs.results) }};
             core.info(`Debug output for test-custom-pattern-env-var:\n${output}`);
             fs.writeFileSync('/tmp/test-custom-pattern-env-var-output.json', output);
 
@@ -246,8 +246,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            // Use single quotes to embed the raw output string
-            const output = '${{ steps.test-fixtures.outputs.results }}';
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-fixtures.outputs.results) }};
             core.info(`Debug output for test-fixtures:\n${output}`);
             fs.writeFileSync('/tmp/test-fixtures-output.json', output);
 
