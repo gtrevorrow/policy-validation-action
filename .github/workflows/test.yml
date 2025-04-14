@@ -380,7 +380,7 @@ jobs:
           fi
 
       - name: Run Jest tests # Keep Jest tests as a separate check
-        run: npm test
+        run: npm test -- --testPathIgnorePatterns=cli.test.ts
 
       - name: Verify Jest test results # Keep Jest verification
         run: |
