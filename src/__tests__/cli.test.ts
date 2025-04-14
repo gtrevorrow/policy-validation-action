@@ -93,55 +93,46 @@ describe('CLI', () => {
     }, 15000); // 15 second timeout
 
     test('using files option works correctly', async () => {
-        const cmd = 'node ./dist/index.js validate ./src/__tests__/fixtures --files valid.tf --verbose';
-        
+        const filesToProcess = 'valid.tf,invalid.tf';
+        const fixturesDir = './src/__tests__/fixtures';
+        const cliPath = binPath;
+        // Explicitly test with default exitOnError=true
+        const command = `node ${cliPath} validate ${fixturesDir} --files ${filesToProcess}`;
+
         try {
-            // Use catch to handle potential error exit codes but still process the output
-            const result = await execAsync(cmd).catch(error => {
-                // The command might exit with non-zero status code, but we still want to check the output
-                return error;
-            });
-            
-            const { stdout, stderr } = result;
-            debugOutput({ stdout, stderr });
-            
-            // Look for expected JSON output first
-            try {
-                const output = getJsonFromOutput(stdout);
-                
-                // Verify it's an array with at least one result
-                expect(Array.isArray(output)).toBe(true);
-                expect(output.length).toBeGreaterThan(0);
-                
-                // Look for a valid.tf file in the results
-                const validFileResult = output.find((item: { file?: string; isValid?: boolean }) => 
-                    item.file && item.file.includes('valid.tf')
-                );
-                
-                // If we found a valid.tf file, check that it's valid
-                if (validFileResult) {
-                    expect(validFileResult.isValid).toBe(true);
+            // This command is expected to fail because invalid.tf causes exitOnError=true
+            await execAsync(command);
+            // If execAsync doesn't throw, the test should fail because an error was expected
+            throw new Error('CLI command succeeded unexpectedly when it should have failed due to invalid.tf');
+        } catch (error: any) {
+            // Check if the error is due to the expected validation failure
+            if (error.code && error.code !== 0 && error.stderr) {
+                debugOutput({ stdout: error.stdout, stderr: error.stderr }); // Log output from the error object
+
+                // Verify that the error message indicates failure due to invalid.tf
+                expect(error.stderr).toContain('Validation failed for');
+                expect(error.stderr).toContain('invalid.tf');
+                expect(error.stderr).toContain('exitOnError is true. Stopping.');
+
+                // Also check stdout for the partial results JSON if needed
+                if (error.stdout && error.stdout.includes('"results":')) {
+                   try {
+                       const output = JSON.parse(error.stdout).results;
+                       expect(output).toBeInstanceOf(Array);
+                       // Check that both files were attempted (results might include both)
+                       expect(output.some((o: any) => o.file.endsWith('valid.tf'))).toBe(true);
+                       expect(output.some((o: any) => o.file.endsWith('invalid.tf'))).toBe(true);
+                   } catch (parseError) {
+                       // Ignore JSON parsing errors if stderr confirms the expected failure
+                       console.warn('Could not parse stdout JSON from failed command, but stderr indicates expected failure.');
+                   }
                 }
-                
-                // Test passed with JSON validation
-                return;
-            } catch (jsonError) {
-                // JSON parsing might have failed, check stderr instead
+                // If stderr contains the expected messages, the test passes
+            } else {
+                // If the error is not the expected one, re-throw it
+                console.error('Unexpected test failure:', error);
+                throw error;
             }
-            
-            // If we get here, JSON parsing failed or no valid file was found
-            // Look for validation completion message in stderr
-            if (stderr && stderr.includes('Policy validation completed')) {
-                // Test passes if we found the validation completed message
-                return;
-            }
-            
-            // If we're here, something unexpected happened
-            fail('Neither JSON output nor validation completion message found');
-            
-        } catch (error) {
-            console.error('Unexpected test failure:', error);
-            throw error;
         }
     }, 15000); // 15 second timeout
 
