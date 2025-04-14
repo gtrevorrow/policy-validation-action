@@ -97,7 +97,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-valid.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-valid.outputs.results }}';
             core.info(`Debug output for test-valid:\n${output}`);
             fs.writeFileSync('/tmp/test-valid-output.json', output);
 
@@ -116,7 +117,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-invalid.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-invalid.outputs.results }}';
             core.info(`Debug output for test-invalid:\n${output}`);
             fs.writeFileSync('/tmp/test-invalid-output.json', output);
 
@@ -135,7 +137,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-vars.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-vars.outputs.results }}';
             core.info(`Debug output for test-vars:\n${output}`);
             fs.writeFileSync('/tmp/test-vars-output.json', output);
 
@@ -154,7 +157,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-conditions.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-conditions.outputs.results }}';
             core.info(`Debug output for test-conditions:\n${output}`);
             fs.writeFileSync('/tmp/test-conditions-output.json', output);
 
@@ -173,7 +177,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-expressions.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-expressions.outputs.results }}';
             core.info(`Debug output for test-expressions:\n${output}`);
             fs.writeFileSync('/tmp/test-expressions-output.json', output);
 
@@ -194,7 +199,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-custom-pattern.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-custom-pattern.outputs.results }}';
             core.info(`Debug output for test-custom-pattern:\n${output}`);
             fs.writeFileSync('/tmp/test-custom-pattern-output.json', output);
 
@@ -218,7 +224,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-custom-pattern-env-var.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-custom-pattern-env-var.outputs.results }}';
             core.info(`Debug output for test-custom-pattern-env-var:\n${output}`);
             fs.writeFileSync('/tmp/test-custom-pattern-env-var-output.json', output);
 
@@ -239,7 +246,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = ${{ toJSON(steps.test-fixtures.outputs.results) }};
+            // Use single quotes to embed the raw output string
+            const output = '${{ steps.test-fixtures.outputs.results }}';
             core.info(`Debug output for test-fixtures:\n${output}`);
             fs.writeFileSync('/tmp/test-fixtures-output.json', output);
 
@@ -285,12 +293,24 @@ jobs:
             # Use process substitution with printf for safer input to jq
             local actual_validity
             local jq_output
-            # Simplify jq filter: directly get .[0].isValid. It will output true, false, or null (as string).
+            # Updated jq filter:
+            # - Check if it's a non-empty array first.
+            # - Select elements where isValid is false. If count > 0, output "false".
+            # - Select elements where isValid is true. If count == total length, output "true".
+            # - Otherwise (mixed, missing isValid, etc.), output "null".
             jq_output=$(jq -r '
-              if type == "array" and length > 0 and (.[0] | has("isValid")) then
-                 .[0].isValid # Output true or false
-              else
-                 "null" # Output literal string "null" if not array, empty, or missing isValid
+              if type == "array" and length > 0 then
+                # Check if any element explicitly has isValid == false
+                if (map(select(.isValid == false)) | length) > 0 then
+                  "false"
+                # Check if ALL elements explicitly have isValid == true
+                elif (map(select(.isValid == true)) | length) == length then
+                  "true"
+                else # Handles arrays with missing isValid or other inconsistencies
+                  "null"
+                end
+              else # Handles non-arrays, empty arrays
+                "null"
               end
             ' <(printf '%s' "$raw_output") 2>/dev/null) # Redirect jq errors to /dev/null
             local jq_exit_code=$? # Capture exit code immediately
