@@ -1,102 +1,79 @@
 #!/usr/bin/env node
-
 import { program } from 'commander';
-import * as path from 'path';
-import * as fs from 'fs';
-import { findPolicyFiles, processFile, parsePolicy, formatPolicyStatements } from './Main';
-import { ExtractorType } from './extractors/ExtractorFactory';
-import { Logger, ValidationOutput } from './types';
+import { runAction } from './Main';
+import { PlatformOperations } from './types';
+import { CliOperations } from './platform/CliOperations';
 
-import pkg from '../package.json';
+// Main command for policy validation
+program
+  .name('policy-validation-action')
+  .description('OCI IAM Policy Validation CLI')
+  .version('0.2.7');
 
 program
-    .name('policy-validation-action')
-    .description('OCI Policy Validation Tool ')
-    .version(pkg.version);
-
-program
-    .command('validate')
-    .description('Validate OCI policy statements in files')
-    .argument('[path]', 'Path to a file or directory containing Terraform files', '.')
-    .option('-v, --verbose', 'Enable verbose output')
-    .option('-p, --pattern <pattern>', 'Custom regex pattern to extract policy statements')
-    .option('-e, --extractor <type>', 'Extractor type (regex or hcl)', 'regex')
-    .option('--files <files>', 'Comma-separated list of specific files to process')
-    .option('--exit-on-error', 'Exit with non-zero status if validation fails', true)
-    .action(async (scanPath, options) => {
-        const resolvedPath = path.resolve(scanPath || process.env.POLICY_PATH || '.');
-        const consoleLogger: Logger = {
-            debug: (msg: string) => options.verbose && console.error(msg),
-            info: (msg: string) => console.error(msg),
-            warn: (msg: string) => console.error(msg),
-            error: (msg: string) => console.error(msg)
+  .command('validate [path]')
+  .description('Validate OCI IAM policy statements in files')
+  .option('-v, --verbose', 'Enable verbose output')
+  .option('-e, --extractor <type>', 'Policy extractor type (regex, hcl)', 'regex')
+  .option('-p, --pattern <pattern>', 'Custom regex pattern for policy extraction')
+  .option('--files <files>', 'Comma-separated list of specific files to process')
+  .option('--exit-on-error <bool>', 'Exit with non-zero status if validation fails', 'true')
+  .option('--file-extension <ext>', 'Filter files by specified extension (e.g., .tf)')
+  .option('--cis-benchmark', 'Run CIS Benchmark validation', false)
+  .action(async (pathArg, cmdOptions) => {
+    // Create a CLI-specific platform implementation that handles Commander options
+    const cliPlatform: PlatformOperations = new class extends CliOperations {
+      // Override getInput to first check command line options, then env vars
+      getInput(name: string): string {
+        // Map CLI option names to input names
+        const optionMap: {[key: string]: string} = {
+          'path': pathArg,
+          'extractor': cmdOptions.extractor,
+          'pattern': cmdOptions.pattern,
+          'files': cmdOptions.files,
+          'exit-on-error': cmdOptions.exitOnError,
+          'file-extension': cmdOptions.fileExtension,
+          'cis-benchmark': cmdOptions.cisBenchmark
         };
-
-        // Parse options with fallback to environment variables
-        const fileNames = options.files 
-            ? options.files.split(',').map((f: string) => f.trim()) 
-            : process.env.POLICY_FILES?.split(',').map((f: string) => f.trim());
-        const pattern = options.pattern || process.env.POLICY_PATTERN;
-        const extractor = options.extractor || process.env.POLICY_EXTRACTOR || 'regex';
-        const exitOnError = options.exitOnError ?? (process.env.POLICY_EXIT_ON_ERROR === 'true');
-
-        // Debug log for troubleshooting
-        if (options.verbose) {
-            consoleLogger.debug(`Resolved path: ${resolvedPath}`);
-            consoleLogger.debug(`Using extractor: ${extractor}`);
-            consoleLogger.debug(`Files filter: ${fileNames ? fileNames.join(', ') : 'none'}`);
-            consoleLogger.debug(`Custom pattern: ${pattern || 'none'}`);
-            consoleLogger.debug(`Exit on error: ${exitOnError}`);
+        
+        // First check explicit command options
+        if (name in optionMap && optionMap[name] !== undefined) {
+          return String(optionMap[name]);
         }
         
-        const files = await findPolicyFiles(resolvedPath, { fileNames }, consoleLogger);
-
-        if (files.length === 0) {
-            const output = { error: `No policy files found in ${resolvedPath}` };
-            console.log(JSON.stringify(output));
-            process.exit(1);
-        }
-
-        let allOutputs: ValidationOutput[] = [];
-
-        for (const file of files) {
-            consoleLogger.info(`Validating policy statements for file ${file}`);
-            const expressions = await processFile(file, pattern, extractor as ExtractorType, consoleLogger);
-            if (expressions.length > 0) {
-                const result = parsePolicy(formatPolicyStatements(expressions), consoleLogger);
-                if (!result.isValid) {
-                    result.errors.forEach(error => {
-                        consoleLogger.error('Failed to parse policy statement:');
-                        consoleLogger.error(`Statement: "${error.statement}"`);
-                        consoleLogger.error(`Position: ${' '.repeat(error.position)}^ ${error.message}`);
-                    });
-                }
-                allOutputs.push({
-                    file,
-                    isValid: result.isValid,
-                    statements: expressions,
-                    errors: result.errors
-                });
-                
-                if (exitOnError && !result.isValid) {
-                    console.log(JSON.stringify(allOutputs));
-                    process.exit(1);
-                }
+        // Then check environment variables with POLICY_ prefix
+        return process.env[`POLICY_${name.replace(/-/g, '_').toUpperCase()}`] || '';
+      }
+      
+      // Override setResult to handle CLI exit codes
+      setResult(success: boolean, message?: string): void {
+        if (message) {
+          if (success) {
+            console.log(message);
+          } else {
+            console.error(message);
+            // Only exit on error if specified by action
+            if (this.getInput('exit-on-error') === 'true') {
+              process.exit(1);
             }
+          }
         }
+      }
+    };
 
-        if (allOutputs.length === 0) {
-            const output = { error: 'No policy statements found' };
-            console.log(JSON.stringify(output));
-            process.exit(1);
-        }
+    // Set verbose mode from option
+    if (cmdOptions.verbose) {
+      process.env.POLICY_VERBOSE = 'true';
+    }
 
-        console.log(JSON.stringify(allOutputs));
-        consoleLogger.info('Policy validation completed');
-        
-        if (allOutputs.some(output => !output.isValid)) {
-            process.exit(1);
-        }
-    });
+    // Run the action with our CLI platform implementation
+    await runAction(cliPlatform);
+  });
 
-program.parse();
+// Parse CLI arguments
+program.parse(process.argv);
+
+// If no arguments, show help
+if (process.argv.length < 3) {
+  program.help();
+}

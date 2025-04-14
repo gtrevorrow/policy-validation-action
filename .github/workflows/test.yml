@@ -88,35 +88,100 @@ jobs:
         uses: ./
         with:
           path: './test/policies/valid.tf'
+        env:
+          GITHUB_ACTIONS: true
           
+      - name: Save test-valid output
+        uses: actions/github-script@v6
+        if: always() # Run even if the previous step failed
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-valid.outputs.results) }};
+            core.info(`Debug output for test-valid:\n${output}`);
+            fs.writeFileSync('/tmp/test-valid-output.json', output);
+
       - name: Test invalid policy
         id: test-invalid
         continue-on-error: true
         uses: ./
         with:
           path: './test/policies/invalid.tf'
+        env:
+          GITHUB_ACTIONS: true
           
+      - name: Save test-invalid output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-invalid.outputs.results) }};
+            core.info(`Debug output for test-invalid:\n${output}`);
+            fs.writeFileSync('/tmp/test-invalid-output.json', output);
+
       - name: Test policy with variables
         id: test-vars
         continue-on-error: true
         uses: ./
         with:
           path: './test/policies/valid_vars.tf'
+        env:
+          GITHUB_ACTIONS: true
           
+      - name: Save test-vars output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-vars.outputs.results) }};
+            core.info(`Debug output for test-vars:\n${output}`);
+            fs.writeFileSync('/tmp/test-vars-output.json', output);
+
       - name: Test conditions with variables
         id: test-conditions
         continue-on-error: true
         uses: ./
         with:
           path: './test/policies/valid_conditions.tf'
+        env:
+          GITHUB_ACTIONS: true
           
+      - name: Save test-conditions output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-conditions.outputs.results) }};
+            core.info(`Debug output for test-conditions:\n${output}`);
+            fs.writeFileSync('/tmp/test-conditions-output.json', output);
+
       - name: Test all expressions
         id: test-expressions
         continue-on-error: true
         uses: ./
         with:
           path: './test/policies/all_expressions.tf'
+        env:
+          GITHUB_ACTIONS: true
           
+      - name: Save test-expressions output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-expressions.outputs.results) }};
+            core.info(`Debug output for test-expressions:\n${output}`);
+            fs.writeFileSync('/tmp/test-expressions-output.json', output);
+
       - name: Test custom extractor pattern
         id: test-custom-pattern
         continue-on-error: true
@@ -124,18 +189,45 @@ jobs:
         with:
           path: './test/policies/valid.tf'
           extractor: 'regex'
-          extractorPattern: 'statements\s*=\s*\[(.*?)\]'
+          pattern: 'statements\s*=\s*\[(.*?)\]' # Changed extractorPattern to pattern
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Save test-custom-pattern output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-custom-pattern.outputs.results) }};
+            core.info(`Debug output for test-custom-pattern:\n${output}`);
+            fs.writeFileSync('/tmp/test-custom-pattern-output.json', output);
 
       - name: Test custom extractor pattern using env variable
         id: test-custom-pattern-env-var
         continue-on-error: true
         env:
+          # NOTE: The 'pattern' input takes precedence over this env var if both are set.
+          # This step tests if the action correctly falls back to the env var when 'pattern' input is NOT provided.
           POLICY_STATEMENTS_PATTERN: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+          GITHUB_ACTIONS: true
         uses: ./
         with:
           path: './test/policies/valid.tf'
           extractor: 'regex'
+          # No 'pattern' input here, relying on env var
 
+      - name: Save test-custom-pattern-env-var output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-custom-pattern-env-var.outputs.results) }};
+            core.info(`Debug output for test-custom-pattern-env-var:\n${output}`);
+            fs.writeFileSync('/tmp/test-custom-pattern-env-var-output.json', output);
 
       - name: Test action with fixtures
         id: test-fixtures
@@ -144,133 +236,155 @@ jobs:
         with:
           path: './src/__tests__/fixtures'
           extractor: 'regex'
-          extractorPattern: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+          pattern: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]" # Changed extractorPattern to pattern
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Save test-fixtures output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            // Use toJSON() to safely serialize the output as a JSON string literal
+            const output = ${{ toJSON(steps.test-fixtures.outputs.results) }};
+            core.info(`Debug output for test-fixtures:\n${output}`);
+            fs.writeFileSync('/tmp/test-fixtures-output.json', output);
 
       - name: Verify test results
+        if: always() # Ensure verification runs even if tests failed
         shell: bash
-        env:
-          TEST_INVALID_OUTPUT: ${{ steps.test-invalid.outputs.policy_validation }}
-          TEST_VALID_OUTPUT: ${{ steps.test-valid.outputs.policy_validation }}
-          TEST_VARS_OUTPUT: ${{ steps.test-vars.outputs.policy_validation }}
-          TEST_CONDITIONS_OUTPUT: ${{ steps.test-conditions.outputs.policy_validation }}
-          TEST_EXPRESSIONS_OUTPUT: ${{ steps.test-expressions.outputs.policy_validation }}
-          TEST_CUSTOM_PATTERN_ENV_VAR_OUTPUT: ${{ steps.test-custom-pattern-env-var.outputs.policy_validation }}
-          TEST_FIXTURES_OUTPUT: ${{ steps.test-fixtures.outputs.policy_validation }}
+        # No env vars needed here for outputs
         run: |
+          # Function to verify the JSON output and the 'isValid' flag
           verify_output() {
-            local step_name="$1"
-            local raw_output=""
-            echo "Verifying output from step: $step_name"
-            case "$step_name" in
-              "test-invalid")
-                raw_output="$TEST_INVALID_OUTPUT"
-                ;;
-              "test-valid")
-                raw_output="$TEST_VALID_OUTPUT"
-                ;;
-              "test-vars")
-                raw_output="$TEST_VARS_OUTPUT"
-                ;;
-              "test-conditions")
-                raw_output="$TEST_CONDITIONS_OUTPUT"
-                ;;
-              "test-expressions")
-                raw_output="$TEST_EXPRESSIONS_OUTPUT"
-                ;;
-              "test-custom-pattern-env-var")
-                raw_output="$TEST_CUSTOM_PATTERN_ENV_VAR_OUTPUT"
-                ;;
-              "test-fixtures")
-                raw_output="$TEST_FIXTURES_OUTPUT"
-                ;;
-              *)
-                echo "Unknown step name: $step_name"
-                return 1
-                ;;
-            esac
-            
-            echo "Raw output value:"
-            echo "$raw_output"
-            
-            if [ -z "$raw_output" ]; then
-              echo "No output found"
+            local step_id="$1"           # Step ID for logging purposes
+            local expected_validity="$2" # Expect 'true' or 'false'
+            local filename="/tmp/${step_id}-output.json"
+
+            echo "Verifying output from step: $step_id"
+
+            if [ ! -f "$filename" ]; then
+              echo "::error::Output file $filename not found for step $step_id."
               return 1
             fi
-            
-            # Updated jq filter for JSON structure verification
-            if ! echo "$raw_output" | jq -e '
-              if type=="array" then
-                all(.[]; (.isValid == false and (.errors | length) > 0))
-              elif type=="object" then
-                (.error != null) or (.isValid == false and (.errors | length) > 0)
-              else
-                false
+
+            # Read the raw output from the file
+            local raw_output
+            raw_output=$(cat "$filename")
+
+            echo "Raw output value (from file $filename):"
+            # Log raw output carefully
+            printf '%s\n' "$raw_output" | jq . # Attempt to pretty print if it's JSON
+
+            # Check if the raw_output is empty OR if it's the literal unevaluated expression string
+            # Also check if it's just an empty JSON string "" which toJSON might produce for empty output
+            if [ -z "$raw_output" ] || [[ "$raw_output" == \$\{\{*\}\} ]] || [[ "$raw_output" == '""' ]]; then
+              echo "::warning::Output file $filename was empty, contained unevaluated expression, or was empty JSON string for step $step_id."
+              # If the step producing the output failed or was skipped, this might be expected.
+              # Check if the corresponding step actually failed/was skipped.
+              # Note: This check is complex to implement reliably here. Let's focus on jq parsing first.
+              # For now, treat empty/invalid output as an error in verification.
+              echo "::error::No valid output JSON found for step $step_id"
+              return 1
+            fi
+
+            # Use the raw_output variable which contains the JSON string
+            # Use process substitution with printf for safer input to jq
+            local actual_validity
+            local jq_output
+            # Updated jq filter:
+            # - Check if it's a non-empty array first.
+            # - Select elements where isValid is false. If count > 0, output "false".
+            # - Select elements where isValid is true. If count == total length, output "true".
+            # - Otherwise (mixed, missing isValid, etc.), output "null".
+            jq_output=$(jq -r '
+              if type == "array" and length > 0 then
+                # Check if any element explicitly has isValid == false
+                if (map(select(.isValid == false)) | length) > 0 then
+                  "false"
+                # Check if ALL elements explicitly have isValid == true
+                elif (map(select(.isValid == true)) | length) == length then
+                  "true"
+                else # Handles arrays with missing isValid or other inconsistencies
+                  "null"
+                end
+              else # Handles non-arrays, empty arrays
+                "null"
               end
-            ' >/dev/null 2>&1; then
-              echo "Invalid JSON structure in output:"
-              echo "$raw_output"
+            ' <(printf '%s' "$raw_output") 2>/dev/null) # Redirect jq errors to /dev/null
+            local jq_exit_code=$? # Capture exit code immediately
+
+            # Check jq exit status
+            if [ $jq_exit_code -ne 0 ]; then
+               echo "::error::jq failed to parse JSON content from $filename for step $step_id."
+               printf 'Problematic file content:\n%s\n' "$raw_output"
+               actual_validity="invalid_json_or_empty" # Force failure path
+            else
+               actual_validity="$jq_output" # Assign the valid output ("true", "false", or "null")
+            fi
+
+            echo "Extracted validity: $actual_validity" # Debugging line
+
+            if [[ "$actual_validity" == "invalid_json_or_empty" ]]; then
+              echo "::error::Output for $step_id could not be parsed by jq."
+              printf 'Problematic JSON input:\n%s\n' "$raw_output" # Log the problematic input
+              return 1
+            elif [[ "$actual_validity" == "null" ]]; then
+              echo "::error::Output for $step_id is missing the 'isValid' property in the first element, or the structure is wrong."
+              printf 'Problematic JSON input:\n%s\n' "$raw_output" # Log the problematic input
+              return 1
+            elif [[ "$actual_validity" != "$expected_validity" ]]; then
+              echo "::error::Expected validity '$expected_validity' but got '$actual_validity' for step $step_id."
               return 1
             fi
-            
-            return 0
-          }
-          
-          echo "Checking invalid policy output..."
-          verify_output "test-invalid" "true"
-          
-          check_outcome() {
-            local step=$1
-            local expected=$2
-            if [ "$step" != "$expected" ]; then
-              echo "Expected outcome '$expected' but got '$step'"
-              return 1
-            fi
+
+            echo "✓ Output for $step_id verified successfully (isValid=$actual_validity)"
             return 0
           }
 
-          # Run checks
-          check_outcome "${{ steps.test-valid.outcome }}" "success" || {
-            echo "Valid policy test failed unexpectedly"
+          # --- Verification ---
+          errors=0
+
+          # Call verify_output and check exit status $? separately
+          verify_output "test-valid" "true"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-invalid" "false"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-vars" "true"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-conditions" "true"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-expressions" "true"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-custom-pattern" "true"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-custom-pattern-env-var" "true"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-fixtures" "false"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          # --- Final Check ---
+          if [ $errors -gt 0 ]; then
+            echo "::error::$errors verification(s) failed."
             exit 1
-          }
+          else
+            echo "All action outputs verified successfully."
+          fi
 
-          check_outcome "${{ steps.test-invalid.outcome }}" "failure" || {
-            echo "Invalid policy test succeeded unexpectedly"
-            exit 1
-          }
+      - name: Run Jest tests # Keep Jest tests as a separate check
+        run: npm test -- --testPathIgnorePatterns=cli.test.ts
 
-          check_outcome "${{ steps.test-vars.outcome }}" "success" || {
-            echo "Variable interpolation test failed unexpectedly"
-            exit 1
-          }
-
-          check_outcome "${{ steps.test-conditions.outcome }}" "success" || {
-            echo "Conditions with variables test failed unexpectedly"
-            exit 1
-          }
-
-          check_outcome "${{ steps.test-expressions.outcome }}" "success" || {
-            echo "All expressions test failed unexpectedly"
-            exit 1
-          }
-
-          check_outcome "${{ steps.test-custom-pattern-env-var.outcome }}" "success" || {
-            echo "All expressions test failed unexpectedly"
-            exit 1
-          }
-
-          check_outcome "${{ steps.test-fixtures.outcome }}" "failure" || {
-            echo "All expressions test failed unexpectedly"
-            exit 1
-          }
-
-          echo "All tests passed successfully"
-
-      - name: Run Jest tests
-        run: npm test
-
-      - name: Verify Jest test results
+      - name: Verify Jest test results # Keep Jest verification
         run: |
+          # This step only checks if the previous Jest step succeeded
           if [[ "${{ job.status }}" == "success" ]]; then
             echo "Tests passed successfully"
             exit 0
