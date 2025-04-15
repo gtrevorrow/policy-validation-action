@@ -1,21 +1,31 @@
 name: Release Package
 
 on:
-  push:
-    branches:
+  workflow_run:
+    workflows: ["Test Policy Validation Action"] # Name of the test workflow (test.yml)
+    types:
+      - completed
+    branches: # Only trigger for runs on these branches
       - main
       - development
 
 permissions:
   contents: write
-  actions: read
+  actions: read # Keep read permission for workflow_run event data
   packages: write
 
 jobs:
   release:
+    # Only run this job if the triggering workflow run was successful
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      # Checkout the specific commit that triggered the test workflow
       - uses: actions/checkout@v3
+        with:
+          # Fetch full history for standard-version changelog generation
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -27,39 +37,55 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      # Handle development branch pushes
-      - name: Publish Test Package
-        if: github.ref == 'refs/heads/development'
+      # Add step to check triggering workflow details
+      - name: Check Triggering Workflow Info
         run: |
+          echo "Triggering workflow run concluded: ${{ github.event.workflow_run.conclusion }}"
+          echo "Workflow run was on branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Workflow run commit SHA: ${{ github.event.workflow_run.head_sha }}"
+
+      # Handle development branch pushes (check head_branch from workflow_run event)
+      - name: Publish Test Package
+        if: github.event.workflow_run.head_branch == 'development'
+        run: |
+          echo "Running on development branch. Preparing beta release..."
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version from package.json: ${CURRENT_VERSION}"
           TIMESTAMP=$(date +%s)
           BETA_VERSION="${CURRENT_VERSION}-beta.${TIMESTAMP}"
-          echo "Updating version to ${BETA_VERSION}"
-          npm version "${BETA_VERSION}" --no-git-tag-version
+          echo "Calculated beta version: ${BETA_VERSION}"
+          echo "Updating version to ${BETA_VERSION} using npm version..."
+          # Add --no-verify to skip test script
+          npm version "${BETA_VERSION}" --no-git-tag-version --no-verify
+          echo "Publishing ${BETA_VERSION} to npm with beta tag..."
           npm publish --tag beta
+          echo "Beta package publish attempt finished."
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Handle main branch pushes
+      # Handle main branch pushes (check head_branch from workflow_run event)
       - name: Configure Git User
-        if: github.ref == 'refs/heads/main'
+        if: github.event.workflow_run.head_branch == 'main'
         run: |
-          git config --global user.name "gtrevorrow"
-          git config --global user.email "gordon.trevorrow@oracle.com"
+          # Use the GITHUB_ACTOR and a generic email for commits made by the action
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Bump Version and Tag for Main
-        if: github.ref == 'refs/heads/main'
+      - name: Bump Version, Tag, and Push for Main
+        if: github.event.workflow_run.head_branch == 'main'
         run: |
-          npx standard-version
+          # Run standard-version - it will bump version, create changelog, commit, and tag
+          npx standard-version --commit-all --release-as patch # Or minor/major as needed, or let it detect
           TAG_NAME=$(node -p "require('./package.json').version")
           echo "Bumped version to: $TAG_NAME"
-          git push --follow-tags origin main
+          # Push the commit and the tag to the main branch
+          git push --follow-tags origin ${{ github.event.workflow_run.head_branch }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # standard-version uses this for commit links
 
       - name: Publish Production Package
-        if: github.ref == 'refs/heads/main'
+        if: github.event.workflow_run.head_branch == 'main'
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access public
@@ -67,10 +93,13 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main'
+        if: github.event.workflow_run.head_branch == 'main'
         run: |
           TAG_NAME=$(node -p "require('./package.json').version")
           echo "Creating GitHub release for tag: $TAG_NAME"
-          gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes-file ./CHANGELOG.md
+          # Use gh release create with --generate-notes or use the CHANGELOG.md
+          gh release create "$TAG_NAME" --generate-notes
+          # Alternative using CHANGELOG.md:
+          # gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes-file ./CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
