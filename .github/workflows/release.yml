@@ -5,9 +5,6 @@ on:
     workflows: ["Test Policy Validation Action"] # Name of the test workflow (test.yml)
     types:
       - completed
-    branches: # Only trigger for runs on these branches
-      - main
-      - development
 
 permissions:
   contents: write
