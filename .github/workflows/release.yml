@@ -17,6 +17,10 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      - name: Dump workflow_run event for debugging
+        run: |
+          echo "==== workflow_run event payload ===="
+          echo '${{ toJson(github.event) }}'
       # Checkout the specific commit that triggered the test workflow
       - uses: actions/checkout@v3
         with:
