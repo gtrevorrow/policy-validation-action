@@ -1,3 +1,4 @@
+# NOTE: This workflow must exist on the default branch (main) for workflow_run to trigger!
 name: Release Package
 
 on:
