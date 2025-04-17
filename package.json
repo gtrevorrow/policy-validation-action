@@ -34,7 +34,7 @@
     "start": "node dist/index.js",
     "test:watch": "jest --watch --verbose",
     "test:coverage": "jest --coverage",
-    "prepare": "npm run build",
+    "prepare": "npm run build && husky install",
     "prepublishOnly": "npm test",
     "test:cli": "chmod +x ./scripts/test-cli-install.sh && ./scripts/test-cli-install.sh",
     "test:cli:validator": "chmod +x ./scripts/test-validator.sh && ./scripts/test-validator.sh",
@@ -44,7 +44,8 @@
     "security:report": "npm audit --json > security-report.json",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
-    "release:patch": "standard-version --release-as patch"
+    "release:patch": "standard-version --release-as patch",
+    "commit": "cz"
   },
   "author": "Gordon Trevorrow",
   "license": "UPL-1.0",
@@ -72,7 +73,12 @@
     "jest-junit": "^15.0.0",
     "standard-version": "^9.0.0",
     "ts-jest": "^29.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "@commitlint/cli": "^17.0.0",
+    "@commitlint/config-conventional": "^17.0.0",
+    "commitizen": "^4.2.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^8.0.0"
   },
   "jest-junit": {
     "outputDirectory": "test-results",
@@ -122,5 +128,10 @@
         "section": "Tests"
       }
     ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
