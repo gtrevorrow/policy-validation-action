@@ -79,6 +79,7 @@
     "commitizen": "^4.2.0",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^8.0.0"
+
   },
   "jest-junit": {
     "outputDirectory": "test-results",
