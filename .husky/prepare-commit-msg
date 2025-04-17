@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# filepath: /Users/gordon/Documents/code/policy-validation-action/.husky/prepare-commit-msg
+. "$(dirname -- "$0")/_/husky.sh"
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+SHA1=$3
+
+# Check if the commit message already contains a Signed-off-by line
+if ! grep -q "^Signed-off-by:" "$COMMIT_MSG_FILE"; then
+  # If not, append it. Use the committer info from git config.
+  NAME=$(git config user.name)
+  EMAIL=$(git config user.email)
+  if [ -n "$NAME" ] && [ -n "$EMAIL" ]; then
+    printf "\nSigned-off-by: %s <%s>" "$NAME" "$EMAIL" >> "$COMMIT_MSG_FILE"
+  else
+    echo "Error: Git user name or email not set. Cannot add Signed-off-by line." >&2
+    echo "Please configure them using:" >&2
+    echo "  git config --global user.name \"Your Name\"" >&2
+    echo "  git config --global user.email \"your.email@example.com\"" >&2
+    exit 1
+  fi
+fi
+
+exit 0
