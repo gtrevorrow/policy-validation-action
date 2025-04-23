@@ -299,19 +299,19 @@ jobs:
             # - Select elements where isValid is true. If count == total length, output "true".
             # - Otherwise (mixed, missing isValid, etc.), output "null".
             jq_output=$(jq -r '
-              if type == "array" and length > 0 then
-                # Check if any element explicitly has isValid == false
-                if (map(select(.isValid == false)) | length) > 0 then
-                  "false"
-                # Check if ALL elements explicitly have isValid == true
-                elif (map(select(.isValid == true)) | length) == length then
-                  "true"
-                else # Handles arrays with missing isValid or other inconsistencies
+              def unwrap: if type=="string" then fromjson else . end;
+              unwrap
+              | if type=="array" and length > 0 then
+                  if (map(select(.isValid == false)) | length) > 0 then
+                    "false"
+                  elif (map(select(.isValid == true)) | length) == length then
+                    "true"
+                  else
+                    "null"
+                  end
+                else
                   "null"
                 end
-              else # Handles non-arrays, empty arrays
-                "null"
-              end
             ' <(printf '%s' "$raw_output") 2>/dev/null) # Redirect jq errors to /dev/null
             local jq_exit_code=$? # Capture exit code immediately
 

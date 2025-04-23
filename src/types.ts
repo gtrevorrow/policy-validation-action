@@ -5,21 +5,10 @@ export interface Logger {
     error(message: string): void;
 }
 
-export interface ValidationResult {
-    isValid: boolean;
-    expressions: string[];
-    errors?: string[];
-}
-
 export interface PolicyError {
     statement: string;
     position: number;
     message: string;
-}
-
-export interface ParseResult {
-    isValid: boolean;
-    errors: PolicyError[];
 }
 
 export enum ExpressionType {
@@ -29,12 +18,10 @@ export enum ExpressionType {
     Admit = 'Admit'
 }
 
-export interface ValidationOutput {
-    file: string;
-    isValid: boolean;
-    statements: string[];
-    errors: any[];
-    validationResults?: ValidationPipelineResult[];
+/** Final per‐file validation output, with one entry per validator run */
+export interface FileValidationResult {
+  file: string;
+  results: ValidationPipelineResult[]; // includes syntax + other validators
 }
 
 export interface ValidationPipelineResult {

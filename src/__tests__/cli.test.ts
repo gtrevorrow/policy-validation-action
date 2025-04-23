@@ -61,25 +61,23 @@ describe('CLI', () => {
         throw new Error('No valid JSON found in output:\n' + output);
     };
 
-    test('invalid policy outputs JSON with isValid=false', async () => {
-        const { stdout, stderr } = await execAsync('node ./dist/index.js validate ./src/__tests__/fixtures/invalid.tf')
-            .catch(error => error);
-        
+    test('invalid.tf policy validation outputs is JSON with isValid=false', async () => {
+        const { stdout, stderr } = await execWithStringOutput(
+          `node ${binPath} validate src/__tests__/fixtures/invalid.tf`
+        );
         debugOutput({ stdout, stderr });
+
         const output = getJsonFromOutput(stdout);
-        // Check if output is an object with results field
-        if (output.results) {
-            const results = JSON.parse(output.results);
-            expect(Array.isArray(results)).toBe(true);
-            expect(results[0].isValid).toBe(false);
-            expect(results[0].errors.length).toBeGreaterThan(0);
-        } else {
-            // Fallback to old structure
-            expect(Array.isArray(output)).toBe(true);
-            expect(output[0].isValid).toBe(false);
-            expect(output[0].errors.length).toBeGreaterThan(0);
-        }
-    }, 15000); // 15 second timeout
+        const results = output.results ? JSON.parse(output.results) : output;
+        expect(Array.isArray(results)).toBe(true);
+
+        // Syntax validator runs first; it should report passed=false
+        const syntaxReport = results[0].results.find((r: any) =>
+          r.validatorName.includes('Syntax')
+        );
+        expect(syntaxReport).toBeDefined();
+        expect(syntaxReport!.reports[0].passed).toBe(false);
+    }, 15000);
 
     test('error conditions output JSON with error field', async () => {
         const { stdout, stderr } = await execAsync('node ./dist/index.js validate ./nonexistent.tf')
@@ -96,46 +94,26 @@ describe('CLI', () => {
     test('using files option works correctly', async () => {
         const filesToProcess = 'valid.tf,invalid.tf';
         const fixturesDir = './src/__tests__/fixtures';
-        const cliPath = binPath;
-        // Explicitly test with default exitOnError=true
-        const command = `node ${cliPath} validate ${fixturesDir} --files ${filesToProcess}`;
+        const command = `node ${binPath} validate ${fixturesDir} --files ${filesToProcess}`;
 
         try {
-            // This command is expected to fail because invalid.tf causes exitOnError=true
             await execAsync(command);
-            // If execAsync doesn't throw, the test should fail because an error was expected
-            throw new Error('CLI command succeeded unexpectedly when it should have failed due to invalid.tf');
+            throw new Error('Expected failure due to invalid.tf');
         } catch (error: any) {
-            // Check if the error is due to the expected validation failure
-            if (error.code && error.code !== 0 && error.stderr) {
-                debugOutput({ stdout: error.stdout, stderr: error.stderr }); // Log output from the error object
+            debugOutput({ stdout: error.stdout, stderr: error.stderr });
 
-                // Verify that the error message indicates failure due to invalid.tf
-                expect(error.stderr).toContain('Validation failed for');
-                expect(error.stderr).toContain('invalid.tf');
-                expect(error.stderr).toContain('exitOnError is true. Stopping.');
+            // Confirm the new top‑level failure message
+            expect(error.stderr).toContain('Policy validation failed for one or more files/checks.');
 
-                // Also check stdout for the partial results JSON if needed
-                if (error.stdout && error.stdout.includes('"results":')) {
-                   try {
-                       const output = JSON.parse(error.stdout).results;
-                       expect(output).toBeInstanceOf(Array);
-                       // Check that both files were attempted (results might include both)
-                       expect(output.some((o: any) => o.file.endsWith('valid.tf'))).toBe(true);
-                       expect(output.some((o: any) => o.file.endsWith('invalid.tf'))).toBe(true);
-                   } catch (parseError) {
-                       // Ignore JSON parsing errors if stderr confirms the expected failure
-                       console.warn('Could not parse stdout JSON from failed command, but stderr indicates expected failure.');
-                   }
-                }
-                // If stderr contains the expected messages, the test passes
-            } else {
-                // If the error is not the expected one, re-throw it
-                console.error('Unexpected test failure:', error);
-                throw error;
-            }
+            // Extract and parse JSON from stdout
+            const outputObj = getJsonFromOutput(error.stdout);
+            const results = outputObj.results ? JSON.parse(outputObj.results) : outputObj;
+
+            expect(Array.isArray(results)).toBe(true);
+            expect(results.some((o: any) => o.file.endsWith('valid.tf'))).toBe(true);
+            expect(results.some((o: any) => o.file.endsWith('invalid.tf'))).toBe(true);
         }
-    }, 15000); // 15 second timeout
+    }, 15000);
 
     test('file-extension command-line flag should work correctly', async () => {
         // Create a temp directory with two files - one .tf and one .txt
@@ -301,5 +279,18 @@ describe('CLI', () => {
             fs.unlinkSync(txtFile);
             fs.rmdirSync(tempDir);
         }
+    }, 15000);
+
+    test('invalid policy outputs JSON with error field', async () => {
+        const { stdout, stderr } = await execWithStringOutput(
+          `node ${binPath} validate src/__tests__/fixtures/invalid.tf`
+        );
+        const output = getJsonFromOutput(stdout);
+        const results = output.results ? JSON.parse(output.results) : output;
+
+        // syntax validator is first; expect its report.passed=false
+        const syntaxReport = results[0].results.find((r: any) => r.validatorName.includes('Syntax'));
+        expect(syntaxReport).toBeDefined();
+        expect(syntaxReport!.reports[0].passed).toBe(false);
     }, 15000);
 });

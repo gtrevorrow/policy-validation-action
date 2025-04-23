@@ -104,124 +104,69 @@ async function processFile(filePath, pattern, extractor = 'regex', logger) {
  If the path is not accessible, an error is logged and an empty array is returned.
 */
 async function findPolicyFiles(dir, options, logger) {
+    var _a, _b;
     try {
         // First check if path exists and is accessible
-        try {
-            await fs.promises.access(dir, fs.constants.R_OK);
-        }
-        catch (error) {
-            logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is not accessible: ${error}`);
-            return [];
-        }
-        const stats = await fs.promises.stat(dir);
-        // If it's a file, check if it matches criteria
-        if (stats.isFile()) {
-            logger === null || logger === void 0 ? void 0 : logger.debug(`Processing single file: ${dir}`);
-            // If specific files are provided, check if this file is in that list
-            if ((options === null || options === void 0 ? void 0 : options.fileNames) && options.fileNames.length > 0) {
-                const fileName = path.basename(dir);
-                return options.fileNames.includes(fileName) ? [dir] : [];
-            }
-            // If file extension is specified, check if file matches
-            if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !dir.endsWith(options.fileExtension)) {
-                logger === null || logger === void 0 ? void 0 : logger.debug(`File ${dir} doesn't match extension ${options.fileExtension}, skipping`);
-                return [];
-            }
-            // Include the file
-            return [dir];
-        }
-        if (!stats.isDirectory()) {
-            logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is neither a file nor a directory`);
-            return [];
-        }
-        // If we have specific file names, we'll look for those files directly
-        if ((options === null || options === void 0 ? void 0 : options.fileNames) && options.fileNames.length > 0) {
-            const files = [];
-            for (const fileName of options.fileNames) {
-                const filePath = path.join(dir, fileName);
-                try {
-                    await fs.promises.access(filePath, fs.constants.R_OK);
-                    const fileStats = await fs.promises.stat(filePath);
-                    if (fileStats.isFile()) {
-                        files.push(filePath);
-                    }
-                }
-                catch (error) {
-                    // File doesn't exist or isn't accessible, just skip it
-                    logger === null || logger === void 0 ? void 0 : logger.debug(`File ${fileName} not found in ${dir}`);
-                }
-            }
-            return files;
-        }
-        // Otherwise, scan the directory recursively
-        const files = [];
-        try {
-            const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-            logger === null || logger === void 0 ? void 0 : logger.debug(`Scanning directory with ${entries.length} entries`);
-            for (const entry of entries) {
-                const fullPath = path.join(dir, entry.name);
-                try {
-                    if (entry.isDirectory()) {
-                        logger === null || logger === void 0 ? void 0 : logger.debug(`Recursing into directory: ${fullPath}`);
-                        files.push(...await findPolicyFiles(fullPath, options, logger));
-                    }
-                    else if (entry.isFile()) {
-                        // If file extension is specified, check if file matches
-                        if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !entry.name.endsWith(options.fileExtension)) {
-                            logger === null || logger === void 0 ? void 0 : logger.debug(`File ${entry.name} doesn't match extension ${options.fileExtension}, skipping`);
-                            continue;
-                        }
-                        logger === null || logger === void 0 ? void 0 : logger.debug(`Found file: ${fullPath}`);
-                        files.push(fullPath);
-                    }
-                }
-                catch (error) {
-                    logger === null || logger === void 0 ? void 0 : logger.error(`Error processing entry ${fullPath}: ${error}`);
-                    // Continue with next entry instead of failing completely
-                    continue;
-                }
-            }
-        }
-        catch (error) {
-            // Fallback to older readdir method if withFileTypes fails
-            logger === null || logger === void 0 ? void 0 : logger.warn(`Advanced directory reading failed, falling back to basic mode: ${error}`);
-            const names = await fs.promises.readdir(dir);
-            for (const name of names) {
-                const fullPath = path.join(dir, name);
-                try {
-                    const entryStats = await fs.promises.stat(fullPath);
-                    if (entryStats.isDirectory()) {
-                        files.push(...await findPolicyFiles(fullPath, options, logger));
-                    }
-                    else if (entryStats.isFile()) {
-                        // If file extension is specified, check if file matches
-                        if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !name.endsWith(options.fileExtension)) {
-                            logger === null || logger === void 0 ? void 0 : logger.debug(`File ${name} doesn't match extension ${options.fileExtension}, skipping`);
-                            continue;
-                        }
-                        logger === null || logger === void 0 ? void 0 : logger.debug(`Found file: ${fullPath}`);
-                        files.push(fullPath);
-                    }
-                }
-                catch (error) {
-                    logger === null || logger === void 0 ? void 0 : logger.error(`Error processing entry ${fullPath}: ${error}`);
-                    continue;
-                }
-            }
-        }
-        return files;
+        await fs.promises.access(dir, fs.constants.R_OK);
     }
     catch (error) {
-        logger === null || logger === void 0 ? void 0 : logger.error(`Error processing path ${dir}: ${error}`);
+        logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is not accessible: ${error}`);
         return [];
     }
+    const stats = await fs.promises.stat(dir);
+    // If it's a file, apply name/extension filters
+    if (stats.isFile()) {
+        const base = path.basename(dir);
+        if (((_a = options === null || options === void 0 ? void 0 : options.fileNames) === null || _a === void 0 ? void 0 : _a.length) && !options.fileNames.includes(base)) {
+            return [];
+        }
+        if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !dir.endsWith(options.fileExtension)) {
+            return [];
+        }
+        return [dir];
+    }
+    if (!stats.isDirectory()) {
+        logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is neither a file nor a directory`);
+        return [];
+    }
+    // If specific fileNames provided, pick those
+    if ((_b = options === null || options === void 0 ? void 0 : options.fileNames) === null || _b === void 0 ? void 0 : _b.length) {
+        const found = [];
+        for (const name of options.fileNames) {
+            const candidate = path.join(dir, name);
+            try {
+                const st = await fs.promises.stat(candidate);
+                if (st.isFile())
+                    found.push(candidate);
+            }
+            catch (_c) {
+                logger === null || logger === void 0 ? void 0 : logger.debug(`File ${name} not found in ${dir}`);
+            }
+        }
+        return found;
+    }
+    // Otherwise recursively scan directory
+    const results = [];
+    for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            results.push(...await findPolicyFiles(fullPath, options, logger));
+        }
+        else if (entry.isFile()) {
+            if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !entry.name.endsWith(options.fileExtension)) {
+                continue;
+            }
+            results.push(fullPath);
+        }
+    }
+    return results;
 }
 /**
  * Validates OCI policy statements for syntax correctness.
  * This is a wrapper around OciSyntaxValidator for backward compatibility.
  * @param statements The policy statements to validate
  * @param logger Optional logger for recording diagnostic info
- * @returns Parse result with validity status and any errors
+ * @returns Object with validity status and any errors
  */
 async function validatePolicySyntax(statements, logger) {
     const syntaxValidator = new OciSyntaxValidator_1.OciSyntaxValidator(logger);
@@ -247,7 +192,7 @@ async function validatePolicySyntax(statements, logger) {
     };
 }
 /**
- * Main function to validate policies in given path with provided options
+ * Validate policies in given path with provided options
  * This function will find all policy files, extract statements, validate syntax,
  * and run the CIS benchmark validation if requested.
  * @param scanPath The path to scan for policy files
@@ -277,105 +222,21 @@ async function validatePolicies(scanPath, options, logger) {
         // throw new Error(message); // Original behavior
     }
     // Track all validation outputs
-    const allOutputs = [];
-    // Track all policy statements for validation pipeline
-    const allPolicyStatements = [];
+    const results = [];
     // Process each file
     for (const file of filesToProcess) {
         logger.info(`Processing file ${file}`);
         const expressions = await processFile(file, options.pattern, options.extractorType, logger);
-        let fileIsValid = true;
-        let fileErrors = [];
-        let validationResults = undefined; // Hold potential pipeline results per file if needed later
-        // Collect statements for overall validation pipeline
-        if (expressions.length > 0) {
-            allPolicyStatements.push(...expressions);
-            // Validate syntax for this file's expressions
-            const syntaxResult = await validatePolicySyntax(expressions, logger);
-            fileIsValid = syntaxResult.isValid;
-            fileErrors = syntaxResult.errors;
-            // Exit on first error if required and this file has errors
-            if (!fileIsValid && options.exitOnError) {
-                // Add the current file's result before returning
-                allOutputs.push({
-                    file,
-                    isValid: fileIsValid,
-                    statements: expressions,
-                    errors: fileErrors,
-                    // validationResults: undefined // No pipeline results yet
-                });
-                logger.error(`Validation failed for ${file} and exitOnError is true. Stopping.`);
-                return allOutputs;
-            }
+        // build a pipeline per file
+        const pipeline = new ValidationPipeline_1.ValidationPipeline(logger)
+            .addValidator(new OciSyntaxValidator_1.OciSyntaxValidator(logger));
+        if (options.runCisBenchmark) {
+            pipeline.addValidator(new OciCisBenchmarkValidator_1.OciCisBenchmarkValidator(logger));
         }
-        else {
-            logger.info(`No policy statements found in ${file}`);
-            // File is considered valid if no statements are found to be invalid
-            fileIsValid = true;
-            fileErrors = [];
-        }
-        // Add an output entry for every processed file
-        allOutputs.push({
-            file,
-            isValid: fileIsValid,
-            statements: expressions,
-            errors: fileErrors,
-            // validationResults will be added later if pipeline runs
-        });
+        const pipelineResults = await pipeline.validate(expressions);
+        results.push({ file, results: pipelineResults });
     }
-    // Run the validation pipeline with all statements if requested
-    if (allPolicyStatements.length > 0 && options.runCisBenchmark) {
-        logger.info('Running validation pipeline on all collected statements...');
-        // Set up validation pipeline
-        const validationPipeline = new ValidationPipeline_1.ValidationPipeline(logger);
-        // Add validators
-        // validationPipeline.addValidator(new OciSyntaxValidator(logger)); // Syntax already checked per file
-        validationPipeline.addValidator(new OciCisBenchmarkValidator_1.OciCisBenchmarkValidator(logger));
-        // Run validation
-        const pipelineResults = await validationPipeline.validate(allPolicyStatements);
-        // Process results and potentially update overall validity or add to outputs
-        let pipelineHasIssues = false;
-        for (const validatorResult of pipelineResults) {
-            logger.info(`Pipeline Results from ${validatorResult.validatorName}:`);
-            for (const report of validatorResult.reports) {
-                if (!report.passed) {
-                    pipelineHasIssues = true;
-                    logger.warn(`Failed check: ${report.checkId} - ${report.name}`);
-                    for (const issue of report.issues) {
-                        logger.warn(`- [${issue.severity.toUpperCase()}] ${issue.message} (Statement: "${issue.statement || 'N/A'}")`);
-                    }
-                }
-                else {
-                    logger.info(`Passed check: ${report.checkId} - ${report.name}`);
-                }
-            }
-        }
-        // Add pipeline results to the first output object for simplicity in current structure
-        // A more robust approach might distribute results per file or have a separate output field
-        if (allOutputs.length > 0) {
-            // Check if the first output already exists, otherwise create a placeholder if needed
-            if (!allOutputs[0]) {
-                allOutputs[0] = { file: "Pipeline Summary", isValid: !pipelineHasIssues, statements: [], errors: [] };
-            }
-            allOutputs[0].validationResults = pipelineResults;
-            // Optionally, mark the first file as invalid if the pipeline failed and exitOnError is true
-            if (pipelineHasIssues) {
-                allOutputs[0].isValid = false;
-            }
-        }
-        // Return early if pipeline issues found and exitOnError is true
-        if (pipelineHasIssues && options.exitOnError) {
-            logger.error('Validation pipeline found issues and exitOnError is true. Stopping.');
-            // Ensure the overall status reflects the failure
-            const finalOutputs = allOutputs.map(o => ({ ...o, isValid: o.isValid && !pipelineHasIssues }));
-            return finalOutputs;
-        }
-    }
-    logger.info('Policy validation processing completed');
-    // Ensure overall validity reflects pipeline results if run
-    const finalOverallValidity = !allOutputs.some(o => !o.isValid);
-    logger.info(`Overall validation status: ${finalOverallValidity ? 'Success' : 'Failed'}`);
-    return allOutputs;
+    return results;
 }
 /**
  * Main entry point for running the policy validation
@@ -391,6 +252,17 @@ async function runAction(platform) {
         const inputPath = platform.getInput('path') || '.';
         const scanPath = resolvePath(inputPath);
         logger.info(`Resolved path: ${scanPath}`);
+        // ❌ Path existence/pre‑accessibility check BEFORE validation
+        try {
+            await fs.promises.access(scanPath, fs.constants.R_OK);
+        }
+        catch (err) {
+            const errorMsg = `Path ${scanPath} is not accessible: ${err}`;
+            logger.error(errorMsg);
+            platform.setOutput('error', errorMsg);
+            platform.setResult(false, errorMsg);
+            return;
+        }
         // Build options from inputs
         const options = {
             extractorType: platform.getInput('extractor') || 'regex',
@@ -419,23 +291,14 @@ async function runAction(platform) {
         }
         logger.info(`Exit on error: ${options.exitOnError}`);
         logger.info(`Run CIS Benchmark: ${options.runCisBenchmark}`);
-        // Check if path exists and is accessible
-        try {
-            await fs.promises.access(scanPath, fs.constants.R_OK);
-        }
-        catch (error) {
-            const errorMsg = `Path ${scanPath} is not accessible: ${error}`;
-            logger.error(errorMsg);
-            platform.setOutput('error', errorMsg);
-            platform.setResult(false, errorMsg);
-            return;
-        }
-        // Run validation
-        const results = await validatePolicies(scanPath, options, logger);
-        // Set outputs
-        platform.setOutput('results', JSON.stringify(results));
-        // Determine success/failure based on the isValid flag in the results array
-        const overallSuccess = results.every(output => output.isValid);
+        // Run policy validation
+        const outputs = await validatePolicies(scanPath, options, logger);
+        // emit JSON
+        platform.setOutput('results', JSON.stringify(outputs));
+        // determine overallSuccess
+        const overallSuccess = outputs
+            .flatMap(o => o.results)
+            .every(r => r.reports.every(rep => rep.passed));
         if (overallSuccess) {
             platform.setResult(true, 'Policy validation succeeded');
         }

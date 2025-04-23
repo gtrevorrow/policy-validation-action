@@ -161,59 +161,36 @@ This pattern captures everything between the square brackets, including policy s
 
 ### CLI Output Format
 
-The CLI produces JSON-formatted output containing an array of validation results. Each result provides details for a specific file and has the following structure:
+The CLI emits a JSON array of **file validation results**, each containing:
+
 ```json
 [
   {
     "file": "path/to/file.tf",
-    "isValid": boolean,
-    "statements": [ "policy statement 1", "policy statement 2", ... ],
-    "errors": [
+    "results": [
       {
-        "statement": "failed statement",
-        "position": number,
-        "message": "error message"
+        "validatorName": "OCI Syntax Validator",
+        "validatorDescription": "...",
+        "reports": [
+          {
+            "checkId": "OCI-SYNTAX-1",
+            "name": "OCI Policy Syntax",
+            "passed": false,
+            "issues": [ { ... } ]
+          }
+        ]
+      },
+      {
+        "validatorName": "OCI CIS Benchmark Validator",
+        "validatorDescription": "...",
+        "reports": [ { ... }, ... ]
       }
     ]
   }
 ]
 ```
-- If all policies are valid, `isValid` will be `true` and the `errors` array will be empty.
-- If any policy fails validation, `isValid` will be `false` and the `errors` array will contain detailed error objects.
 
-#### Successful Output Example:
-```json
-[
-  {
-    "file": "./terraform/example.tf",
-    "isValid": true,
-    "statements": [
-      "Allow group Administrators to manage all-resources in tenancy"
-    ],
-    "errors": []
-  }
-]
-```
-
-#### Unsuccessful Output Example:
-```json
-[
-  {
-    "file": "./terraform/bad_example.tf",
-    "isValid": false,
-    "statements": [
-      "Allow BadSyntax manage"
-    ],
-    "errors": [
-      {
-        "statement": "Allow BadSyntax manage",
-        "position": 6,
-        "message": "mismatched input 'BadSyntax' expecting {ANYUSER, RESOURCE, DYNAMICGROUP, GROUP, SERVICE}"
-      }
-    ]
-  }
-]
-```
+Consumers can inspect each validator’s reports per file. Syntax failures will appear in the first validator’s report.
 
 ## Usage in CI Platforms
 
