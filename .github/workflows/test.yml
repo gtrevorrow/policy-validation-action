@@ -302,12 +302,10 @@ jobs:
               def unwrap: if type=="string" then fromjson else . end;
               unwrap
               | if type=="array" and length > 0 then
-                  if (map(select(.isValid == false)) | length) > 0 then
+                  if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) then
                     "false"
-                  elif (map(select(.isValid == true)) | length) == length then
-                    "true"
                   else
-                    "null"
+                    "true"
                   end
                 else
                   "null"
