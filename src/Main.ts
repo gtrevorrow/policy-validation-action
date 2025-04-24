@@ -169,19 +169,19 @@ export {
 };
 
 /**
- * Validate policies in given path with provided options
- * This function will find all policy files, extract statements, validate syntax,
- * and run the CIS benchmark validation if requested.
- * @param scanPath The path to scan for policy files
- * @param options Validation options including extractor type, pattern, file names, etc.
- * @param logger Optional logger for recording diagnostic info
- * @returns An array of validation outputs for each file processed
- * Each output contains the file name, validity status, extracted statements, and any errors.
- * 
- * If exitOnError is true and validation fails, the function will return early.
- * If runCisBenchmark is true, the CIS benchmark validation will be performed..
- * @throws Error if no files are found or if the path is not accessible
- * @throws Error if any file is not accessible
+ * Validate policies at the given path using the specified options.
+ * @param scanPath Path (file or directory) to scan for policy files.
+ * @param options ValidationOptions including:
+ *   - extractorType: 'regex' or custom extractor
+ *   - pattern?: regex string for statement extraction
+ *   - fileExtension?: filter files by extension
+ *   - fileNames?: explicit list of filenames to include
+ *   - exitOnError: stop early on first syntax failure
+ *   - runCisBenchmark: include CIS benchmark validation
+ * @param logger Logger instance for diagnostic output.
+ * @returns Promise<FileValidationResult[]> 
+ *   Array of per-file results; each has `file` and `results[]` of validator reports.
+ *   Returns an empty array if no files match the criteria.
  */
 export async function validatePolicies(
   scanPath: string,
@@ -204,23 +204,31 @@ export async function validatePolicies(
     // throw new Error(message); // Original behavior
   }
 
-  // Track all validation outputs
+  // Track all validation outputs and collect expressions for global pipeline
   const results: FileValidationResult[] = [];
-
-  // Process each file
+  const allExpressions: string[] = [];
+  const localPipeline = new ValidationPipeline(logger);
+  const globalPipeline = new ValidationPipeline(logger);
+  // Per-file local pipeline
   for (const file of filesToProcess) {
     logger.info(`Processing file ${file}`);
     const expressions = await processFile(file, options.pattern, options.extractorType as ExtractorType, logger);
+    allExpressions.push(...expressions);
+    localPipeline.addValidator(new OciSyntaxValidator(logger));
 
-    // build a pipeline per file
-    const pipeline = new ValidationPipeline(logger)
-      .addValidator(new OciSyntaxValidator(logger));
-    if (options.runCisBenchmark) {
-      pipeline.addValidator(new OciCisBenchmarkValidator(logger));
-    }
-    const pipelineResults = await pipeline.validate(expressions);
+    const syntaxResults = await localPipeline.validate(expressions);
 
-    results.push({ file, results: pipelineResults });
+    results.push({ file, results: syntaxResults });
+  }
+
+  // Global CIS benchmark pipeline, if requested
+  if (options.runCisBenchmark && allExpressions.length > 0) {
+    logger.info('Running global CIS benchmark validation on all statements...');
+    globalPipeline.addValidator(new OciCisBenchmarkValidator(logger));
+
+    const cisResults = await globalPipeline.validate(allExpressions);
+
+    results.push({ file: 'CIS Benchmark', results: cisResults });
   }
 
   return results;
