@@ -43,28 +43,13 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findPolicyFiles = findPolicyFiles;
 exports.processFile = processFile;
-exports.validatePolicySyntax = validatePolicySyntax;
-exports.formatPolicyStatements = formatPolicyStatements;
 exports.validatePolicies = validatePolicies;
 exports.runAction = runAction;
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const ExtractorFactory_1 = __nccwpck_require__(9727);
 const ValidationPipeline_1 = __nccwpck_require__(3220);
-const OciCisBenchmarkValidator_1 = __nccwpck_require__(1122);
-const OciSyntaxValidator_1 = __nccwpck_require__(6850);
-/**
- * Function to format policy statements for output
- * This function ensures that each statement is on its own line and properly formatted.
- * It is used to prepare the output for better readability.
- * @param expressions
- * @returns  Formatted string of policy statements
- * Each statement is separated by a newline character.
- */
-function formatPolicyStatements(expressions) {
-    // Ensure each statement is on its own line with proper separation
-    return expressions.map(expr => expr.trim()).join('\n');
-}
+const ValidatorFactory_1 = __nccwpck_require__(7101);
 /**
  * Function to process a file and extract policy statements
  * @param filePath The path to the file to process
@@ -162,50 +147,35 @@ async function findPolicyFiles(dir, options, logger) {
     return results;
 }
 /**
- * Validates OCI policy statements for syntax correctness.
- * This is a wrapper around OciSyntaxValidator for backward compatibility.
- * @param statements The policy statements to validate
- * @param logger Optional logger for recording diagnostic info
- * @returns Object with validity status and any errors
- */
-async function validatePolicySyntax(statements, logger) {
-    const syntaxValidator = new OciSyntaxValidator_1.OciSyntaxValidator(logger);
-    const validationReports = await syntaxValidator.validate(statements);
-    // Process validation results into the expected ParseResult format
-    const syntaxReport = validationReports[0]; // We expect only one report from OciSyntaxValidator
-    const isValid = syntaxReport.passed;
-    // Convert validation issues to PolicyError format
-    const errors = [];
-    if (!isValid) {
-        for (const issue of syntaxReport.issues) {
-            errors.push({
-                statement: issue.statement,
-                position: issue.message.includes('position') ?
-                    parseInt(issue.message.split('position ')[1].split(':')[0]) : 0,
-                message: issue.message.includes(':') ? issue.message.split(':')[1].trim() : issue.message
-            });
-        }
-    }
-    return {
-        isValid,
-        errors
-    };
-}
-/**
  * Validate policies at the given path using the specified options.
+ *
+ * This function processes policy files found at `scanPath`. For each file, it extracts
+ * policy statements based on `options.extractorType` and `options.pattern`.
+ * These statements are then run through a `ValidationPipeline`.
+ *
+ * The pipeline includes:
+ *   - A per-file syntax validation (OciSyntaxValidator) on each matching file.
+ *   - If `options.runCisBenchmark` is true, a global CIS benchmark validation
+ *     (OciCisBenchmarkValidator) on all extracted statements.
+ *
  * @param scanPath Path (file or directory) to scan for policy files.
- * @param options ValidationOptions including:
- *   - extractorType: 'regex' or custom extractor
- *   - pattern?: regex string for statement extraction
- *   - fileExtension?: filter files by extension
- *   - fileNames?: explicit list of filenames to include
- *   - exitOnError: stop early on first syntax failure
- *   - runCisBenchmark: include CIS benchmark validation
+ * @param options ValidationOptions:
+ *   - extractorType: 'regex' or a custom extractor type
+ *   - pattern?: Regex string for statement extraction
+ *   - fileExtension?: Only include files with this extension
+ *   - fileNames?: Explicit list of filenames to process
+ *   - exitOnError: Stop per‐file syntax processing on first error (Note: behavior might be validator-specific)
+ *   - runCisBenchmark: If true, include global CIS benchmark validation in the pipeline
  * @param logger Logger instance for diagnostic output.
- * @returns Promise<FileValidationResult[]>
- *   Array of per-file results; each has `file` and `results[]` of validator reports.
- *   Returns an empty array if no files match the criteria.
- */
+ * @returns Promise<FileValidationResult[]>:
+ *   - An array of `FileValidationResult`. Each entry corresponds to a processed file
+ *     and contains the `file` path and an array of `ValidationPipelineResult` objects.
+ *   - Each `ValidationPipelineResult` includes the `validatorName`, `validatorDescription`,
+ *     and an array of `ValidationReport` objects from that validator.
+ *   - If `runCisBenchmark` is true, an additional `FileValidationResult` with `file: 'CIS Benchmark'`
+ *     will be included, containing reports from the CIS benchmark validator for all statements.
+ *   - Returns an empty array if no files match the criteria or no statements are extracted.
+  */
 async function validatePolicies(scanPath, options, logger) {
     // Find all policy files
     const filesToProcess = await findPolicyFiles(scanPath, {
@@ -224,22 +194,32 @@ async function validatePolicies(scanPath, options, logger) {
     // Track all validation outputs and collect expressions for global pipeline
     const results = [];
     const allExpressions = [];
-    const localPipeline = new ValidationPipeline_1.ValidationPipeline(logger);
-    const globalPipeline = new ValidationPipeline_1.ValidationPipeline(logger);
+    // Use validator configuration if provided, otherwise use defaults
+    const validatorConfig = options.validatorConfig || {
+        runLocalValidators: true,
+        runGlobalValidators: options.runCisBenchmark
+    };
+    // Create pipelines using the ValidatorFactory
+    const localPipeline = validatorConfig.runLocalValidators ?
+        ValidatorFactory_1.ValidatorFactory.createPipeline('local', {}, logger) :
+        new ValidationPipeline_1.ValidationPipeline(logger);
+    const globalPipeline = validatorConfig.runGlobalValidators ?
+        ValidatorFactory_1.ValidatorFactory.createPipeline('global', { runCisBenchmark: options.runCisBenchmark }, logger) :
+        new ValidationPipeline_1.ValidationPipeline(logger);
     // Per-file local pipeline
     for (const file of filesToProcess) {
         logger.info(`Processing file ${file}`);
         const expressions = await processFile(file, options.pattern, options.extractorType, logger);
         allExpressions.push(...expressions);
-        localPipeline.addValidator(new OciSyntaxValidator_1.OciSyntaxValidator(logger));
         const syntaxResults = await localPipeline.validate(expressions);
         results.push({ file, results: syntaxResults });
     }
-    // Global CIS benchmark pipeline, if requested
-    if (options.runCisBenchmark && allExpressions.length > 0) {
-        logger.info('Running global CIS benchmark validation on all statements...');
-        globalPipeline.addValidator(new OciCisBenchmarkValidator_1.OciCisBenchmarkValidator(logger));
-        const cisResults = await globalPipeline.validate(allExpressions);
+    // Global pipeline
+    logger.info('Running global validation pipeline on all statements...');
+    const cisResults = options.runCisBenchmark && allExpressions.length > 0 ?
+        await globalPipeline.validate(allExpressions) :
+        [];
+    if (cisResults.length > 0) {
         results.push({ file: 'CIS Benchmark', results: cisResults });
     }
     return results;
@@ -269,6 +249,20 @@ async function runAction(platform) {
             platform.setResult(false, errorMsg);
             return;
         }
+        // Helper function to parse boolean inputs with default true
+        const parseBooleanInput = (name, defaultValue = true) => {
+            const value = platform.getInput(name);
+            if (!value)
+                return defaultValue;
+            return value.toLowerCase() !== 'false';
+        };
+        // Helper function to parse boolean inputs with default false
+        const parseBooleanInputFalse = (name) => {
+            const value = platform.getInput(name);
+            if (!value)
+                return false;
+            return value.toLowerCase() === 'true';
+        };
         // Build options from inputs
         const options = {
             extractorType: platform.getInput('extractor') || 'regex',
@@ -277,8 +271,12 @@ async function runAction(platform) {
             fileNames: platform.getInput('files') ?
                 platform.getInput('files').split(',').map(f => f.trim()) :
                 undefined,
-            exitOnError: platform.getInput('exit-on-error') !== 'false', // Default to true unless explicitly 'false'
-            runCisBenchmark: platform.getInput('cis-benchmark') === 'true'
+            exitOnError: parseBooleanInput('exit-on-error'),
+            runCisBenchmark: parseBooleanInputFalse('cis-benchmark'),
+            validatorConfig: {
+                runLocalValidators: parseBooleanInput('validators-local'),
+                runGlobalValidators: parseBooleanInput('validators-global')
+            }
         };
         // Log options
         logger.info(`Using extractor: ${options.extractorType}`);
@@ -297,6 +295,11 @@ async function runAction(platform) {
         }
         logger.info(`Exit on error: ${options.exitOnError}`);
         logger.info(`Run CIS Benchmark: ${options.runCisBenchmark}`);
+        // Log validator configuration
+        if (options.validatorConfig) {
+            logger.info(`Local validators enabled: ${options.validatorConfig.runLocalValidators}`);
+            logger.info(`Global validators enabled: ${options.validatorConfig.runGlobalValidators}`);
+        }
         // Run policy validation
         const outputs = await validatePolicies(scanPath, options, logger);
         // emit JSON
@@ -381,6 +384,8 @@ commander_1.program
     .option('--exit-on-error <bool>', 'Exit with non-zero status if validation fails', 'true')
     .option('--file-extension <ext>', 'Filter files by specified extension (e.g., .tf)')
     .option('--cis-benchmark', 'Run CIS Benchmark validation', false)
+    .option('--validators-local <bool>', 'Enable local validators (syntax validation)', 'true')
+    .option('--validators-global <bool>', 'Enable global validators', 'true')
     .action(async (pathArg, cmdOptions) => {
     // Create a CLI-specific platform implementation that handles Commander options
     const cliPlatform = new class extends CliOperations_1.CliOperations {
@@ -394,8 +399,16 @@ commander_1.program
                 'files': cmdOptions.files,
                 'exit-on-error': cmdOptions.exitOnError,
                 'file-extension': cmdOptions.fileExtension,
-                'cis-benchmark': cmdOptions.cisBenchmark
+                'cis-benchmark': cmdOptions.cisBenchmark,
+                'validators-local': cmdOptions.validatorsLocal,
+                'validators-global': cmdOptions.validatorsGlobal
             };
+            // Debug output for verbose mode
+            if (cmdOptions.verbose) {
+                console.log(`[DEBUG] Getting input for ${name}`);
+                console.log(`[DEBUG] Command option: ${name in optionMap ? optionMap[name] : 'undefined'}`);
+                console.log(`[DEBUG] Environment variable: ${process.env[`POLICY_${name.replace(/-/g, '_').toUpperCase()}`] || 'undefined'}`);
+            }
             // First check explicit command options
             if (name in optionMap && optionMap[name] !== undefined) {
                 return String(optionMap[name]);
@@ -5475,7 +5488,7 @@ class OciSyntaxValidator {
                         // Reproduce the original detailed error logging format
                         (_a = this.logger) === null || _a === void 0 ? void 0 : _a.error('Failed to parse policy statement:');
                         (_b = this.logger) === null || _b === void 0 ? void 0 : _b.error(`Statement: "${trimmedStatement}"`);
-                        (_c = this.logger) === null || _c === void 0 ? void 0 : _c.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
+                        (_c = this.logger) === null || _c === void 0 ? void 0 : _c.error(`Position: ${' '.repeat(charPositionInLine + 2)}^ ${msg}`);
                         issues.push({
                             checkId: 'OCI-SYNTAX-1',
                             statement: trimmedStatement,
@@ -5547,6 +5560,10 @@ class ValidationPipeline {
      */
     async validate(statements) {
         var _a, _b, _c, _d;
+        // Return early if no statements to validate
+        if (statements.length === 0) {
+            return [];
+        }
         (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`Running validation pipeline with ${this.validators.length} validators`);
         const results = [];
         for (const validator of this.validators) {
@@ -5572,6 +5589,99 @@ class ValidationPipeline {
     }
 }
 exports.ValidationPipeline = ValidationPipeline;
+
+
+/***/ }),
+
+/***/ 7101:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ValidatorFactory = void 0;
+const OciSyntaxValidator_1 = __nccwpck_require__(6850);
+const OciCisBenchmarkValidator_1 = __nccwpck_require__(1122);
+const ValidationPipeline_1 = __nccwpck_require__(3220);
+/**
+ * Factory for creating validator instances based on validation type
+ *
+ * This factory centralizes the creation of validators, making it easier to:
+ * 1. Configure validators consistently across the application
+ * 2. Add new validators in the future
+ * 3. Control validator initialization and dependencies
+ */
+class ValidatorFactory {
+    /**
+     * Creates a syntax validator instance
+     * @param logger Optional logger for recording diagnostic info
+     * @returns An instance of OciSyntaxValidator
+     */
+    static createSyntaxValidator(logger) {
+        return new OciSyntaxValidator_1.OciSyntaxValidator(logger);
+    }
+    /**
+     * Creates a CIS benchmark validator instance
+     * @param logger Optional logger for recording diagnostic info
+     * @returns An instance of OciCisBenchmarkValidator
+     */
+    static createCisBenchmarkValidator(logger) {
+        return new OciCisBenchmarkValidator_1.OciCisBenchmarkValidator(logger);
+    }
+    /**
+     * Creates validators for local (per-file) validation pipeline
+     * These validators are applied to each file individually
+     *
+     * @param logger Optional logger for recording diagnostic info
+     * @param options Optional configuration options for local validators
+     * @returns Array of validator instances
+     */
+    static createLocalValidators(logger, options) {
+        // Currently only includes syntax validator
+        // In future, additional local validators can be added here
+        return [
+            ValidatorFactory.createSyntaxValidator(logger)
+        ];
+    }
+    /**
+     * Creates validators for global validation pipeline
+     * These validators are applied to all statements from all files together
+     *
+     * @param runCisBenchmark Whether to include CIS benchmark validator
+     * @param logger Optional logger for recording diagnostic info
+     * @param options Optional configuration options for global validators
+     * @returns Array of validator instances
+     */
+    static createGlobalValidators(runCisBenchmark, logger, options) {
+        const validators = [];
+        if (runCisBenchmark) {
+            validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
+        }
+        // Future global validators can be added here
+        return validators;
+    }
+    /**
+     * Creates a validation pipeline with configured validators
+     *
+     * @param validatorType The type of validators to include ('local' or 'global')
+     * @param options Configuration options for the validators
+     * @param logger Optional logger for recording diagnostic info
+     * @returns A configured ValidationPipeline instance
+     */
+    static createPipeline(validatorType, options = {}, logger) {
+        const pipeline = new ValidationPipeline_1.ValidationPipeline(logger);
+        if (validatorType === 'local') {
+            const validators = ValidatorFactory.createLocalValidators(logger, options);
+            validators.forEach(validator => pipeline.addValidator(validator));
+        }
+        else if (validatorType === 'global') {
+            const validators = ValidatorFactory.createGlobalValidators(options.runCisBenchmark || false, logger, options);
+            validators.forEach(validator => pipeline.addValidator(validator));
+        }
+        return pipeline;
+    }
+}
+exports.ValidatorFactory = ValidatorFactory;
 
 
 /***/ }),

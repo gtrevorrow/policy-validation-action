@@ -26,6 +26,14 @@ inputs:
     description: 'Run CIS Benchmark validation'
     required: false
     default: 'false'
+  validators-local:
+    description: 'Enable local (per-file) validators like syntax validation'
+    required: false
+    default: 'true'
+  validators-global:
+    description: 'Enable global validators like CIS benchmark'
+    required: false
+    default: 'true'
 outputs:
   results:
     description: 'Validation results in JSON format'

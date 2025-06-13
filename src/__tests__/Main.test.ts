@@ -16,10 +16,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { 
     findPolicyFiles, 
-    validatePolicySyntax, 
-    processFile, 
-    formatPolicyStatements 
+    processFile,
+    runAction
 } from '../Main';
+import { ValidatorFactory } from '../validators/ValidatorFactory';
 import { ExtractorType } from '../extractors/ExtractorFactory';
 import { mockLogger } from './fixtures/test-utils';
 
@@ -373,28 +373,6 @@ describe('Main', () => {
     });
     
     /**
-     * Tests for formatPolicyStatements function
-     * 
-     * This section verifies that policy statements are correctly formatted:
-     * - Leading and trailing whitespace is trimmed
-     * - Statements are concatenated with newlines
-     */
-    describe('formatPolicyStatements', () => {
-        it('should format policy statements correctly', () => {
-            const statements = [
-                '  Allow group Admins to manage all-resources in tenancy  ',
-                'Allow group Users to read all-resources in compartment Dev'
-            ];
-            
-            const formatted = formatPolicyStatements(statements);
-            expect(formatted).toBe(
-                'Allow group Admins to manage all-resources in tenancy\n' +
-                'Allow group Users to read all-resources in compartment Dev'
-            );
-        });
-    });
-
-    /**
      * Tests for validatePolicySyntax function
      * 
      * These tests verify that the syntax validator correctly:
@@ -407,9 +385,11 @@ describe('Main', () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
             const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
             
-            const result = await validatePolicySyntax(statements, mockLogger);
-            expect(result.isValid).toBe(true);
-            expect(result.errors).toHaveLength(0);
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(statements);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(true);
+            expect(reports[0].issues).toHaveLength(0);
         });
         
         it('should reject invalid policies from fixture file', async () => {
@@ -417,9 +397,11 @@ describe('Main', () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'invalid.tf');
             const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
             
-            const result = await validatePolicySyntax(statements, mockLogger);
-            expect(result.isValid).toBe(false);
-            expect(result.errors.length).toBeGreaterThan(0);
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(statements);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(false);
+            expect(reports[0].issues.length).toBeGreaterThan(0);
         });
     
 
@@ -512,8 +494,10 @@ describe('Main', () => {
                 expect(expressions.length).toBeGreaterThan(0);
                 
                 // Test validation on the extracted policies
-                const result = await validatePolicySyntax(expressions, mockLogger);
-                expect(typeof result.isValid).toBe('boolean');
+                const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+                const reports = await validator.validate(expressions);
+                expect(reports).toHaveLength(1);
+                expect(typeof reports[0].passed).toBe('boolean');
             }
         });
         
@@ -541,8 +525,10 @@ describe('Main', () => {
                 expect(expressions.length).toBeGreaterThan(0);
                 
                 // Policy validation should work for all extracted statements
-                const result = await validatePolicySyntax(expressions, mockLogger);
-                expect(typeof result.isValid).toBe('boolean');
+                const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+                const reports = await validator.validate(expressions);
+                expect(reports).toHaveLength(1);
+                expect(typeof reports[0].passed).toBe('boolean');
             }
         });
 
@@ -578,8 +564,10 @@ describe('Main', () => {
             expect(expressions).not.toContain('allow group vision-cred-admin-group to manage groups in tenancy');
             
             // Validate extracted policies
-            const validationResult = await validatePolicySyntax(expressions, mockLogger);
-            expect(validationResult.isValid).toBe(true);
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(expressions);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(true);
         });
 
         it('should extract and validate complex security policies from OCI Core Landing Zone IAM module', async () => {
@@ -649,12 +637,16 @@ describe('Main', () => {
             expect(policies3.length).toBe(41);
 
             // Validate the extracted policies
-            const result1 = await validatePolicySyntax(policies1, mockLogger);
-            const result2 = await validatePolicySyntax(policies2, mockLogger);
-            const result3 = await validatePolicySyntax(policies3, mockLogger);
-            expect(result1.isValid).toBe(true);
-            expect(result2.isValid).toBe(true);
-            expect(result3.isValid).toBe(true);
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports1 = await validator.validate(policies1);
+            const reports2 = await validator.validate(policies2);
+            const reports3 = await validator.validate(policies3);
+            expect(reports1).toHaveLength(1);
+            expect(reports2).toHaveLength(1);
+            expect(reports3).toHaveLength(1);
+            expect(reports1[0].passed).toBe(true);
+            expect(reports2[0].passed).toBe(true);
+            expect(reports3[0].passed).toBe(true);
         });
     });
 });
@@ -672,5 +664,200 @@ describe('Unit Tests', () => {
         const files = await findPolicyFiles('nonexistent', {}, mockLogger);
         expect(files).toEqual([]);
         expect(mockLogger.error).toHaveBeenCalled();
+    });
+});
+
+/**
+ * Tests for configuration parsing helpers
+ * These tests verify that the configuration parsing functions correctly
+ * handle different input formats and default values
+ */
+describe('Configuration Parsing', () => {
+    let accessMock: jest.SpyInstance;
+    let statMock: jest.SpyInstance;
+    let readdirMock: jest.SpyInstance;
+    beforeAll(() => {
+        accessMock = jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
+        statMock = jest.spyOn(fs.promises, 'stat').mockImplementation(async (p) => {
+            return {
+                isFile: () => true,
+                isDirectory: () => false,
+                isBlockDevice: () => false,
+                isCharacterDevice: () => false,
+                isSymbolicLink: () => false,
+                isFIFO: () => false,
+                isSocket: () => false,
+                atime: new Date(),
+                mtime: new Date(),
+                ctime: new Date(),
+                birthtime: new Date(),
+                atimeMs: 0,
+                mtimeMs: 0,
+                ctimeMs: 0,
+                birthtimeMs: 0,
+                dev: 0,
+                ino: 0,
+                mode: 0,
+                nlink: 0,
+                uid: 0,
+                gid: 0,
+                rdev: 0,
+                size: 0,
+                blksize: 0,
+                blocks: 0,
+                atimeNs: BigInt(0),
+                mtimeNs: BigInt(0),
+                ctimeNs: BigInt(0),
+                birthtimeNs: BigInt(0),
+                devBigInt: BigInt(0),
+                inoBigInt: BigInt(0),
+                modeBigInt: BigInt(0),
+                nlinkBigInt: BigInt(0),
+                uidBigInt: BigInt(0),
+                gidBigInt: BigInt(0),
+                rdevBigInt: BigInt(0),
+                sizeBigInt: BigInt(0),
+                blksizeBigInt: BigInt(0),
+                blocksBigInt: BigInt(0)
+            };
+        });
+        readdirMock = jest.spyOn(fs.promises, 'readdir').mockResolvedValue([
+            {
+                name: 'dummy.tf',
+                isFile: () => true,
+                isDirectory: () => false,
+                isBlockDevice: () => false,
+                isCharacterDevice: () => false,
+                isSymbolicLink: () => false,
+                isFIFO: () => false,
+                isSocket: () => false
+            }
+        ]);
+    });
+    afterAll(() => {
+        accessMock.mockRestore();
+        statMock.mockRestore();
+        readdirMock.mockRestore();
+    });
+
+    // Mock platform for testing input parsing
+    const mockPlatform = {
+        getInput: jest.fn(),
+        setOutput: jest.fn(),
+        setResult: jest.fn(),
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        warning: jest.fn(), // Added missing property
+        error: jest.fn(),
+        createLogger: jest.fn().mockReturnValue({
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn()
+        }) // Added missing property
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should correctly parse boolean inputs with default true', async () => {
+        // Create a shared logger mock
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn()
+        };
+        const mockGetInput = jest.fn((name) => {
+            if (name === 'path') return '.';
+            if (name === 'validators-local') return '';
+            return '';
+        });
+        const testPlatform = {
+            getInput: mockGetInput,
+            setOutput: jest.fn(),
+            setResult: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            warning: jest.fn(),
+            error: jest.fn(),
+            createLogger: jest.fn().mockReturnValue(logger)
+        };
+        await runAction(testPlatform);
+        expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: true");
+    });
+
+    it('should correctly parse boolean inputs with default false', async () => {
+        // Shared logger mock for all sub-tests
+        const logger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn()
+        };
+        // Test default false (empty input)
+        const mockGetInput = jest.fn((name) => {
+            if (name === 'path') return '.';
+            if (name === 'cis-benchmark') return '';
+            return '';
+        });
+        const testPlatform = {
+            getInput: mockGetInput,
+            setOutput: jest.fn(),
+            setResult: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            warning: jest.fn(),
+            error: jest.fn(),
+            createLogger: jest.fn().mockReturnValue(logger)
+        };
+        await runAction(testPlatform);
+        expect(logger.info.mock.calls.flat()).toContain("Run CIS Benchmark: false");
+
+        // Test explicit 'true'
+        jest.clearAllMocks();
+        const mockGetInputTrue = jest.fn((name) => {
+            if (name === 'path') return '.';
+            if (name === 'cis-benchmark') return 'true';
+            return '';
+        });
+        const testPlatformTrue = {
+            getInput: mockGetInputTrue,
+            setOutput: jest.fn(),
+            setResult: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            warning: jest.fn(),
+            error: jest.fn(),
+            createLogger: jest.fn().mockReturnValue(logger)
+        };
+        await runAction(testPlatformTrue);
+        expect(logger.info.mock.calls.flat()).toContain("Run CIS Benchmark: true");
+
+        // Test explicit 'false'
+        jest.clearAllMocks();
+        const mockGetInputFalse = jest.fn((name) => {
+            if (name === 'path') return '.';
+            if (name === 'cis-benchmark') return 'false';
+            return '';
+        });
+        const testPlatformFalse = {
+            getInput: mockGetInputFalse,
+            setOutput: jest.fn(),
+            setResult: jest.fn(),
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            warning: jest.fn(),
+            error: jest.fn(),
+            createLogger: jest.fn().mockReturnValue(logger)
+        };
+        await runAction(testPlatformFalse);
+        expect(logger.info.mock.calls.flat()).toContain("Run CIS Benchmark: false");
     });
 });

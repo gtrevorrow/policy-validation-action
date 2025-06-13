@@ -20,6 +20,8 @@ program
   .option('--exit-on-error <bool>', 'Exit with non-zero status if validation fails', 'true')
   .option('--file-extension <ext>', 'Filter files by specified extension (e.g., .tf)')
   .option('--cis-benchmark', 'Run CIS Benchmark validation', false)
+  .option('--validators-local <bool>', 'Enable local validators (syntax validation)', 'true')
+  .option('--validators-global <bool>', 'Enable global validators', 'true')
   .action(async (pathArg, cmdOptions) => {
     // Create a CLI-specific platform implementation that handles Commander options
     const cliPlatform: PlatformOperations = new class extends CliOperations {
@@ -33,8 +35,17 @@ program
           'files': cmdOptions.files,
           'exit-on-error': cmdOptions.exitOnError,
           'file-extension': cmdOptions.fileExtension,
-          'cis-benchmark': cmdOptions.cisBenchmark
+          'cis-benchmark': cmdOptions.cisBenchmark,
+          'validators-local': cmdOptions.validatorsLocal,
+          'validators-global': cmdOptions.validatorsGlobal
         };
+        
+        // Debug output for verbose mode
+        if (cmdOptions.verbose) {
+          console.log(`[DEBUG] Getting input for ${name}`);
+          console.log(`[DEBUG] Command option: ${name in optionMap ? optionMap[name] : 'undefined'}`);
+          console.log(`[DEBUG] Environment variable: ${process.env[`POLICY_${name.replace(/-/g, '_').toUpperCase()}`] || 'undefined'}`);
+        }
         
         // First check explicit command options
         if (name in optionMap && optionMap[name] !== undefined) {

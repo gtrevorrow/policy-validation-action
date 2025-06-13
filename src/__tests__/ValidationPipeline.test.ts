@@ -150,7 +150,15 @@ describe('ValidationPipeline', () => {
     
     expect(results).toEqual([]);
   });
-  
+
+  test('should return empty array when there are no statements', async () => {
+    const pipeline = new ValidationPipeline(testLogger);
+    // even with validators registered, no statements => no reports
+    pipeline.addValidator(new MockValidator('Validator1'));
+    const results = await pipeline.validate([]);
+    expect(results).toEqual([]);
+  });
+
   test('validators should be chainable', () => {
     const pipeline = new ValidationPipeline();
     const validator1 = new MockValidator('Validator1');

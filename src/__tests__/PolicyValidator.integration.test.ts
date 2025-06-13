@@ -1,6 +1,7 @@
 import { ValidationPipeline } from '../validators/ValidationPipeline';
 import { OciCisBenchmarkValidator } from '../validators/OciCisBenchmarkValidator';
 import { Logger } from '../types';
+import { mockLogger } from './fixtures/test-utils';
 
 // Sample TF file content
 const sampleTerraformContent = `
@@ -30,14 +31,6 @@ resource "oci_identity_policy" "bad_policy" {
   ]
 }
 `;
-
-// Mock logger for testing
-const testLogger: Logger = {
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
-};
 
 // Extract statements from Terraform content
 function extractPolicyStatements(content: string): string[] {
@@ -106,8 +99,8 @@ describe('Policy Validator Integration Tests', () => {
     expect(statements.length).toBeGreaterThan(0);
     
     // Create validation pipeline with OCI CIS validator
-    const pipeline = new ValidationPipeline(testLogger);
-    pipeline.addValidator(new OciCisBenchmarkValidator(testLogger));
+    const pipeline = new ValidationPipeline(mockLogger);
+    pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
     
     // Run validation
     const results = await pipeline.validate(statements);
@@ -136,14 +129,14 @@ describe('Policy Validator Integration Tests', () => {
     const statements = extractPolicyStatements(sampleTerraformContent);
     
     // Create validation pipeline
-    const pipeline = new ValidationPipeline(testLogger);
-    pipeline.addValidator(new OciCisBenchmarkValidator(testLogger));
+    const pipeline = new ValidationPipeline(mockLogger);
+    pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
     
     // Run validation
     const results = await pipeline.validate(statements);
     
     // Check logging of results summary
-    expect(testLogger.info).toHaveBeenCalledWith(
+    expect(mockLogger.info).toHaveBeenCalledWith(
       expect.stringMatching(/Validator .* completed:/)
     );
     

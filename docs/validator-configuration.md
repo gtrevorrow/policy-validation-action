@@ -1,0 +1,289 @@
+# Validator Configuration Guide
+
+This document explains how to configure and use the validators in the policy validation action.
+
+## Overview
+
+The policy validation action uses a pipeline-based approach to validation, where each policy file is processed through a series of validators. There are two types of validators:
+
+1. **Local Validators**: These run on each file individually and validate syntax and other per-file constraints.
+2. **Global Validators**: These run on all statements from all files together and perform cross-file validations, such as CIS benchmark compliance checks.
+
+## Configuration Options
+
+### GitHub Action Configuration
+
+You can control which validators run using the following inputs in your GitHub Action:
+
+```yaml
+- uses: gtrevorrow/policy-validation-action@v0.2
+  with:
+    path: './policies'
+    validators-local: 'true'  # Enable/disable local validators (syntax validation)
+    validators-global: 'true' # Enable/disable global validators
+    cis-benchmark: 'true'     # Enable/disable CIS benchmark validation specifically
+```
+
+### CLI Configuration
+
+When using the CLI tool, you can configure validators using command-line arguments or environment variables:
+
+```bash
+# Using command-line arguments
+policy-validation-action validate ./policies --validators-local=true --validators-global=false --cis-benchmark=true
+
+# Using environment variables
+export POLICY_VALIDATORS_LOCAL=true
+export POLICY_VALIDATORS_GLOBAL=false
+export POLICY_CIS_BENCHMARK=true
+policy-validation-action validate ./policies
+```
+
+All boolean options use string values of 'true' or 'false' and default to 'true' for validators-local and validators-global, and 'false' for cis-benchmark.
+
+## Available Validators
+
+### Local Validators
+
+1. **OCI Syntax Validator**: Validates that policy statements follow the correct OCI IAM policy syntax.
+
+### Global Validators
+
+1. **OCI CIS Benchmark Validator**: Validates that policies conform to the CIS Benchmark recommendations for Oracle Cloud Infrastructure.
+
+## Using the ValidatorFactory
+
+If you're extending the action or writing custom validators, the `ValidatorFactory` class provides a convenient way to create and configure validators.
+
+```typescript
+import { ValidatorFactory } from './validators/ValidatorFactory';
+
+// Create a local validation pipeline
+const localPipeline = ValidatorFactory.createPipeline('local', {}, logger);
+
+// Create a global validation pipeline with CIS benchmark validation
+const globalPipeline = ValidatorFactory.createPipeline('global', { runCisBenchmark: true }, logger);
+```
+
+## Adding New Validators
+
+To add a new validator:
+
+1. Create a new class that implements the `PolicyValidator` interface
+2. Add a factory method to the `ValidatorFactory` class
+3. Update the `createLocalValidators` or `createGlobalValidators` method to include your new validator
+
+Example:
+
+```typescript
+// 1. Create new validator
+class MyCustomValidator implements PolicyValidator {
+  private logger?: Logger;
+  
+  constructor(logger?: Logger) {
+    this.logger = logger;
+  }
+  
+  name(): string {
+    return "My Custom Validator";
+  }
+  
+  description(): string {
+    return "Validates policies against custom rules";
+  }
+  
+  getChecks(): ValidationCheck[] {
+    return [
+      {
+        id: "CUSTOM-1",
+        name: "Custom Check 1",
+        description: "Ensures policies meet custom rule 1"
+      }
+    ];
+  }
+  
+  async validate(statements: string[]): Promise<ValidationReport[]> {
+    // Implementation of validation logic
+    this.logger?.debug(`Validating ${statements.length} statements with custom rules`);
+    
+    // Sample report creation
+    const report: ValidationReport = {
+      checkId: "CUSTOM-1",
+      name: "Custom Check 1",
+      description: "Ensures policies meet custom rule 1",
+      passed: true,
+      issues: []
+    };
+    
+    // Return array of reports
+    return [report];
+  }
+}
+
+// 2. Add to ValidatorFactory
+static createCustomValidator(logger?: Logger): PolicyValidator {
+  return new MyCustomValidator(logger);
+}
+
+// 3. Include in validator creation
+static createLocalValidators(logger?: Logger): PolicyValidator[] {
+  return [
+    ValidatorFactory.createSyntaxValidator(logger),
+    ValidatorFactory.createCustomValidator(logger)
+  ];
+}
+```
+
+## Example: Implementing a RegexPolicyValidator
+
+Here's a more concrete example of implementing a validator that uses regular expressions to check for policy statement patterns:
+
+```typescript
+class RegexPolicyValidator implements PolicyValidator {
+  private logger?: Logger;
+  private patterns: Map<string, RegExp>;
+  
+  constructor(logger?: Logger) {
+    this.logger = logger;
+    
+    // Define regex patterns to check for various policy issues
+    this.patterns = new Map<string, RegExp>([
+      // Check for policies that might be too permissive
+      ['REGEX-1', /allow\s+group\s+\S+\s+to\s+manage\s+all-resources/i],
+      // Check for policies that might be missing compartment scopes
+      ['REGEX-2', /allow\s+group\s+\S+\s+to\s+\S+\s+\S+(\s+where\s+|$)/i]
+    ]);
+  }
+  
+  name(): string {
+    return "Regex Policy Validator";
+  }
+  
+  description(): string {
+    return "Validates policy statements using regular expressions";
+  }
+  
+  getChecks(): ValidationCheck[] {
+    return [
+      {
+        id: "REGEX-1",
+        name: "Overly Permissive Policy Check",
+        description: "Flags policies that might grant excessive permissions"
+      },
+      {
+        id: "REGEX-2",
+        name: "Missing Compartment Scope Check",
+        description: "Flags policies that might be missing compartment scopes"
+      }
+    ];
+  }
+  
+  async validate(statements: string[]): Promise<ValidationReport[]> {
+    const reports: ValidationReport[] = [];
+    
+    // Create a report for each check
+    for (const [checkId, pattern] of this.patterns.entries()) {
+      const checkInfo = this.getChecks().find(check => check.id === checkId);
+      if (!checkInfo) continue;
+      
+      const issues: ValidationIssue[] = [];
+      
+      // Check each statement against the pattern
+      for (const statement of statements) {
+        if (pattern.test(statement)) {
+          issues.push({
+            checkId: checkId,
+            statement: statement,
+            message: `Policy matches pattern: ${pattern}`,
+            severity: 'warning'
+          });
+        }
+      }
+      
+      reports.push({
+        checkId: checkInfo.id,
+        name: checkInfo.name,
+        description: checkInfo.description,
+        passed: issues.length === 0,
+        issues: issues
+      });
+    }
+    
+    return reports;
+  }
+}
+```
+
+## Extending ValidatorFactory Configuration
+
+The `ValidatorFactory` can be extended to support additional configuration options. Here's how you might enhance the factory to accept validator-specific configuration options:
+
+```typescript
+// 1. Extend the ValidatorConfig interface
+export interface ValidatorConfig {
+  runLocalValidators: boolean;
+  runGlobalValidators: boolean;
+  regexValidatorPatterns?: Map<string, RegExp>; // Custom patterns for RegexPolicyValidator
+}
+
+// 2. Update the factory methods to use the extended configuration
+static createRegexValidator(config?: ValidatorConfig, logger?: Logger): PolicyValidator {
+  return new RegexPolicyValidator(
+    config?.regexValidatorPatterns,  // Pass custom patterns if provided
+    logger
+  );
+}
+
+// 3. Update creation methods to use the configuration
+static createLocalValidators(config: ValidatorConfig, logger?: Logger): PolicyValidator[] {
+  const validators: PolicyValidator[] = [];
+  
+  // Always add syntax validator if local validators are enabled
+  if (config.runLocalValidators) {
+    validators.push(ValidatorFactory.createSyntaxValidator(logger));
+    
+    // Add regex validator if custom patterns are provided
+    if (config.regexValidatorPatterns) {
+      validators.push(ValidatorFactory.createRegexValidator(config, logger));
+    }
+  }
+  
+  return validators;
+}
+```
+
+## Advanced Configuration
+
+For more advanced configuration, you can:
+
+1. **Add Command Line Options**: Extend the CLI to support custom validator options
+2. **Use Environment Variables**: Define environment variables for configuring validators
+3. **Create Configuration Files**: Support loading validator configuration from JSON/YAML files
+4. **Implement Pluggable Validators**: Create a plugin system to load custom validators at runtime
+
+Example of adding CLI options for a custom validator:
+
+```typescript
+program
+  .command('validate [path]')
+  .option('--custom-validator-rule <rule>', 'Custom validation rule (format: id:pattern)')
+  .action((path, cmdOptions) => {
+    const customRules = new Map();
+    
+    // Parse custom rules from command options
+    if (cmdOptions.customValidatorRule) {
+      const [id, pattern] = cmdOptions.customValidatorRule.split(':');
+      customRules.set(id, new RegExp(pattern));
+    }
+    
+    // Pass to validator config
+    const validatorConfig = {
+      runLocalValidators: true,
+      runGlobalValidators: true,
+      regexValidatorPatterns: customRules
+    };
+    
+    // Run validation with custom config
+    runValidation(path, validatorConfig);
+  });
+```

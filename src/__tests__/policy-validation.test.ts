@@ -1,5 +1,5 @@
-import { validatePolicySyntax } from '../Main';
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
+import { ValidatorFactory } from '../validators/ValidatorFactory';
 
 describe('OCI Policy Validation', () => {
    
@@ -59,26 +59,36 @@ describe('OCI Policy Validation', () => {
     });
 
     describe('Validation', () => {
+        const mockLogger = {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn()
+        };
+        
         it('should validate correct policy statements', async () => {
             const input = [
                 'Allow group Administrators to manage all-resources in tenancy',
                 'Allow group Developers to use instances in compartment dev'
             ];
-            const result = await validatePolicySyntax(input);
-            expect(result.isValid).toBe(true);
-            expect(result.errors).toHaveLength(0);
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(input);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(true);
+            expect(reports[0].issues).toHaveLength(0);
         });
 
         it('should reject invalid policy statements', async () => {
             const input = [
                 'Allow BadSyntax manage'
             ];
-            const result = await validatePolicySyntax(input);
-            expect(result.isValid).toBe(false);
-            expect(result.errors.length).toBeGreaterThan(0);
-            expect(result.errors[0]).toHaveProperty('statement');
-            expect(result.errors[0]).toHaveProperty('position');
-            expect(result.errors[0]).toHaveProperty('message');
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(input);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(false);
+            expect(reports[0].issues.length).toBeGreaterThan(0);
+            expect(reports[0].issues[0]).toHaveProperty('statement');
+            expect(reports[0].issues[0]).toHaveProperty('message');
         });
 
         it('should validate tenancy subject with HCL variables', async () => {
@@ -92,9 +102,11 @@ describe('OCI Policy Validation', () => {
                 'Admit group Admins of tenancy ${var.acceptor_tenant} to manage instances in tenancy',
                 'Endorse group foo to manage virtual-network-family in tenancy ${var.acceptor_tenant}'
             ];
-            const result = await validatePolicySyntax(input);
-            expect(result.isValid).toBe(true);
-            expect(result.errors).toHaveLength(0);
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(input);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(true);
+            expect(reports[0].issues).toHaveLength(0);
         });
 
         it('should reject policy statements without proper spacing', async () => {
@@ -106,12 +118,13 @@ describe('OCI Policy Validation', () => {
                 'Endorsegroup NetworkAdmins to manage something in tenancy'
             ];
             
-            const result = await validatePolicySyntax(invalidInputs);
-            expect(result.isValid).toBe(false);
-            expect(result.errors.length).toBeGreaterThan(0);
-            expect(result.errors[0]).toMatchObject({
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(invalidInputs);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(false);
+            expect(reports[0].issues.length).toBeGreaterThan(0);
+            expect(reports[0].issues[0]).toMatchObject({
                 statement: expect.any(String),
-                position: expect.any(Number),
                 message: expect.any(String)
             });
         });

@@ -68,7 +68,7 @@ export class OciSyntaxValidator implements PolicyValidator {
             // Reproduce the original detailed error logging format
             this.logger?.error('Failed to parse policy statement:');
             this.logger?.error(`Statement: "${trimmedStatement}"`);
-            this.logger?.error(`Position: ${' '.repeat(charPositionInLine)}^ ${msg}`);
+            this.logger?.error(`Position: ${' '.repeat(charPositionInLine+2)}^ ${msg}`);
             
             issues.push({
               checkId: 'OCI-SYNTAX-1',

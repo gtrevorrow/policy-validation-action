@@ -30,6 +30,10 @@ export class ValidationPipeline {
    * Run all validators in the pipeline on the given statements
    */
   async validate(statements: string[]): Promise<ValidationPipelineResult[]> {
+    // Return early if no statements to validate
+    if (statements.length === 0) {
+        return [];
+    }
     this.logger?.info(`Running validation pipeline with ${this.validators.length} validators`);
     
     const results: ValidationPipelineResult[] = [];

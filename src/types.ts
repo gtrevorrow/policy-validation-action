@@ -53,6 +53,22 @@ export interface ValidationOptions {
   fileNames?: string[];
   exitOnError: boolean;
   runCisBenchmark: boolean;
+  validatorConfig?: ValidatorConfig;
+}
+
+/**
+ * Options for configuring validators in the validation pipeline
+ */
+export interface ValidatorConfig {
+  /**
+   * Whether to run local (per-file) validators
+   */
+  runLocalValidators: boolean;
+  
+  /**
+   * Whether to run global validators like CIS benchmark
+   */
+  runGlobalValidators: boolean;
 }
 
 /**

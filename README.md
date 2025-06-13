@@ -48,6 +48,8 @@ This tool validates OCI IAM policy statements ensuring that the policies adhere 
 - Colored CLI output with verbose mode.
 - Recursive directory scanning.
 - Configurable policy extractors for extracting IAM policies from various file types.
+- Configurable validation pipeline with customizable validators.
+- CIS Benchmark validation for OCI IAM policies.
 - Although Terraform is the primary target, the tool works with any text-based file.
 
 ## Prerequisites
@@ -211,6 +213,9 @@ jobs:
           path: './terraform'
           extractor: 'regex'  # Optional: defaults to regex
           extractorPattern: 'your-custom-pattern'  # Optional
+          validators-local: 'true'  # Enable syntax validation (default: true)
+          validators-global: 'true' # Enable global validators (default: true)
+          cis-benchmark: 'true'     # Enable CIS benchmark validation (default: false)
 ```
 
 #### Github Action Inputs
@@ -221,6 +226,9 @@ jobs:
 | `extractor`         | Type of policy extractor to use (regex, json)                        | No       | `regex` |
 | `extractorPattern`  | Custom pattern for the policy extractor                              | No       | -       |
 | `exitOnError`       | Exit immediately if policy validation fails                          | No       | `true`  |
+| `validators-local`  | Enable local validators (syntax validation)                          | No       | `true`  |
+| `validators-global` | Enable global validators                                             | No       | `true`  |
+| `cis-benchmark`     | Run CIS Benchmark validation                                         | No       | `false` |
 
 #### Github Action Outputs
 
@@ -501,6 +509,46 @@ The validators subsystem includes the following validators:
 - **OciSyntaxValidator**: Validates the syntax of OCI policy statements according to the grammar rules
 - **OciCisBenchmarkValidator**: Validates policies against the CIS Benchmark for Oracle Cloud Infrastructure
 - **ValidationPipeline**: A pipeline that can run multiple validators in sequence
+
+### Validator Configuration
+
+The policy validation tool allows you to configure which validators are run during the validation process. This configuration is available both through the GitHub Action inputs and environment variables for CLI usage.
+
+#### GitHub Action Configuration
+
+```yaml
+- uses: gtrevorrow/policy-validation-action@v1
+  with:
+    validators-local: 'true'   # Enable/disable local validators (syntax validation)
+    validators-global: 'true'  # Enable/disable global validators
+    cis-benchmark: 'true'      # Enable/disable CIS benchmark validation specifically
+```
+
+#### Environment Variables for CLI
+
+```bash
+# Enable or disable local validators (true/false)
+export POLICY_VALIDATORS_LOCAL=true
+
+# Enable or disable global validators (true/false)
+export POLICY_VALIDATORS_GLOBAL=true
+
+# Enable or disable CIS benchmark validation (true/false)
+export POLICY_CIS_BENCHMARK=true
+```
+
+#### Validator Types
+
+1. **Local Validators**: Run on each file individually
+   - Currently includes the OciSyntaxValidator
+   - Can be enabled/disabled with `validators-local`
+
+2. **Global Validators**: Run on all statements from all files together
+   - Currently includes the OciCisBenchmarkValidator
+   - Can be enabled/disabled with `validators-global`
+   - The CIS benchmark validator can be specifically enabled/disabled with `cis-benchmark`
+
+For more detailed information, see the [validator configuration guide](docs/validator-configuration.md).
 
 ### OciSyntaxValidator
 

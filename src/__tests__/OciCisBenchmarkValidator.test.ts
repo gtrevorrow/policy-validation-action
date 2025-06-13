@@ -1,5 +1,5 @@
 import { OciCisBenchmarkValidator } from '../validators/OciCisBenchmarkValidator';
-import { Logger } from '../types';
+import { mockLogger } from './fixtures/test-utils';
 
 // Sample policy statements for testing
 const goodPolicies = [
@@ -20,21 +20,13 @@ const badPolicies = [
   'Allow group NetworkAdmins to manage network-security-groups in tenancy'
 ];
 
-// Mock logger for testing
-const testLogger: Logger = {
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
-};
-
 describe('OciCisBenchmarkValidator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
   
   test('should identify well-configured policies', async () => {
-    const validator = new OciCisBenchmarkValidator(testLogger);
+    const validator = new OciCisBenchmarkValidator(mockLogger);
     const reports = await validator.validate(goodPolicies);
     
     // Should have all 6 CIS checks
@@ -61,7 +53,7 @@ describe('OciCisBenchmarkValidator', () => {
   });
   
   test('should report issues with overly permissive policies', async () => {
-    const validator = new OciCisBenchmarkValidator(testLogger);
+    const validator = new OciCisBenchmarkValidator(mockLogger);
     const reports = await validator.validate(badPolicies);
     
     // Find least privilege check
@@ -73,7 +65,7 @@ describe('OciCisBenchmarkValidator', () => {
   });
   
   test('should report missing MFA requirements', async () => {
-    const validator = new OciCisBenchmarkValidator(testLogger);
+    const validator = new OciCisBenchmarkValidator(mockLogger);
     const reports = await validator.validate(badPolicies);
     
     // Find MFA check
@@ -85,7 +77,7 @@ describe('OciCisBenchmarkValidator', () => {
   });
   
   test('should report missing administrators group protection', async () => {
-    const validator = new OciCisBenchmarkValidator(testLogger);
+    const validator = new OciCisBenchmarkValidator(mockLogger);
     const reports = await validator.validate(badPolicies);
     
     // Find admin restriction check
@@ -97,7 +89,7 @@ describe('OciCisBenchmarkValidator', () => {
   });
   
   test('should report missing network security group conditions', async () => {
-    const validator = new OciCisBenchmarkValidator(testLogger);
+    const validator = new OciCisBenchmarkValidator(mockLogger);
     const reports = await validator.validate(badPolicies);
     
     // Find NSG check
@@ -108,22 +100,22 @@ describe('OciCisBenchmarkValidator', () => {
   });
   
   test('should handle empty policy list', async () => {
-    const validator = new OciCisBenchmarkValidator(testLogger);
+    const validator = new OciCisBenchmarkValidator(mockLogger);
     const reports = await validator.validate([]);
     
     expect(reports).toEqual([]);
-    expect(testLogger.info).toHaveBeenCalledWith('No policy statements to validate');
+    expect(mockLogger.info.mock.calls.flat()).toContain('No policy statements to validate');
   });
   
   test('should handle invalid policy syntax', async () => {
-    const validator = new OciCisBenchmarkValidator(testLogger);
+    const validator = new OciCisBenchmarkValidator(mockLogger);
     const reports = await validator.validate(['This is not a valid policy']);
     
     // Should still run and produce reports instead of failing
     expect(reports.length).toBeGreaterThan(0);
     
     // Logger should record debug messages about parsing issues
-    expect(testLogger.debug).toHaveBeenCalledWith(
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       expect.stringContaining('Skipping statement due to parsing error')
     );
   });
