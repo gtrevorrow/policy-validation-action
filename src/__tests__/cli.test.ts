@@ -68,10 +68,11 @@ describe('CLI', () => {
         debugOutput({ stdout, stderr });
 
         const output = getJsonFromOutput(stdout);
-        const results = output.results ? JSON.parse(output.results) : output;
+        const results = JSON.parse(output.results);
+
         expect(Array.isArray(results)).toBe(true);
 
-        // Syntax validator runs first; it should report passed=false
+        // Local syntax validator runs first; it should report passed=false
         const syntaxReport = results[0].results.find((r: any) =>
           r.validatorName.includes('Syntax')
         );
@@ -80,39 +81,28 @@ describe('CLI', () => {
     }, 15000);
 
     test('error conditions output JSON with error field', async () => {
-        const { stdout, stderr } = await execAsync('node ./dist/index.js validate ./nonexistent.tf')
-            .catch(error => error);
-        
+        const { stdout, stderr } = await execWithStringOutput(
+          `node ${binPath} validate ./nonexistent.tf`
+        );
         debugOutput({ stdout, stderr });
+
         const output = getJsonFromOutput(stdout);
         expect(output).toHaveProperty('error');
-        // The property could be on the object directly or in the first element of an array
-        const errorMessage = Array.isArray(output) ? output[0].error : output.error;
-        expect(typeof errorMessage).toBe('string');
-    }, 15000); // 15 second timeout
+        const errMsg = Array.isArray(output) ? output[0].error : output.error;
+        expect(typeof errMsg).toBe('string');
+    }, 15000);
 
     test('using files option works correctly', async () => {
-        const filesToProcess = 'valid.tf,invalid.tf';
-        const fixturesDir = './src/__tests__/fixtures';
-        const command = `node ${binPath} validate ${fixturesDir} --files ${filesToProcess}`;
+        const command = `node ${binPath} validate src/__tests__/fixtures --files valid.tf,invalid.tf`;
+        const { stdout, stderr } = await execAsync(command).catch(e => e);
+        debugOutput({ stdout, stderr });
+        expect(stderr).toContain('Policy validation failed for one or more files/checks.');
 
-        try {
-            await execAsync(command);
-            throw new Error('Expected failure due to invalid.tf');
-        } catch (error: any) {
-            debugOutput({ stdout: error.stdout, stderr: error.stderr });
-
-            // Confirm the new top‑level failure message
-            expect(error.stderr).toContain('Policy validation failed for one or more files/checks.');
-
-            // Extract and parse JSON from stdout
-            const outputObj = getJsonFromOutput(error.stdout);
-            const results = outputObj.results ? JSON.parse(outputObj.results) : outputObj;
-
-            expect(Array.isArray(results)).toBe(true);
-            expect(results.some((o: any) => o.file.endsWith('valid.tf'))).toBe(true);
-            expect(results.some((o: any) => o.file.endsWith('invalid.tf'))).toBe(true);
-        }
+        const outputObj = getJsonFromOutput(stdout);
+        const results = JSON.parse(outputObj.results) as any[];
+        
+        expect(results.some((o: any) => o.file.endsWith('valid.tf'))).toBe(true);
+        expect(results.some((o: any) => o.file.endsWith('invalid.tf'))).toBe(true);
     }, 15000);
 
     test('file-extension command-line flag should work correctly', async () => {
@@ -134,7 +124,7 @@ describe('CLI', () => {
         try {
             // Test with all files (no extension filter)
             const { stdout: stdoutDefault, stderr: stderrDefault } = await execWithStringOutput(
-                `node lib/cli.js validate ${tempDir} --verbose`
+                `node ${binPath} validate ${tempDir} --verbose`
             );
             
             debugOutput({
@@ -143,18 +133,18 @@ describe('CLI', () => {
             });
             
             const outputDefault = getJsonFromOutput(stdoutDefault);
-            const resultDefault = outputDefault.results ? JSON.parse(outputDefault.results) : outputDefault;
+            const resultDefault = JSON.parse(outputDefault.results);
             expect(resultDefault.length).toBe(2); // Should find both files
             
             // Test with file-extension filter for .tf files
             const { stdout, stderr } = await execWithStringOutput(
-                `node lib/cli.js validate ${tempDir} --file-extension .tf --verbose`
+                `node ${binPath} validate ${tempDir} --file-extension .tf --verbose`
             );
             
             debugOutput({ stdout, stderr });
             
             const output = getJsonFromOutput(stdout);
-            const result = output.results ? JSON.parse(output.results) : output;
+            const result = JSON.parse(output.results);
             expect(result.length).toBe(1); // Should only find .tf file
             expect(result[0].file.endsWith('.tf')).toBe(true);
             
@@ -185,11 +175,11 @@ describe('CLI', () => {
         try {
             // First test without the env var to verify both files are found
             const { stdout: stdoutBefore, stderr: stderrBefore } = await execWithStringOutput(
-                `node lib/cli.js validate ${tempDir}`
+                `node ${binPath} validate ${tempDir}`
             );
             
             const outputBefore = getJsonFromOutput(stdoutBefore);
-            const resultBefore = outputBefore.results ? JSON.parse(outputBefore.results) : outputBefore;
+            const resultBefore = JSON.parse(outputBefore.results);
             expect(resultBefore.length).toBe(2); // Should find both files initially
             
             // Now set file-extension in environment variable
@@ -197,39 +187,24 @@ describe('CLI', () => {
             
             // Run the CLI again which should pick up the environment variable
             const { stdout, stderr } = await execWithStringOutput(
-                `node lib/cli.js validate ${tempDir} --verbose`
+                `node ${binPath} validate ${tempDir} --verbose`
             );
             
             debugOutput({ stdout, stderr });
             
             // Check if the environment variable is being respected properly
+            const output = getJsonFromOutput(stdout);
+            const result = JSON.parse(output.results);
+
             if (stderr.includes('File extension: .tf')) {
                 // If the stderr shows the correct extension, check for proper filtering
-                const output = getJsonFromOutput(stdout);
-                const result = output.results ? JSON.parse(output.results) : output;
-                
-                if (result.length === 1) {
-                    // If proper filtering, should only have one file
-                    expect(result[0].file.endsWith('.tf')).toBe(true);
-                } else {
-                    // Environment variable might be working differently than expected
-                    // Skip the length check but ensure at least one file is a .tf file
-                    const tfFiles = result.filter((item: { file: string }) => item.file.endsWith('.tf'));
-                    expect(tfFiles.length).toBeGreaterThan(0);
-                    
-                    // This is a workaround - env var may not be working as expected in tests
-                    console.warn('Warning: Environment variable filtering not working as expected in test');
-                }
+                expect(result.length).toBe(1);
+                expect(result[0].file.endsWith('.tf')).toBe(true);
             } else {
-                // The environment variable is not being read properly
-                // Just check that at least the .tf file is included in results
-                const output = getJsonFromOutput(stdout);
-                const result = output.results ? JSON.parse(output.results) : output;
-                
-                const tfFiles = result.filter((item: { file: string }) => item.file.endsWith('.tf'));
+                // Environment variable might be working differently than expected
+                // Skip the length check but ensure at least one file is a .tf file
+                const tfFiles = result.filter((i: any) => i.file.endsWith('.tf'));
                 expect(tfFiles.length).toBeGreaterThan(0);
-                
-                console.warn('Warning: Environment variable not detected in output');
             }
         } finally {
             // Clean up
@@ -262,16 +237,14 @@ describe('CLI', () => {
             
             // But override with command-line to filter for .txt
             const { stdout, stderr } = await execWithStringOutput(
-                `node lib/cli.js validate ${tempDir} --file-extension .txt --verbose`
+                `node ${binPath} validate ${tempDir} --file-extension .txt --verbose`
             );
             
             debugOutput({ stdout, stderr });
-            
             const output = getJsonFromOutput(stdout);
-            const result = output.results ? JSON.parse(output.results) : output;
-            expect(result.length).toBe(1); // Should only find .txt file
+            const result = JSON.parse(output.results);
+            expect(result.length).toBe(1);
             expect(result[0].file.endsWith('.txt')).toBe(true);
-            
         } finally {
             // Clean up
             delete process.env.POLICY_FILE_EXTENSION;
@@ -286,11 +259,42 @@ describe('CLI', () => {
           `node ${binPath} validate src/__tests__/fixtures/invalid.tf`
         );
         const output = getJsonFromOutput(stdout);
-        const results = output.results ? JSON.parse(output.results) : output;
+        const results = JSON.parse(output.results);
 
         // syntax validator is first; expect its report.passed=false
         const syntaxReport = results[0].results.find((r: any) => r.validatorName.includes('Syntax'));
         expect(syntaxReport).toBeDefined();
         expect(syntaxReport!.reports[0].passed).toBe(false);
+    }, 15000);
+
+    test('should return empty results when no files match criteria', async () => {
+        // Create a temp directory with no matching files
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'policy-test-empty-'));
+        
+        // Create a non-matching file
+        const txtFile = path.join(tempDir, 'readme.txt');
+        fs.writeFileSync(txtFile, 'This is not a policy file');
+        
+        try {
+            // Run CLI with .tf extension filter - should find no files and return empty pipeline results
+            const { stdout, stderr } = await execWithStringOutput(
+                `node ${binPath} validate ${tempDir} --file-extension .tf --verbose`
+            );
+            
+            debugOutput({ stdout, stderr });
+            
+            // Should get warning about no files found
+            expect(stderr).toContain('No files matching criteria found');
+            
+            const output = getJsonFromOutput(stdout);
+            const results = JSON.parse(output.results);
+            expect(Array.isArray(results)).toBe(true);
+            expect(results.length).toBe(0); // Should be empty array - no validation pipeline runs
+            
+        } finally {
+            // Clean up
+            fs.unlinkSync(txtFile);
+            fs.rmdirSync(tempDir);
+        }
     }, 15000);
 });

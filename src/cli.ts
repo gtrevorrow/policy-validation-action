@@ -17,11 +17,10 @@ program
   .option('-e, --extractor <type>', 'Policy extractor type (regex, hcl)', 'regex')
   .option('-p, --pattern <pattern>', 'Custom regex pattern for policy extraction')
   .option('--files <files>', 'Comma-separated list of specific files to process')
-  .option('--exit-on-error <bool>', 'Exit with non-zero status if validation fails', 'true')
   .option('--file-extension <ext>', 'Filter files by specified extension (e.g., .tf)')
-  .option('--cis-benchmark', 'Run CIS Benchmark validation', false)
-  .option('--validators-local <bool>', 'Enable local validators (syntax validation)', 'true')
-  .option('--validators-global <bool>', 'Enable global validators', 'true')
+  .option('--exit-on-error <bool>', 'Exit with non-zero status if validation fails', 'false')
+  .option('--validators-local <bool>', 'Enable local validators (per-file syntax validation)', 'true')
+  .option('--validators-global <bool>', 'Enable global validators (cross-file CIS benchmark validation)', 'false')
   .action(async (pathArg, cmdOptions) => {
     // Create a CLI-specific platform implementation that handles Commander options
     const cliPlatform: PlatformOperations = new class extends CliOperations {
@@ -35,7 +34,6 @@ program
           'files': cmdOptions.files,
           'exit-on-error': cmdOptions.exitOnError,
           'file-extension': cmdOptions.fileExtension,
-          'cis-benchmark': cmdOptions.cisBenchmark,
           'validators-local': cmdOptions.validatorsLocal,
           'validators-global': cmdOptions.validatorsGlobal
         };
@@ -52,6 +50,7 @@ program
           return String(optionMap[name]);
         }
         
+        
         // Then check environment variables with POLICY_ prefix
         return process.env[`POLICY_${name.replace(/-/g, '_').toUpperCase()}`] || '';
       }
@@ -63,7 +62,7 @@ program
             console.log(message);
           } else {
             console.error(message);
-            // Only exit on error if specified by action
+            // Only exit on error if the user specified the flag
             if (this.getInput('exit-on-error') === 'true') {
               process.exit(1);
             }

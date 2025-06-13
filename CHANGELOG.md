@@ -180,7 +180,7 @@ All notable changes to this project will be documented in this file. See [standa
 * **extractor:** processFile signature has changed to support the new
 extraction system. It now accepts pattern and extractor type parameters.
 
-Affects: src/extractors/*, src/Main.ts, src/cli.ts, src/__tests__/Main.test.ts
+Affects: src/extractors/*, src/Main.ts, src/cli.ts, src/__tests__/Infrastructure.integration.test.ts
 
 ### Features
 

@@ -1,15 +1,19 @@
 /**
- * Main.test.ts
+ * Infrastructure.integration.test.ts
  * 
- * This file contains tests for the core functionality of the policy validation tool.
- * It tests the following key functions:
- * - findPolicyFiles: Locates policy files in a directory or validates a single file path
- * - formatPolicyStatements: Formats and normalizes policy statements
- * - processFile: Extracts policy statements from files using different extraction strategies
- * - validatePolicySyntax: Validates the syntax of extracted policy statements
+ * This file contains integration tests for the core infrastructure components of the policy validation tool.
+ * It tests the integration between multiple components working together:
+ * - findPolicyFiles: File system traversal and filtering logic
+ * - processFile: Policy extraction from various file formats (Terraform, tfvars, etc.)
+ * - validatePolicies: End-to-end validation pipeline orchestration
+ * - runAction: Main CLI/GitHub Actions entry point with configuration parsing
  * 
- * The tests use a combination of mocked file system operations and real fixture files
- * to ensure both unit test coverage and integration test validation.
+ * The validation system uses a pipeline-based approach with two types of validators:
+ * - Local validators: Run on each file individually (syntax validation)
+ * - Global validators: Run on all statements together (CIS benchmark validation)
+ * 
+ * These integration tests use a combination of mocked file system operations and real fixture files
+ * to ensure the infrastructure components work correctly together in production-like scenarios.
  */
 
 import * as fs from 'fs';
@@ -17,7 +21,8 @@ import * as path from 'path';
 import { 
     findPolicyFiles, 
     processFile,
-    runAction
+    runAction,
+    validatePolicies
 } from '../Main';
 import { ValidatorFactory } from '../validators/ValidatorFactory';
 import { ExtractorType } from '../extractors/ExtractorFactory';
@@ -43,7 +48,7 @@ jest.mock('fs', () => {
     };
 });
 
-describe('Main', () => {
+describe('Infrastructure Integration Tests', () => {
     // Clear mocks between tests
     beforeEach(() => {
         jest.clearAllMocks();
@@ -649,215 +654,247 @@ describe('Main', () => {
             expect(reports3[0].passed).toBe(true);
         });
     });
-});
 
-/**
- * Additional tests for edge cases and error handling
- * These tests ensure the library correctly handles missing files,
- * inaccessible directories, and other error conditions.
- */
-describe('Unit Tests', () => {
-    it('should handle empty directory', async () => {
-        const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-        mockAccess.mockRejectedValue(new Error('Directory not found'));
-        
-        const files = await findPolicyFiles('nonexistent', {}, mockLogger);
-        expect(files).toEqual([]);
-        expect(mockLogger.error).toHaveBeenCalled();
-    });
-});
+    /**
+     * Tests for validatePolicies function
+     * 
+     * These tests verify that the validatePolicies function correctly:
+     * - Returns an empty array when no files match the criteria
+     * - Returns validation reports for found policies using the pipeline system
+     * - Handles different validation pipeline configurations
+     * - Properly logs warnings and handles error conditions
+     */
+    describe('validatePolicies', () => {
+        it('should return empty array when no files match criteria', async () => {
+            // Mock file system to simulate directory with no matching files
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
 
-/**
- * Tests for configuration parsing helpers
- * These tests verify that the configuration parsing functions correctly
- * handle different input formats and default values
- */
-describe('Configuration Parsing', () => {
-    let accessMock: jest.SpyInstance;
-    let statMock: jest.SpyInstance;
-    let readdirMock: jest.SpyInstance;
-    beforeAll(() => {
-        accessMock = jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
-        statMock = jest.spyOn(fs.promises, 'stat').mockImplementation(async (p) => {
-            return {
-                isFile: () => true,
-                isDirectory: () => false,
-                isBlockDevice: () => false,
-                isCharacterDevice: () => false,
-                isSymbolicLink: () => false,
-                isFIFO: () => false,
-                isSocket: () => false,
-                atime: new Date(),
-                mtime: new Date(),
-                ctime: new Date(),
-                birthtime: new Date(),
-                atimeMs: 0,
-                mtimeMs: 0,
-                ctimeMs: 0,
-                birthtimeMs: 0,
-                dev: 0,
-                ino: 0,
-                mode: 0,
-                nlink: 0,
-                uid: 0,
-                gid: 0,
-                rdev: 0,
-                size: 0,
-                blksize: 0,
-                blocks: 0,
-                atimeNs: BigInt(0),
-                mtimeNs: BigInt(0),
-                ctimeNs: BigInt(0),
-                birthtimeNs: BigInt(0),
-                devBigInt: BigInt(0),
-                inoBigInt: BigInt(0),
-                modeBigInt: BigInt(0),
-                nlinkBigInt: BigInt(0),
-                uidBigInt: BigInt(0),
-                gidBigInt: BigInt(0),
-                rdevBigInt: BigInt(0),
-                sizeBigInt: BigInt(0),
-                blksizeBigInt: BigInt(0),
-                blocksBigInt: BigInt(0)
+            mockAccess.mockResolvedValue(undefined);
+            
+            // Mock directory check
+            mockStat.mockResolvedValueOnce({
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            // Mock directory with only non-matching files
+            mockReaddir.mockResolvedValueOnce([
+                { name: 'readme.txt', isFile: () => true, isDirectory: () => false },
+                { name: 'config.json', isFile: () => true, isDirectory: () => false }
+            ] as unknown as fs.Dirent[]);
+            
+            const options = {
+                extractorType: 'regex' as ExtractorType,
+                fileExtension: '.tf',
+                exitOnError: false
             };
+            
+            const results = await validatePolicies('/test/dir', options, mockLogger);
+            
+            // Should return empty array
+            expect(Array.isArray(results)).toBe(true);
+            expect(results.length).toBe(0);
+            
+            // Should log the appropriate warning message
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                'No files matching criteria found in /test/dir'
+            );
         });
-        readdirMock = jest.spyOn(fs.promises, 'readdir').mockResolvedValue([
-            {
-                name: 'dummy.tf',
-                isFile: () => true,
-                isDirectory: () => false,
-                isBlockDevice: () => false,
-                isCharacterDevice: () => false,
-                isSymbolicLink: () => false,
-                isFIFO: () => false,
-                isSocket: () => false
-            }
-        ]);
-    });
-    afterAll(() => {
-        accessMock.mockRestore();
-        statMock.mockRestore();
-        readdirMock.mockRestore();
-    });
 
-    // Mock platform for testing input parsing
-    const mockPlatform = {
-        getInput: jest.fn(),
-        setOutput: jest.fn(),
-        setResult: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        warning: jest.fn(), // Added missing property
-        error: jest.fn(),
-        createLogger: jest.fn().mockReturnValue({
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn()
-        }) // Added missing property
-    };
+        it('should return empty array when directory has no files at all', async () => {
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
 
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('should correctly parse boolean inputs with default true', async () => {
-        // Create a shared logger mock
-        const logger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn()
-        };
-        const mockGetInput = jest.fn((name) => {
-            if (name === 'path') return '.';
-            if (name === 'validators-local') return '';
-            return '';
+            mockAccess.mockResolvedValue(undefined);
+            
+            // Mock directory check
+            mockStat.mockResolvedValueOnce({
+                isFile: () => false,
+                isDirectory: () => true
+            } as unknown as fs.Stats);
+            
+            // Mock empty directory
+            mockReaddir.mockResolvedValueOnce([]);
+            
+            const options = {
+                extractorType: 'regex' as ExtractorType,
+                exitOnError: false
+            };
+            
+            const results = await validatePolicies('/empty/dir', options, mockLogger);
+            
+            // Should return empty array
+            expect(Array.isArray(results)).toBe(true);
+            expect(results.length).toBe(0);
+            
+            // Should log the general "no files found" message
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                'No files found in /empty/dir'
+            );
         });
-        const testPlatform = {
-            getInput: mockGetInput,
-            setOutput: jest.fn(),
-            setResult: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            warning: jest.fn(),
-            error: jest.fn(),
-            createLogger: jest.fn().mockReturnValue(logger)
-        };
-        await runAction(testPlatform);
-        expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: true");
     });
 
-    it('should correctly parse boolean inputs with default false', async () => {
-        // Shared logger mock for all sub-tests
-        const logger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn()
-        };
-        // Test default false (empty input)
-        const mockGetInput = jest.fn((name) => {
-            if (name === 'path') return '.';
-            if (name === 'cis-benchmark') return '';
-            return '';
+    /**
+     * Additional tests for edge cases and error handling
+     * These tests ensure the library correctly handles missing files,
+     * inaccessible directories, and other error conditions.
+     */
+    describe('Unit Tests', () => {
+        it('should handle empty directory', async () => {
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            mockAccess.mockRejectedValue(new Error('Directory not found'));
+            
+            const files = await findPolicyFiles('nonexistent', {}, mockLogger);
+            expect(files).toEqual([]);
+            expect(mockLogger.error).toHaveBeenCalled();
         });
-        const testPlatform = {
-            getInput: mockGetInput,
-            setOutput: jest.fn(),
-            setResult: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            warning: jest.fn(),
-            error: jest.fn(),
-            createLogger: jest.fn().mockReturnValue(logger)
-        };
-        await runAction(testPlatform);
-        expect(logger.info.mock.calls.flat()).toContain("Run CIS Benchmark: false");
 
-        // Test explicit 'true'
-        jest.clearAllMocks();
-        const mockGetInputTrue = jest.fn((name) => {
-            if (name === 'path') return '.';
-            if (name === 'cis-benchmark') return 'true';
-            return '';
+        it('should handle path access errors correctly in findPolicyFiles', async () => {
+            // Mock fs.promises.access to simulate a path access error
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            mockAccess.mockRejectedValue(new Error('Access denied'));
+            
+            // Call findPolicyFiles with an inaccessible path
+            const files = await findPolicyFiles('/inaccessible/path', {}, mockLogger);
+            
+            // It should return an empty array and log the error
+            expect(files).toEqual([]);
+            expect(mockLogger.error).toHaveBeenCalledWith(
+                expect.stringContaining('Path /inaccessible/path is not accessible')
+            );
         });
-        const testPlatformTrue = {
-            getInput: mockGetInputTrue,
-            setOutput: jest.fn(),
-            setResult: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            warning: jest.fn(),
-            error: jest.fn(),
-            createLogger: jest.fn().mockReturnValue(logger)
-        };
-        await runAction(testPlatformTrue);
-        expect(logger.info.mock.calls.flat()).toContain("Run CIS Benchmark: true");
+    });
 
-        // Test explicit 'false'
-        jest.clearAllMocks();
-        const mockGetInputFalse = jest.fn((name) => {
-            if (name === 'path') return '.';
-            if (name === 'cis-benchmark') return 'false';
-            return '';
+    /**
+     * Tests for configuration parsing helpers
+     * These tests verify that the configuration parsing functions correctly
+     * handle different input formats and default values for validator pipelines
+     */
+    describe('Configuration Parsing', () => {
+        let accessMock: jest.SpyInstance;
+        let statMock: jest.SpyInstance;
+        let readdirMock: jest.SpyInstance;
+        beforeAll(() => {
+            const resolvedDotPath = path.resolve('.');
+            accessMock = jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
+            statMock = jest.spyOn(fs.promises, 'stat').mockImplementation(async (p: string | Buffer | URL) => {
+                const pathStr = path.resolve(p.toString());
+                if (pathStr === resolvedDotPath) { 
+                    return {
+                        isFile: () => false, isDirectory: () => true, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
+                        dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 0, blksize: 0, blocks: 0,
+                        atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
+                        atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
+                    } as fs.Stats;
+                } else if (pathStr === path.join(resolvedDotPath, 'dummy.tf')) { 
+                     return {
+                        isFile: () => true, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
+                        dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 100, blksize: 4096, blocks: 1,
+                        atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
+                        atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
+                    } as fs.Stats;
+                }
+                // Enhanced fallback for unhandled paths
+                return { 
+                    isFile: () => false, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
+                    dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 0, blksize: 0, blocks: 0,
+                    atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
+                    atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
+                } as fs.Stats;
+            });
+            readdirMock = jest.spyOn(fs.promises, 'readdir').mockImplementation(async (p: string | Buffer | URL) => {
+                const pathStr = p.toString();
+                if (pathStr === '.' || pathStr.endsWith('/.')) {
+                    return [
+                        { name: 'dummy.tf', isFile: () => true, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false }
+                    ] as fs.Dirent[];
+                }
+                return [];
+            });
         });
-        const testPlatformFalse = {
-            getInput: mockGetInputFalse,
-            setOutput: jest.fn(),
-            setResult: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            warning: jest.fn(),
-            error: jest.fn(),
-            createLogger: jest.fn().mockReturnValue(logger)
-        };
-        await runAction(testPlatformFalse);
-        expect(logger.info.mock.calls.flat()).toContain("Run CIS Benchmark: false");
+        afterAll(() => {
+            accessMock.mockRestore();
+            statMock.mockRestore();
+            readdirMock.mockRestore();
+        });
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
+
+        it('should correctly parse boolean inputs with default values', async () => {
+            // Create a shared logger mock
+            const logger = {
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn()
+            };
+            
+            // Test with empty inputs to verify default values
+            const mockGetInput = jest.fn((name) => {
+                if (name === 'path') return '.';
+                // Return empty for all other inputs to test default values
+                return '';
+            });
+            
+            const testPlatform = {
+                getInput: mockGetInput,
+                setOutput: jest.fn(),
+                setResult: jest.fn(),
+                debug: jest.fn(),
+                info: jest.fn(),
+                warning: jest.fn(), // Changed from warn to warning
+                error: jest.fn(),
+                createLogger: jest.fn().mockReturnValue(logger)
+            };
+            
+            await runAction(testPlatform);
+            
+            // Verify the explicit default values for validator pipelines
+            expect(logger.info.mock.calls.flat()).toContain("Exit on error: false");
+            expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: true");
+            expect(logger.info.mock.calls.flat()).toContain("Global validators enabled: false");
+        });
+        
+        it('should handle specific boolean values correctly', async () => {
+            // Create a shared logger mock
+            const logger = {
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn()
+            };
+            
+            // Test with specific boolean values
+            const mockGetInput = jest.fn((name) => {
+                if (name === 'path') return '.';
+                if (name === 'exit-on-error') return 'true';
+                if (name === 'validators-local') return 'false';
+                if (name === 'validators-global') return 'true';
+                return '';
+            });
+            
+            const testPlatform = {
+                getInput: mockGetInput,
+                setOutput: jest.fn(),
+                setResult: jest.fn(),
+                debug: jest.fn(),
+                info: jest.fn(),
+                warning: jest.fn(), // Changed from warn to warning
+                error: jest.fn(),
+                createLogger: jest.fn().mockReturnValue(logger)
+            };
+            
+            await runAction(testPlatform);
+            
+            // Verify all boolean values for validator pipelines are set correctly
+            expect(logger.info.mock.calls.flat()).toContain("Exit on error: true");
+            expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: false");
+            expect(logger.info.mock.calls.flat()).toContain("Global validators enabled: true");
+        });
     });
 });

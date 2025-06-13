@@ -20,8 +20,7 @@ You can control which validators run using the following inputs in your GitHub A
   with:
     path: './policies'
     validators-local: 'true'  # Enable/disable local validators (syntax validation)
-    validators-global: 'true' # Enable/disable global validators
-    cis-benchmark: 'true'     # Enable/disable CIS benchmark validation specifically
+    validators-global: 'true' # Enable/disable global validators (includes CIS benchmark)
 ```
 
 ### CLI Configuration
@@ -30,16 +29,15 @@ When using the CLI tool, you can configure validators using command-line argumen
 
 ```bash
 # Using command-line arguments
-policy-validation-action validate ./policies --validators-local=true --validators-global=false --cis-benchmark=true
+policy-validation-action validate ./policies --validators-local=true --validators-global=true
 
 # Using environment variables
 export POLICY_VALIDATORS_LOCAL=true
-export POLICY_VALIDATORS_GLOBAL=false
-export POLICY_CIS_BENCHMARK=true
+export POLICY_VALIDATORS_GLOBAL=true
 policy-validation-action validate ./policies
 ```
 
-All boolean options use string values of 'true' or 'false' and default to 'true' for validators-local and validators-global, and 'false' for cis-benchmark.
+All boolean options use string values of 'true' or 'false' and default to 'true' for validators-local and 'false' for validators-global.
 
 ## Available Validators
 
@@ -58,11 +56,11 @@ If you're extending the action or writing custom validators, the `ValidatorFacto
 ```typescript
 import { ValidatorFactory } from './validators/ValidatorFactory';
 
-// Create a local validation pipeline
+// Create a local validation pipeline (includes syntax validator)
 const localPipeline = ValidatorFactory.createPipeline('local', {}, logger);
 
-// Create a global validation pipeline with CIS benchmark validation
-const globalPipeline = ValidatorFactory.createPipeline('global', { runCisBenchmark: true }, logger);
+// Create a global validation pipeline (includes CIS benchmark validator)
+const globalPipeline = ValidatorFactory.createPipeline('global', {}, logger);
 ```
 
 ## Adding New Validators
@@ -235,18 +233,27 @@ static createRegexValidator(config?: ValidatorConfig, logger?: Logger): PolicyVa
 }
 
 // 3. Update creation methods to use the configuration
-static createLocalValidators(config: ValidatorConfig, logger?: Logger): PolicyValidator[] {
+static createLocalValidators(logger?: Logger, options?: any): PolicyValidator[] {
   const validators: PolicyValidator[] = [];
   
-  // Always add syntax validator if local validators are enabled
-  if (config.runLocalValidators) {
-    validators.push(ValidatorFactory.createSyntaxValidator(logger));
-    
-    // Add regex validator if custom patterns are provided
-    if (config.regexValidatorPatterns) {
-      validators.push(ValidatorFactory.createRegexValidator(config, logger));
-    }
+  // Always add syntax validator for local validation
+  validators.push(ValidatorFactory.createSyntaxValidator(logger));
+  
+  // Add additional validators based on options
+  if (options?.regexValidatorPatterns) {
+    validators.push(ValidatorFactory.createRegexValidator(options, logger));
   }
+  
+  return validators;
+}
+
+static createGlobalValidators(options?: any, logger?: Logger): PolicyValidator[] {
+  const validators: PolicyValidator[] = [];
+  
+  // Always include CIS benchmark validator for global validation
+  validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
+  
+  // Future global validators can be added here based on options
   
   return validators;
 }
@@ -287,3 +294,9 @@ program
     runValidation(path, validatorConfig);
   });
 ```
+
+## Pipeline Behavior
+
+- **Local Pipeline**: Runs when `validators-local` is `true` (default). Always includes the OCI Syntax Validator.
+- **Global Pipeline**: Runs when `validators-global` is `true` (default `false` for CLI, `true` for GitHub Actions).
+- **Empty Pipelines**: If a pipeline has no validators configured, it won't run, ensuring optimal performance.

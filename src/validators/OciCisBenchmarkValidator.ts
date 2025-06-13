@@ -81,8 +81,14 @@ export class OciCisBenchmarkValidator implements PolicyValidator {
       
       // Check if we have admin policies for each critical service
       results.serviceAdminPolicies.forEach((policy: string) => {
+        const lowerPolicy = policy.toLowerCase();
         criticalServices.forEach(service => {
-          if (policy.toLowerCase().includes(service)) {
+          if (lowerPolicy.includes(service) || 
+              lowerPolicy.includes(`${service}-family`) ||
+              lowerPolicy.includes(`virtual-${service}`) ||
+              (service === 'network' && lowerPolicy.includes('virtual-network')) ||
+              (service === 'compute' && lowerPolicy.includes('instance')) ||
+              (service === 'storage' && lowerPolicy.includes('object'))) {
             foundServiceAdmins.add(service);
           }
         });
@@ -117,31 +123,36 @@ export class OciCisBenchmarkValidator implements PolicyValidator {
           checkId: 'CIS-OCI-1.2',
           statement: policy,
           message: 'Overly permissive policy grants "manage all-resources" without conditions',
-          recommendation: 'Restrict permissions using specific resource types and add conditions',
+          recommendation: 'Restrict permissions to specific compartments and add appropriate conditions',
           severity: 'error'
         }))
       });
       
-      // CIS-OCI-1.3: Admin group restrictions
-      const adminPolicies = statements.filter(policy => 
-        policy.toLowerCase().includes('manage') && 
-        policy.toLowerCase().includes('group'));
+      // CIS-OCI-1.3: Admin group restrictions - applies to IAM policies that manage groups and users
+      const iamAdminPolicies = statements.filter(policy => {
+        const lowerPolicy = policy.toLowerCase();
+        return lowerPolicy.includes('manage') && 
+               (lowerPolicy.includes('manage groups ') || lowerPolicy.includes('manage users ') ||
+                lowerPolicy.endsWith('manage groups') || lowerPolicy.endsWith('manage users'));
+      });
       
-      const adminRestrictionsMissing = adminPolicies.length > 0 && 
-        results.adminRestrictionPolicies.length === 0;
+      const unprotectedAdminPolicies = iamAdminPolicies.filter(policy => 
+        !results.adminRestrictionPolicies.includes(policy));
+      
+      const adminRestrictionsMissing = unprotectedAdminPolicies.length > 0;
       
       reports.push({
         checkId: 'CIS-OCI-1.3',
         name: 'Admin Group Restrictions',
         description: 'Ensure IAM administrators cannot update tenancy Administrators group',
         passed: !adminRestrictionsMissing,
-        issues: adminRestrictionsMissing ? [{
+        issues: unprotectedAdminPolicies.map(policy => ({
           checkId: 'CIS-OCI-1.3',
-          statement: adminPolicies[0],
-          message: 'Group management policies do not restrict access to Administrators group',
-          recommendation: 'Add "where target.group.name != \'Administrators\'" to group management policies',
+          statement: policy,
+          message: 'IAM management policies do not restrict access to Administrators group',
+          recommendation: 'Add "where target.group.name != \'Administrators\'" to group and user management policies',
           severity: 'error'
-        }] : []
+        }))
       });
       
       // CIS-OCI-1.5: Compartment-level admins
@@ -162,25 +173,32 @@ export class OciCisBenchmarkValidator implements PolicyValidator {
       });
       
       // CIS-OCI-1.13: MFA enforcement
-      const securityPolicies = statements.filter(policy => 
-        (policy.toLowerCase().includes('security') || 
-         policy.toLowerCase().includes('iam')) && 
-        policy.toLowerCase().includes('manage'));
+      const securityPolicies = statements.filter(policy => {
+        const lowerPolicy = policy.toLowerCase();
+        return (lowerPolicy.includes('security-family') || 
+                lowerPolicy.includes('keys') ||
+                lowerPolicy.includes('certificates') ||
+                lowerPolicy.includes('vault')) && 
+               lowerPolicy.includes('manage');
+      });
       
-      const mfaMissing = securityPolicies.length > 0 && results.mfaPolicies.length === 0;
+      const unprotectedSecurityPolicies = securityPolicies.filter(policy => 
+        !results.mfaPolicies.includes(policy));
+      
+      const mfaMissing = unprotectedSecurityPolicies.length > 0;
       
       reports.push({
         checkId: 'CIS-OCI-1.13',
         name: 'MFA Enforcement',
         description: 'Ensure multi-factor authentication is enforced for all users with console access',
         passed: !mfaMissing,
-        issues: mfaMissing ? [{
+        issues: unprotectedSecurityPolicies.map(policy => ({
           checkId: 'CIS-OCI-1.13',
-          statement: securityPolicies[0] || '',
+          statement: policy,
           message: 'Security-related policies do not enforce MFA',
           recommendation: 'Add "where request.user.mfachallenged == \'true\'" to security policies',
           severity: 'warning'
-        }] : []
+        }))
       });
       
       // CIS-OCI-5.2: Network Security Groups

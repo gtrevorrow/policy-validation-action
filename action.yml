@@ -22,10 +22,6 @@ inputs:
   file-extension:
     description: 'Filter files by specified extension (e.g., .tf)'
     required: false
-  cis-benchmark:
-    description: 'Run CIS Benchmark validation'
-    required: false
-    default: 'false'
   validators-local:
     description: 'Enable local (per-file) validators like syntax validation'
     required: false

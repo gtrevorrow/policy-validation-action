@@ -78,15 +78,16 @@ async function processFile(filePath, pattern, extractor = 'regex', logger) {
         return [];
     }
 }
-/** Function to find policy files in a directory
- This function will recursively search for files matching the specified criteria
- and return their paths. It also handles both file and directory inputs.
- @param dir The directory to search in
- @param options Optional parameters for file names and extensions
- @param logger Optional logger for recording diagnostic info
- @returns An array of file paths that match the criteria
- If no files are found, an empty array is returned.
- If the path is not accessible, an error is logged and an empty array is returned.
+/**
+ * Function to find policy files in a directory
+ * This function will recursively search for files matching the specified criteria
+ * and return their paths. It also handles both file and directory inputs.
+ * @param dir The directory to search in
+ * @param options Optional parameters for file names and extensions
+ * @param logger Optional logger for recording diagnostic info
+ * @returns An array of file paths that match the criteria
+ * If no files are found, an empty array is returned.
+ * If the path is not accessible, an error is logged and an empty array is returned.
 */
 async function findPolicyFiles(dir, options, logger) {
     var _a, _b;
@@ -151,12 +152,12 @@ async function findPolicyFiles(dir, options, logger) {
  *
  * This function processes policy files found at `scanPath`. For each file, it extracts
  * policy statements based on `options.extractorType` and `options.pattern`.
- * These statements are then run through a `ValidationPipeline`.
+ * These statements are then run through validation pipelines.
  *
- * The pipeline includes:
- *   - A per-file syntax validation (OciSyntaxValidator) on each matching file.
- *   - If `options.runCisBenchmark` is true, a global CIS benchmark validation
- *     (OciCisBenchmarkValidator) on all extracted statements.
+ * The validation process includes:
+ *   - A local validation pipeline that runs on each file individually (includes OciSyntaxValidator)
+ *   - A global validation pipeline that runs on all statements from all files together
+ *     (includes OciCisBenchmarkValidator when enabled)
  *
  * @param scanPath Path (file or directory) to scan for policy files.
  * @param options ValidationOptions:
@@ -164,20 +165,20 @@ async function findPolicyFiles(dir, options, logger) {
  *   - pattern?: Regex string for statement extraction
  *   - fileExtension?: Only include files with this extension
  *   - fileNames?: Explicit list of filenames to process
- *   - exitOnError: Stop per‐file syntax processing on first error (Note: behavior might be validator-specific)
- *   - runCisBenchmark: If true, include global CIS benchmark validation in the pipeline
+ *   - exitOnError: Stop processing on first error (Note: behavior might be validator-specific)
+ *   - validatorConfig?: Configuration for which validator pipelines to run
  * @param logger Logger instance for diagnostic output.
  * @returns Promise<FileValidationResult[]>:
  *   - An array of `FileValidationResult`. Each entry corresponds to a processed file
  *     and contains the `file` path and an array of `ValidationPipelineResult` objects.
  *   - Each `ValidationPipelineResult` includes the `validatorName`, `validatorDescription`,
  *     and an array of `ValidationReport` objects from that validator.
- *   - If `runCisBenchmark` is true, an additional `FileValidationResult` with `file: 'CIS Benchmark'`
- *     will be included, containing reports from the CIS benchmark validator for all statements.
+ *   - If global validators are enabled, an additional `FileValidationResult` with `file: 'Global Validation'`
+ *     will be included, containing reports from the global validation pipeline.
  *   - Returns an empty array if no files match the criteria or no statements are extracted.
   */
 async function validatePolicies(scanPath, options, logger) {
-    // Find all policy files
+    // Find all policy files - findPolicyFiles already handles inaccessible paths
     const filesToProcess = await findPolicyFiles(scanPath, {
         fileNames: options.fileNames,
         fileExtension: options.fileExtension,
@@ -185,11 +186,9 @@ async function validatePolicies(scanPath, options, logger) {
     if (filesToProcess.length === 0) {
         const message = options.fileExtension == undefined ?
             `No files found in ${scanPath}` :
-            `No files matching criteria found in ${scanPath}`; // Adjusted message
-        // Don't throw an error, return empty array if no files match
+            `No files matching criteria found in ${scanPath}`;
         logger.warn(message);
         return [];
-        // throw new Error(message); // Original behavior
     }
     // Track all validation outputs and collect expressions for global pipeline
     const results = [];
@@ -197,14 +196,14 @@ async function validatePolicies(scanPath, options, logger) {
     // Use validator configuration if provided, otherwise use defaults
     const validatorConfig = options.validatorConfig || {
         runLocalValidators: true,
-        runGlobalValidators: options.runCisBenchmark
+        runGlobalValidators: false
     };
     // Create pipelines using the ValidatorFactory
     const localPipeline = validatorConfig.runLocalValidators ?
-        ValidatorFactory_1.ValidatorFactory.createPipeline('local', {}, logger) :
+        ValidatorFactory_1.ValidatorFactory.createPipeline('local', options, logger) :
         new ValidationPipeline_1.ValidationPipeline(logger);
     const globalPipeline = validatorConfig.runGlobalValidators ?
-        ValidatorFactory_1.ValidatorFactory.createPipeline('global', { runCisBenchmark: options.runCisBenchmark }, logger) :
+        ValidatorFactory_1.ValidatorFactory.createPipeline('global', options, logger) :
         new ValidationPipeline_1.ValidationPipeline(logger);
     // Per-file local pipeline
     for (const file of filesToProcess) {
@@ -214,13 +213,13 @@ async function validatePolicies(scanPath, options, logger) {
         const syntaxResults = await localPipeline.validate(expressions);
         results.push({ file, results: syntaxResults });
     }
-    // Global pipeline
-    logger.info('Running global validation pipeline on all statements...');
-    const cisResults = options.runCisBenchmark && allExpressions.length > 0 ?
-        await globalPipeline.validate(allExpressions) :
-        [];
-    if (cisResults.length > 0) {
-        results.push({ file: 'CIS Benchmark', results: cisResults });
+    // Global pipeline - only run if it has validators
+    if (globalPipeline.hasValidators() && allExpressions.length > 0) {
+        logger.info('Running global validation pipeline on all statements...');
+        const globalResults = await globalPipeline.validate(allExpressions);
+        if (globalResults.length > 0) {
+            results.push({ file: 'Global Validation', results: globalResults });
+        }
     }
     return results;
 }
@@ -238,44 +237,32 @@ async function runAction(platform) {
         const inputPath = platform.getInput('path') || '.';
         const scanPath = resolvePath(inputPath);
         logger.info(`Resolved path: ${scanPath}`);
-        // ❌ Path existence/pre‑accessibility check BEFORE validation
+        // fail fast if the top‐level path is inaccessible
         try {
             await fs.promises.access(scanPath, fs.constants.R_OK);
         }
-        catch (err) {
-            const errorMsg = `Path ${scanPath} is not accessible: ${err}`;
-            logger.error(errorMsg);
-            platform.setOutput('error', errorMsg);
-            platform.setResult(false, errorMsg);
-            return;
+        catch (e) {
+            throw new Error(`Path ${scanPath} is not accessible: ${e.message}`);
         }
-        // Helper function to parse boolean inputs with default true
-        const parseBooleanInput = (name, defaultValue = true) => {
+        // Helper function to parse boolean inputs with explicit defaults
+        const parseBooleanInput = (name, defaultValue) => {
             const value = platform.getInput(name);
             if (!value)
                 return defaultValue;
-            return value.toLowerCase() !== 'false';
-        };
-        // Helper function to parse boolean inputs with default false
-        const parseBooleanInputFalse = (name) => {
-            const value = platform.getInput(name);
-            if (!value)
-                return false;
             return value.toLowerCase() === 'true';
         };
-        // Build options from inputs
+        // Build options from inputs with appropriate defaults
         const options = {
             extractorType: platform.getInput('extractor') || 'regex',
-            pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN, // Use env var as fallback
+            pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN,
             fileExtension: platform.getInput('file-extension'),
             fileNames: platform.getInput('files') ?
                 platform.getInput('files').split(',').map(f => f.trim()) :
                 undefined,
-            exitOnError: parseBooleanInput('exit-on-error'),
-            runCisBenchmark: parseBooleanInputFalse('cis-benchmark'),
+            exitOnError: parseBooleanInput('exit-on-error', false),
             validatorConfig: {
-                runLocalValidators: parseBooleanInput('validators-local'),
-                runGlobalValidators: parseBooleanInput('validators-global')
+                runLocalValidators: parseBooleanInput('validators-local', true),
+                runGlobalValidators: parseBooleanInput('validators-global', false)
             }
         };
         // Log options
@@ -291,36 +278,34 @@ async function runAction(platform) {
             logger.info(`Using pattern from env var POLICY_STATEMENTS_PATTERN`);
         }
         else {
-            logger.info('Using default pattern');
+            logger.info(`Using default pattern`);
         }
         logger.info(`Exit on error: ${options.exitOnError}`);
-        logger.info(`Run CIS Benchmark: ${options.runCisBenchmark}`);
         // Log validator configuration
         if (options.validatorConfig) {
             logger.info(`Local validators enabled: ${options.validatorConfig.runLocalValidators}`);
             logger.info(`Global validators enabled: ${options.validatorConfig.runGlobalValidators}`);
         }
-        // Run policy validation
+        // Run policy validation - error handling including path access errors happens here
         const outputs = await validatePolicies(scanPath, options, logger);
-        // emit JSON
+        // platform.info( JSON.stringify(outputs) );
         platform.setOutput('results', JSON.stringify(outputs));
-        // determine overallSuccess
+        // determine overall success
         const overallSuccess = outputs
             .flatMap(o => o.results)
             .every(r => r.reports.every(rep => rep.passed));
-        if (overallSuccess) {
-            platform.setResult(true, 'Policy validation succeeded');
-        }
-        else {
-            // Fail the step if any file is invalid, regardless of exitOnError option
-            // exitOnError only controls whether processing stops early
-            platform.setResult(false, 'Policy validation failed for one or more files/checks.');
-        }
+        platform.setResult(overallSuccess, overallSuccess
+            ? 'Policy validation succeeded'
+            : 'Policy validation failed for one or more files/checks.');
     }
     catch (error) {
-        logger.error(`Error: ${error}`);
-        platform.setOutput('error', `${error}`);
-        platform.setResult(false, `Error: ${error}`);
+        const msg = error.message || String(error);
+        logger.error(msg);
+        // CLI JSON error line (error already a string)
+        console.log(JSON.stringify({ error: msg }));
+        // GitHub Actions output API (no-op in CLI)
+        platform.setOutput('results', JSON.stringify([]));
+        platform.setResult(false, msg);
     }
 }
 /**
@@ -381,11 +366,10 @@ commander_1.program
     .option('-e, --extractor <type>', 'Policy extractor type (regex, hcl)', 'regex')
     .option('-p, --pattern <pattern>', 'Custom regex pattern for policy extraction')
     .option('--files <files>', 'Comma-separated list of specific files to process')
-    .option('--exit-on-error <bool>', 'Exit with non-zero status if validation fails', 'true')
     .option('--file-extension <ext>', 'Filter files by specified extension (e.g., .tf)')
-    .option('--cis-benchmark', 'Run CIS Benchmark validation', false)
-    .option('--validators-local <bool>', 'Enable local validators (syntax validation)', 'true')
-    .option('--validators-global <bool>', 'Enable global validators', 'true')
+    .option('--exit-on-error <bool>', 'Exit with non-zero status if validation fails', 'false')
+    .option('--validators-local <bool>', 'Enable local validators (per-file syntax validation)', 'true')
+    .option('--validators-global <bool>', 'Enable global validators (cross-file CIS benchmark validation)', 'false')
     .action(async (pathArg, cmdOptions) => {
     // Create a CLI-specific platform implementation that handles Commander options
     const cliPlatform = new class extends CliOperations_1.CliOperations {
@@ -399,7 +383,6 @@ commander_1.program
                 'files': cmdOptions.files,
                 'exit-on-error': cmdOptions.exitOnError,
                 'file-extension': cmdOptions.fileExtension,
-                'cis-benchmark': cmdOptions.cisBenchmark,
                 'validators-local': cmdOptions.validatorsLocal,
                 'validators-global': cmdOptions.validatorsGlobal
             };
@@ -424,7 +407,7 @@ commander_1.program
                 }
                 else {
                     console.error(message);
-                    // Only exit on error if specified by action
+                    // Only exit on error if the user specified the flag
                     if (this.getInput('exit-on-error') === 'true') {
                         process.exit(1);
                     }
@@ -5079,8 +5062,14 @@ class OciCisBenchmarkValidator {
             const foundServiceAdmins = new Set();
             // Check if we have admin policies for each critical service
             results.serviceAdminPolicies.forEach((policy) => {
+                const lowerPolicy = policy.toLowerCase();
                 criticalServices.forEach(service => {
-                    if (policy.toLowerCase().includes(service)) {
+                    if (lowerPolicy.includes(service) ||
+                        lowerPolicy.includes(`${service}-family`) ||
+                        lowerPolicy.includes(`virtual-${service}`) ||
+                        (service === 'network' && lowerPolicy.includes('virtual-network')) ||
+                        (service === 'compute' && lowerPolicy.includes('instance')) ||
+                        (service === 'storage' && lowerPolicy.includes('object'))) {
                         foundServiceAdmins.add(service);
                     }
                 });
@@ -5111,27 +5100,31 @@ class OciCisBenchmarkValidator {
                     checkId: 'CIS-OCI-1.2',
                     statement: policy,
                     message: 'Overly permissive policy grants "manage all-resources" without conditions',
-                    recommendation: 'Restrict permissions using specific resource types and add conditions',
+                    recommendation: 'Restrict permissions to specific compartments and add appropriate conditions',
                     severity: 'error'
                 }))
             });
-            // CIS-OCI-1.3: Admin group restrictions
-            const adminPolicies = statements.filter(policy => policy.toLowerCase().includes('manage') &&
-                policy.toLowerCase().includes('group'));
-            const adminRestrictionsMissing = adminPolicies.length > 0 &&
-                results.adminRestrictionPolicies.length === 0;
+            // CIS-OCI-1.3: Admin group restrictions - applies to IAM policies that manage groups and users
+            const iamAdminPolicies = statements.filter(policy => {
+                const lowerPolicy = policy.toLowerCase();
+                return lowerPolicy.includes('manage') &&
+                    (lowerPolicy.includes('manage groups ') || lowerPolicy.includes('manage users ') ||
+                        lowerPolicy.endsWith('manage groups') || lowerPolicy.endsWith('manage users'));
+            });
+            const unprotectedAdminPolicies = iamAdminPolicies.filter(policy => !results.adminRestrictionPolicies.includes(policy));
+            const adminRestrictionsMissing = unprotectedAdminPolicies.length > 0;
             reports.push({
                 checkId: 'CIS-OCI-1.3',
                 name: 'Admin Group Restrictions',
                 description: 'Ensure IAM administrators cannot update tenancy Administrators group',
                 passed: !adminRestrictionsMissing,
-                issues: adminRestrictionsMissing ? [{
-                        checkId: 'CIS-OCI-1.3',
-                        statement: adminPolicies[0],
-                        message: 'Group management policies do not restrict access to Administrators group',
-                        recommendation: 'Add "where target.group.name != \'Administrators\'" to group management policies',
-                        severity: 'error'
-                    }] : []
+                issues: unprotectedAdminPolicies.map(policy => ({
+                    checkId: 'CIS-OCI-1.3',
+                    statement: policy,
+                    message: 'IAM management policies do not restrict access to Administrators group',
+                    recommendation: 'Add "where target.group.name != \'Administrators\'" to group and user management policies',
+                    severity: 'error'
+                }))
             });
             // CIS-OCI-1.5: Compartment-level admins
             const compartmentAdminsPassed = results.compartmentAdminPolicies.length > 0;
@@ -5149,22 +5142,28 @@ class OciCisBenchmarkValidator {
                     }]
             });
             // CIS-OCI-1.13: MFA enforcement
-            const securityPolicies = statements.filter(policy => (policy.toLowerCase().includes('security') ||
-                policy.toLowerCase().includes('iam')) &&
-                policy.toLowerCase().includes('manage'));
-            const mfaMissing = securityPolicies.length > 0 && results.mfaPolicies.length === 0;
+            const securityPolicies = statements.filter(policy => {
+                const lowerPolicy = policy.toLowerCase();
+                return (lowerPolicy.includes('security-family') ||
+                    lowerPolicy.includes('keys') ||
+                    lowerPolicy.includes('certificates') ||
+                    lowerPolicy.includes('vault')) &&
+                    lowerPolicy.includes('manage');
+            });
+            const unprotectedSecurityPolicies = securityPolicies.filter(policy => !results.mfaPolicies.includes(policy));
+            const mfaMissing = unprotectedSecurityPolicies.length > 0;
             reports.push({
                 checkId: 'CIS-OCI-1.13',
                 name: 'MFA Enforcement',
                 description: 'Ensure multi-factor authentication is enforced for all users with console access',
                 passed: !mfaMissing,
-                issues: mfaMissing ? [{
-                        checkId: 'CIS-OCI-1.13',
-                        statement: securityPolicies[0] || '',
-                        message: 'Security-related policies do not enforce MFA',
-                        recommendation: 'Add "where request.user.mfachallenged == \'true\'" to security policies',
-                        severity: 'warning'
-                    }] : []
+                issues: unprotectedSecurityPolicies.map(policy => ({
+                    checkId: 'CIS-OCI-1.13',
+                    statement: policy,
+                    message: 'Security-related policies do not enforce MFA',
+                    recommendation: 'Add "where request.user.mfachallenged == \'true\'" to security policies',
+                    severity: 'warning'
+                }))
             });
             // CIS-OCI-5.2: Network Security Groups
             const nsgPolicies = statements.filter(policy => policy.toLowerCase().includes('network-security-group'));
@@ -5296,8 +5295,8 @@ class OciCisListener {
         if (resource && resource.includes('network-security-groups')) {
             this.restrictNsgPolicies.push(this.currentStatement);
         }
-        // Check for specific service-related admin policies
-        if (resource) {
+        // Check for specific service-related admin policies (only for manage operations)
+        if (resource && this.currentStatement.toLowerCase().includes('manage')) {
             if (this.isServiceSpecificResource(resource)) {
                 this.serviceAdminPolicies.push(this.currentStatement);
             }
@@ -5310,9 +5309,9 @@ class OciCisListener {
         if (condition && condition.includes('request.user.mfachallenged')) {
             this.mfaPolicies.push(this.currentStatement);
         }
-        // Check for admin restriction condition
-        if (condition && (condition.includes('target.group.name!=') || condition.includes('target.group.name !='))) {
-            if (condition.includes('administrators')) {
+        // Check for admin restriction condition - applies to both group and user management
+        if (condition && condition.includes('target.group.name')) {
+            if (condition.includes('administrators') && condition.includes('!=')) {
                 this.adminRestrictionPolicies.push(this.currentStatement);
             }
         }
@@ -5320,8 +5319,9 @@ class OciCisListener {
     exitScope(ctx) {
         var _a;
         const scope = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.getText()) === null || _a === void 0 ? void 0 : _a.toLowerCase();
-        // Check for compartment-level admin policies
-        if (scope && scope.includes('compartment')) {
+        // Check for compartment-level admin policies (should manage all-resources in compartment)
+        if (scope && scope.includes('compartment') &&
+            this.currentStatement.toLowerCase().includes('manage all-resources')) {
             this.compartmentAdminPolicies.push(this.currentStatement);
         }
     }
@@ -5401,12 +5401,22 @@ class OciCisListener {
      * Check if the resource is specific to a particular OCI service
      */
     isServiceSpecificResource(resource) {
-        const criticalServices = [
+        const serviceFamilies = [
             'compute', 'database', 'object', 'storage',
-            'network', 'vcn', 'file-system', 'instances',
-            'autonomous-database', 'vault', 'keys', 'volumes'
+            'network', 'virtual-network', 'instance',
+            'autonomous-database', 'vault', 'keys', 'volumes',
+            'file-system', 'analytics', 'ai', 'functions',
+            'api-gateway', 'load-balancer', 'dns'
         ];
-        return criticalServices.some(service => resource.includes(service));
+        // Check if resource contains any service family name
+        const hasKnownService = serviceFamilies.some(service => {
+            return resource.includes(service) ||
+                resource.includes(`${service}-family`) ||
+                resource.includes(`${service}_family`);
+        });
+        // Also check for custom service families (anything ending with -family)
+        const isCustomServiceFamily = resource.includes('-family') || resource.includes('_family');
+        return hasKnownService || isCustomServiceFamily;
     }
     /**
      * Get all collected results
@@ -5472,6 +5482,8 @@ class OciSyntaxValidator {
         }
         const issues = [];
         for (const statement of statements) {
+            if (!statement || typeof statement !== 'string')
+                continue;
             const trimmedStatement = statement.trim();
             if (!trimmedStatement)
                 continue;
@@ -5556,15 +5568,21 @@ class ValidationPipeline {
         return this;
     }
     /**
+     * Check if the pipeline has any validators configured
+     */
+    hasValidators() {
+        return this.validators.length > 0;
+    }
+    /**
      * Run all validators in the pipeline on the given statements
      */
     async validate(statements) {
         var _a, _b, _c, _d;
+        (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`Running validation pipeline with ${this.validators.length} validators`);
         // Return early if no statements to validate
         if (statements.length === 0) {
             return [];
         }
-        (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`Running validation pipeline with ${this.validators.length} validators`);
         const results = [];
         for (const validator of this.validators) {
             try {
@@ -5582,7 +5600,7 @@ class ValidationPipeline {
                 (_c = this.logger) === null || _c === void 0 ? void 0 : _c.info(`Validator ${validator.name()} completed: ${totalChecks - failedChecks}/${totalChecks} checks passed, ${issuesCount} issues found`);
             }
             catch (error) {
-                (_d = this.logger) === null || _d === void 0 ? void 0 : _d.error(`Error running validator ${validator.name()}: ${error}`);
+                (_d = this.logger) === null || _d === void 0 ? void 0 : _d.error(`Error running validator ${validator.name()}: ${error instanceof Error ? error.message : error}`);
             }
         }
         return results;
@@ -5644,20 +5662,18 @@ class ValidatorFactory {
         ];
     }
     /**
-     * Creates validators for global validation pipeline
+     * Creates validators for global validation pipeline based on configuration
      * These validators are applied to all statements from all files together
      *
-     * @param runCisBenchmark Whether to include CIS benchmark validator
      * @param logger Optional logger for recording diagnostic info
      * @param options Optional configuration options for global validators
      * @returns Array of validator instances
      */
-    static createGlobalValidators(runCisBenchmark, logger, options) {
+    static createGlobalValidators(options = {}, logger) {
         const validators = [];
-        if (runCisBenchmark) {
-            validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
-        }
-        // Future global validators can be added here
+        // Include CIS benchmark validator when global validators are enabled
+        validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
+        // Future global validators can be added here based on other options
         return validators;
     }
     /**
@@ -5675,8 +5691,11 @@ class ValidatorFactory {
             validators.forEach(validator => pipeline.addValidator(validator));
         }
         else if (validatorType === 'global') {
-            const validators = ValidatorFactory.createGlobalValidators(options.runCisBenchmark || false, logger, options);
+            const validators = ValidatorFactory.createGlobalValidators(options, logger);
             validators.forEach(validator => pipeline.addValidator(validator));
+        }
+        else {
+            throw new Error(`Invalid pipeline type: ${validatorType}. Must be 'local' or 'global'.`);
         }
         return pipeline;
     }

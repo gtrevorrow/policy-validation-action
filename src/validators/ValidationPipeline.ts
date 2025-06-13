@@ -27,14 +27,22 @@ export class ValidationPipeline {
   }
   
   /**
+   * Check if the pipeline has any validators configured
+   */
+  hasValidators(): boolean {
+    return this.validators.length > 0;
+  }
+  
+  /**
    * Run all validators in the pipeline on the given statements
    */
   async validate(statements: string[]): Promise<ValidationPipelineResult[]> {
+    this.logger?.info(`Running validation pipeline with ${this.validators.length} validators`);
+    
     // Return early if no statements to validate
     if (statements.length === 0) {
         return [];
     }
-    this.logger?.info(`Running validation pipeline with ${this.validators.length} validators`);
     
     const results: ValidationPipelineResult[] = [];
     
@@ -56,7 +64,7 @@ export class ValidationPipeline {
         
         this.logger?.info(`Validator ${validator.name()} completed: ${totalChecks - failedChecks}/${totalChecks} checks passed, ${issuesCount} issues found`);
       } catch (error) {
-        this.logger?.error(`Error running validator ${validator.name()}: ${error}`);
+        this.logger?.error(`Error running validator ${validator.name()}: ${error instanceof Error ? error.message : error}`);
       }
     }
     

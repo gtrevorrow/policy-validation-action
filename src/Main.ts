@@ -3,8 +3,6 @@ import * as path from 'path';
 import { Logger, PolicyError, PlatformOperations, ValidationOptions } from './types';
 import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
 import { ValidationPipeline } from './validators/ValidationPipeline';
-import { OciCisBenchmarkValidator } from './validators/OciCisBenchmarkValidator';
-import { OciSyntaxValidator } from './validators/OciSyntaxValidator';
 import { FileValidationResult } from './types';
 import { ValidatorFactory } from './validators/ValidatorFactory';
 
@@ -127,12 +125,12 @@ export {
  *  
  * This function processes policy files found at `scanPath`. For each file, it extracts
  * policy statements based on `options.extractorType` and `options.pattern`.
- * These statements are then run through a `ValidationPipeline`.
+ * These statements are then run through validation pipelines.
  * 
- * The pipeline includes:
- *   - A per-file syntax validation (OciSyntaxValidator) on each matching file.
- *   - If `options.runCisBenchmark` is true, a global CIS benchmark validation
- *     (OciCisBenchmarkValidator) on all extracted statements.
+ * The validation process includes:
+ *   - A local validation pipeline that runs on each file individually (includes OciSyntaxValidator)
+ *   - A global validation pipeline that runs on all statements from all files together 
+ *     (includes OciCisBenchmarkValidator when enabled)
  *
  * @param scanPath Path (file or directory) to scan for policy files.
  * @param options ValidationOptions:
@@ -140,16 +138,16 @@ export {
  *   - pattern?: Regex string for statement extraction
  *   - fileExtension?: Only include files with this extension
  *   - fileNames?: Explicit list of filenames to process
- *   - exitOnError: Stop per‐file syntax processing on first error (Note: behavior might be validator-specific)
- *   - runCisBenchmark: If true, include global CIS benchmark validation in the pipeline
+ *   - exitOnError: Stop processing on first error (Note: behavior might be validator-specific)
+ *   - validatorConfig?: Configuration for which validator pipelines to run
  * @param logger Logger instance for diagnostic output.
  * @returns Promise<FileValidationResult[]>:
  *   - An array of `FileValidationResult`. Each entry corresponds to a processed file
  *     and contains the `file` path and an array of `ValidationPipelineResult` objects.
  *   - Each `ValidationPipelineResult` includes the `validatorName`, `validatorDescription`,
  *     and an array of `ValidationReport` objects from that validator.
- *   - If `runCisBenchmark` is true, an additional `FileValidationResult` with `file: 'CIS Benchmark'`
- *     will be included, containing reports from the CIS benchmark validator for all statements.
+ *   - If global validators are enabled, an additional `FileValidationResult` with `file: 'Global Validation'`
+ *     will be included, containing reports from the global validation pipeline.
  *   - Returns an empty array if no files match the criteria or no statements are extracted.
   */
 export async function validatePolicies(
@@ -157,7 +155,7 @@ export async function validatePolicies(
   options: ValidationOptions,
   logger: Logger
 ): Promise<FileValidationResult[]> {
-  // Find all policy files
+  // Find all policy files - findPolicyFiles already handles inaccessible paths
   const filesToProcess = await findPolicyFiles(scanPath, {
     fileNames: options.fileNames,
     fileExtension: options.fileExtension,
@@ -166,11 +164,9 @@ export async function validatePolicies(
   if (filesToProcess.length === 0) {
     const message = options.fileExtension == undefined ?
       `No files found in ${scanPath}` :
-      `No files matching criteria found in ${scanPath}`; // Adjusted message
-    // Don't throw an error, return empty array if no files match
+      `No files matching criteria found in ${scanPath}`;
     logger.warn(message);
     return [];
-    // throw new Error(message); // Original behavior
   }
 
   // Track all validation outputs and collect expressions for global pipeline
@@ -180,16 +176,16 @@ export async function validatePolicies(
   // Use validator configuration if provided, otherwise use defaults
   const validatorConfig = options.validatorConfig || {
     runLocalValidators: true,
-    runGlobalValidators: options.runCisBenchmark
+    runGlobalValidators: false
   };
   
   // Create pipelines using the ValidatorFactory
   const localPipeline = validatorConfig.runLocalValidators ? 
-    ValidatorFactory.createPipeline('local', {}, logger) : 
+    ValidatorFactory.createPipeline('local', options, logger) : 
     new ValidationPipeline(logger);
     
   const globalPipeline = validatorConfig.runGlobalValidators ?
-    ValidatorFactory.createPipeline('global', { runCisBenchmark: options.runCisBenchmark }, logger) :
+    ValidatorFactory.createPipeline('global', options, logger) :
     new ValidationPipeline(logger);
   
   // Per-file local pipeline
@@ -203,14 +199,13 @@ export async function validatePolicies(
     results.push({ file, results: syntaxResults });
   }
 
-  // Global pipeline
-  logger.info('Running global validation pipeline on all statements...');
-  const cisResults = options.runCisBenchmark && allExpressions.length > 0 ? 
-    await globalPipeline.validate(allExpressions) : 
-    [];
-
-  if (cisResults.length > 0) {
-    results.push({ file: 'CIS Benchmark', results: cisResults });
+  // Global pipeline - only run if it has validators
+  if (globalPipeline.hasValidators() && allExpressions.length > 0) {
+    logger.info('Running global validation pipeline on all statements...');
+    const globalResults = await globalPipeline.validate(allExpressions);
+    if (globalResults.length > 0) {
+      results.push({ file: 'Global Validation', results: globalResults });
+    }
   }
 
   return results;
@@ -225,51 +220,41 @@ export async function validatePolicies(
  */
 export async function runAction(platform: PlatformOperations): Promise<void> {
   const logger = platform.createLogger();
-
   try {
+
     // Get inputs using the platform abstraction
     const inputPath = platform.getInput('path') || '.';
     const scanPath = resolvePath(inputPath);
     logger.info(`Resolved path: ${scanPath}`);
 
-    // ❌ Path existence/pre‑accessibility check BEFORE validation
+    
+    // fail fast if the top‐level path is inaccessible
     try {
       await fs.promises.access(scanPath, fs.constants.R_OK);
-    } catch (err) {
-      const errorMsg = `Path ${scanPath} is not accessible: ${err}`;
-      logger.error(errorMsg);
-      platform.setOutput('error', errorMsg);
-      platform.setResult(false, errorMsg);
-      return;
+    } catch (e: any) {
+      throw new Error(`Path ${scanPath} is not accessible: ${e.message}`);
     }
+   
 
-    // Helper function to parse boolean inputs with default true
-    const parseBooleanInput = (name: string, defaultValue = true): boolean => {
+    // Helper function to parse boolean inputs with explicit defaults
+    const parseBooleanInput = (name: string, defaultValue: boolean): boolean => {
       const value = platform.getInput(name);
       if (!value) return defaultValue;
-      return value.toLowerCase() !== 'false';
-    };
-
-    // Helper function to parse boolean inputs with default false
-    const parseBooleanInputFalse = (name: string): boolean => {
-      const value = platform.getInput(name);
-      if (!value) return false;
       return value.toLowerCase() === 'true';
     };
     
-    // Build options from inputs
+    // Build options from inputs with appropriate defaults
     const options: ValidationOptions = {
       extractorType: platform.getInput('extractor') || 'regex',
-      pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN, // Use env var as fallback
+      pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN,
       fileExtension: platform.getInput('file-extension'),
       fileNames: platform.getInput('files') ?
         platform.getInput('files').split(',').map(f => f.trim()) :
         undefined,
-      exitOnError: parseBooleanInput('exit-on-error'),
-      runCisBenchmark: parseBooleanInputFalse('cis-benchmark'),
+      exitOnError: parseBooleanInput('exit-on-error', false),
       validatorConfig: {
-        runLocalValidators: parseBooleanInput('validators-local'),
-        runGlobalValidators: parseBooleanInput('validators-global')
+        runLocalValidators: parseBooleanInput('validators-local', true),
+        runGlobalValidators: parseBooleanInput('validators-global', false)
       }
     };
 
@@ -284,10 +269,9 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
     } else if (process.env.POLICY_STATEMENTS_PATTERN) {
       logger.info(`Using pattern from env var POLICY_STATEMENTS_PATTERN`);
     } else {
-      logger.info('Using default pattern');
+      logger.info(`Using default pattern`);
     }
     logger.info(`Exit on error: ${options.exitOnError}`);
-    logger.info(`Run CIS Benchmark: ${options.runCisBenchmark}`);
     
     // Log validator configuration
     if (options.validatorConfig) {
@@ -295,28 +279,34 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       logger.info(`Global validators enabled: ${options.validatorConfig.runGlobalValidators}`);
     }
 
-    // Run policy validation
+    // Run policy validation - error handling including path access errors happens here
     const outputs = await validatePolicies(scanPath, options, logger);
-
-    // emit JSON
+    
+    // platform.info( JSON.stringify(outputs) );
     platform.setOutput('results', JSON.stringify(outputs));
 
-    // determine overallSuccess
+    // determine overall success
     const overallSuccess = outputs
       .flatMap(o => o.results)
       .every(r => r.reports.every(rep => rep.passed));
 
-    if (overallSuccess) {
-      platform.setResult(true, 'Policy validation succeeded');
-    } else {
-      // Fail the step if any file is invalid, regardless of exitOnError option
-      // exitOnError only controls whether processing stops early
-      platform.setResult(false, 'Policy validation failed for one or more files/checks.');
-    }
-  } catch (error) {
-    logger.error(`Error: ${error}`);
-    platform.setOutput('error', `${error}`);
-    platform.setResult(false, `Error: ${error}`);
+    platform.setResult(
+      overallSuccess,
+      overallSuccess
+        ? 'Policy validation succeeded'
+        : 'Policy validation failed for one or more files/checks.'
+    );
+
+  } catch (error: any) {
+    const msg = error.message || String(error);
+    logger.error(msg);
+
+    // CLI JSON error line (error already a string)
+    console.log(JSON.stringify({ error: msg }));
+
+    // GitHub Actions output API (no-op in CLI)
+    platform.setOutput('results', JSON.stringify([]));
+    platform.setResult(false, msg);
   }
 }
 

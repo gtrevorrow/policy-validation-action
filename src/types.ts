@@ -46,29 +46,27 @@ export interface ValidationIssue {
     severity: 'info' | 'warning' | 'error';
 }
 
+/**
+ * Configuration for validator pipelines
+ */
+export interface ValidatorConfig {
+  /** Enable local validators (per-file syntax validation) */
+  runLocalValidators: boolean;
+  /** Enable global validators (cross-file CIS benchmark validation) */
+  runGlobalValidators: boolean;
+}
+
+/**
+ * Options for policy validation
+ */
 export interface ValidationOptions {
   extractorType: string;
   pattern?: string;
   fileExtension?: string;
   fileNames?: string[];
   exitOnError: boolean;
-  runCisBenchmark: boolean;
+  /** Configuration for which validator pipelines to run */
   validatorConfig?: ValidatorConfig;
-}
-
-/**
- * Options for configuring validators in the validation pipeline
- */
-export interface ValidatorConfig {
-  /**
-   * Whether to run local (per-file) validators
-   */
-  runLocalValidators: boolean;
-  
-  /**
-   * Whether to run global validators like CIS benchmark
-   */
-  runGlobalValidators: boolean;
 }
 
 /**

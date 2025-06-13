@@ -45,6 +45,7 @@ export class OciSyntaxValidator implements PolicyValidator {
     const issues: ValidationIssue[] = [];
     
     for (const statement of statements) {
+      if (!statement || typeof statement !== 'string') continue;
       const trimmedStatement = statement.trim();
       if (!trimmedStatement) continue;
       

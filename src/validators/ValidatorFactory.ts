@@ -48,22 +48,20 @@ export class ValidatorFactory {
   }
 
   /**
-   * Creates validators for global validation pipeline
+   * Creates validators for global validation pipeline based on configuration
    * These validators are applied to all statements from all files together
    * 
-   * @param runCisBenchmark Whether to include CIS benchmark validator
    * @param logger Optional logger for recording diagnostic info
    * @param options Optional configuration options for global validators
    * @returns Array of validator instances
    */
-  static createGlobalValidators(runCisBenchmark: boolean, logger?: Logger, options?: Record<string, any>): PolicyValidator[] {
+  static createGlobalValidators(options: any = {}, logger?: Logger): PolicyValidator[] {
     const validators: PolicyValidator[] = [];
     
-    if (runCisBenchmark) {
-      validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
-    }
+    // Include CIS benchmark validator when global validators are enabled
+    validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
     
-    // Future global validators can be added here
+    // Future global validators can be added here based on other options
     
     return validators;
   }
@@ -78,10 +76,7 @@ export class ValidatorFactory {
    */
   static createPipeline(
     validatorType: 'local' | 'global',
-    options: {
-      runCisBenchmark?: boolean;
-      [key: string]: any;
-    } = {},
+    options: any = {},
     logger?: Logger
   ): ValidationPipeline {
     const pipeline = new ValidationPipeline(logger);
@@ -90,12 +85,10 @@ export class ValidatorFactory {
       const validators = ValidatorFactory.createLocalValidators(logger, options);
       validators.forEach(validator => pipeline.addValidator(validator));
     } else if (validatorType === 'global') {
-      const validators = ValidatorFactory.createGlobalValidators(
-        options.runCisBenchmark || false, 
-        logger,
-        options
-      );
+      const validators = ValidatorFactory.createGlobalValidators(options, logger);
       validators.forEach(validator => pipeline.addValidator(validator));
+    } else {
+      throw new Error(`Invalid pipeline type: ${validatorType}. Must be 'local' or 'global'.`);
     }
     
     return pipeline;

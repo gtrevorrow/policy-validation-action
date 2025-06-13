@@ -215,7 +215,6 @@ jobs:
           extractorPattern: 'your-custom-pattern'  # Optional
           validators-local: 'true'  # Enable syntax validation (default: true)
           validators-global: 'true' # Enable global validators (default: true)
-          cis-benchmark: 'true'     # Enable CIS benchmark validation (default: false)
 ```
 
 #### Github Action Inputs
@@ -227,8 +226,7 @@ jobs:
 | `extractorPattern`  | Custom pattern for the policy extractor                              | No       | -       |
 | `exitOnError`       | Exit immediately if policy validation fails                          | No       | `true`  |
 | `validators-local`  | Enable local validators (syntax validation)                          | No       | `true`  |
-| `validators-global` | Enable global validators                                             | No       | `true`  |
-| `cis-benchmark`     | Run CIS Benchmark validation                                         | No       | `false` |
+| `validators-global` | Enable global validators (includes CIS benchmark)                   | No       | `true`  |
 
 #### Github Action Outputs
 
@@ -520,8 +518,7 @@ The policy validation tool allows you to configure which validators are run duri
 - uses: gtrevorrow/policy-validation-action@v1
   with:
     validators-local: 'true'   # Enable/disable local validators (syntax validation)
-    validators-global: 'true'  # Enable/disable global validators
-    cis-benchmark: 'true'      # Enable/disable CIS benchmark validation specifically
+    validators-global: 'true'  # Enable/disable global validators (includes CIS benchmark)
 ```
 
 #### Environment Variables for CLI
@@ -532,9 +529,6 @@ export POLICY_VALIDATORS_LOCAL=true
 
 # Enable or disable global validators (true/false)
 export POLICY_VALIDATORS_GLOBAL=true
-
-# Enable or disable CIS benchmark validation (true/false)
-export POLICY_CIS_BENCHMARK=true
 ```
 
 #### Validator Types
@@ -547,6 +541,8 @@ export POLICY_CIS_BENCHMARK=true
    - Currently includes the OciCisBenchmarkValidator
    - Can be enabled/disabled with `validators-global`
    - The CIS benchmark validator can be specifically enabled/disabled with `cis-benchmark`
+
+**Pipeline Behavior**: The system automatically determines whether to run each pipeline based on whether it has validators configured (`hasValidators()` check). When `validators-global` is enabled, it always includes the CIS Benchmark validator. This eliminates the need for separate flags for individual validators and ensures optimal performance by only running pipelines that have actual validators configured.
 
 For more detailed information, see the [validator configuration guide](docs/validator-configuration.md).
 

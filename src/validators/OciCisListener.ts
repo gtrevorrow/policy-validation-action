@@ -60,8 +60,8 @@ export class OciCisListener implements PolicyListener {
       this.restrictNsgPolicies.push(this.currentStatement);
     }
     
-    // Check for specific service-related admin policies
-    if (resource) {
+    // Check for specific service-related admin policies (only for manage operations)
+    if (resource && this.currentStatement.toLowerCase().includes('manage')) {
       if (this.isServiceSpecificResource(resource)) {
         this.serviceAdminPolicies.push(this.currentStatement);
       }
@@ -76,9 +76,9 @@ export class OciCisListener implements PolicyListener {
       this.mfaPolicies.push(this.currentStatement);
     }
     
-    // Check for admin restriction condition
-    if (condition && (condition.includes('target.group.name!=') || condition.includes('target.group.name !='))) {
-      if (condition.includes('administrators')) {
+    // Check for admin restriction condition - applies to both group and user management
+    if (condition && condition.includes('target.group.name')) {
+      if (condition.includes('administrators') && condition.includes('!=')) {
         this.adminRestrictionPolicies.push(this.currentStatement);
       }
     }
@@ -87,8 +87,9 @@ export class OciCisListener implements PolicyListener {
   exitScope(ctx: any): void {
     const scope = ctx?.getText()?.toLowerCase();
     
-    // Check for compartment-level admin policies
-    if (scope && scope.includes('compartment')) {
+    // Check for compartment-level admin policies (should manage all-resources in compartment)
+    if (scope && scope.includes('compartment') && 
+        this.currentStatement.toLowerCase().includes('manage all-resources')) {
       this.compartmentAdminPolicies.push(this.currentStatement);
     }
   }
@@ -172,13 +173,25 @@ export class OciCisListener implements PolicyListener {
    * Check if the resource is specific to a particular OCI service
    */
   private isServiceSpecificResource(resource: string): boolean {
-    const criticalServices = [
+    const serviceFamilies = [
       'compute', 'database', 'object', 'storage', 
-      'network', 'vcn', 'file-system', 'instances', 
-      'autonomous-database', 'vault', 'keys', 'volumes'
+      'network', 'virtual-network', 'instance', 
+      'autonomous-database', 'vault', 'keys', 'volumes',
+      'file-system', 'analytics', 'ai', 'functions',
+      'api-gateway', 'load-balancer', 'dns'
     ];
     
-    return criticalServices.some(service => resource.includes(service));
+    // Check if resource contains any service family name
+    const hasKnownService = serviceFamilies.some(service => {
+      return resource.includes(service) || 
+             resource.includes(`${service}-family`) ||
+             resource.includes(`${service}_family`);
+    });
+    
+    // Also check for custom service families (anything ending with -family)
+    const isCustomServiceFamily = resource.includes('-family') || resource.includes('_family');
+    
+    return hasKnownService || isCustomServiceFamily;
   }
   
   /**
