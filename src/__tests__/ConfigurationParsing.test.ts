@@ -2,14 +2,6 @@ import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { PlatformOperations } from '../types';
 import { parseBooleanInput } from '../Main';
 
-// Legacy function that was referenced but doesn't exist in Main.ts
-// Keeping for backward compatibility testing
-const parseBooleanInputFalse = (name: string, platform: PlatformOperations): boolean => {
-  const value = platform.getInput(name);
-  if (!value) return false;
-  return value.trim().toLowerCase() === 'true';
-};
-
 /**
  * Tests for configuration parsing helpers in Main.ts
  * These tests verify that the configuration parsing functions correctly
@@ -102,30 +94,6 @@ describe('Boolean Configuration Parsing', () => {
         });
     });
 
-    describe('parseBooleanInputFalse (legacy function differences)', () => {
-        it('should always default to false (unlike parseBooleanInput)', () => {
-            const falsyValues = ['', null, undefined];
-            
-            falsyValues.forEach(value => {
-                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
-                const result = parseBooleanInputFalse('test-input', mockPlatform);
-                expect(result).toBe(false); // Always false, no configurable default
-            });
-        });
-
-        it('should handle "true" and "false" same as parseBooleanInput', () => {
-            // Test true
-            (mockPlatform.getInput as jest.Mock).mockReturnValue('true');
-            const resultTrue = parseBooleanInputFalse('test-input', mockPlatform);
-            expect(resultTrue).toBe(true);
-
-            // Test false  
-            (mockPlatform.getInput as jest.Mock).mockReturnValue('false');
-            const resultFalse = parseBooleanInputFalse('test-input', mockPlatform);
-            expect(resultFalse).toBe(false);
-        });
-    });
-
     describe('Real-world configuration scenarios', () => {
         it('should work with actual Main.ts configuration options', () => {
             const configs = [
@@ -173,7 +141,6 @@ describe('Boolean Configuration Parsing', () => {
             
             expect(() => parseBooleanInput('test', true, mockPlatform)).not.toThrow();
             expect(() => parseBooleanInput('test', false, mockPlatform)).not.toThrow();
-            expect(() => parseBooleanInputFalse('test', mockPlatform)).not.toThrow();
         });
 
         it('should handle special characters and unicode', () => {
