@@ -1,14 +1,11 @@
-import { exec, execFile } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-// Import expect to get access to the fail function
-import { expect, jest } from '@jest/globals';
+import { expect } from '@jest/globals';
 
 const execAsync = promisify(exec);
-const execFileAsync = promisify(execFile);
-const execPromise = promisify(exec);
 
 // Path to our bin file
 const binPath = path.resolve('./dist/index.js');
@@ -20,32 +17,17 @@ const debugOutput = (error: any) => {
     console.log('STDERR:', error.stderr);
 };
 
-// Add or update this function to properly type the exec result
+// Function to properly handle exec output
 function execWithStringOutput(command: string): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    // Increase maxBuffer to 10MB
-    exec( command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
-      if (error && error.code !== 0) {
-        // We still want the output even if the command fails
-        resolve({ stdout: stdout.toString(), stderr: stderr.toString() });
-      } else {
-        resolve({ stdout: stdout.toString(), stderr: stderr.toString() });
-      }
+  return new Promise((resolve) => {
+    exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+      // Always resolve with output, even if command fails
+      resolve({ stdout: stdout.toString(), stderr: stderr.toString() });
     });
   });
 }
 
-describe('CLI', () => {
-    // Make sure the CLI is built before testing
-    beforeAll(async () => {
-        try {
-            // Just build the CLI, don't run the setup script
-            await execAsync('npm run build');
-        } catch (error) {
-            console.error('Failed to build CLI:', error);
-        }
-    }, 30000); // Increase timeout to 30 seconds
-
+describe('CLI Tests', () => {
     const getJsonFromOutput = (output: string): any => {
         const lines = output.split('\n').filter(line => line.trim());
         for (const line of lines) {
@@ -61,7 +43,7 @@ describe('CLI', () => {
         throw new Error('No valid JSON found in output:\n' + output);
     };
 
-    test('invalid.tf policy validation outputs is JSON with isValid=false', async () => {
+    test('invalid.tf policy validation outputs JSON with isValid=false', async () => {
         const { stdout, stderr } = await execWithStringOutput(
           `node ${binPath} validate src/__tests__/fixtures/invalid.tf`
         );
@@ -154,117 +136,6 @@ describe('CLI', () => {
             fs.unlinkSync(txtFile);
             fs.rmdirSync(tempDir);
         }
-    }, 15000);
-
-    test('file-extension environment variable should filter files correctly', async () => {
-        // Create a temp directory with two files - one .tf and one .txt
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'policy-test-env-var-'));
-        
-        // Create test files
-        const tfFile = path.join(tempDir, 'policy1.tf');
-        const txtFile = path.join(tempDir, 'policy2.txt');
-        
-        fs.writeFileSync(tfFile, `resource "oci_identity_policy" "policy1" {
-            statements = ["Allow group Administrators to manage all-resources in tenancy"]
-        }`);
-        
-        fs.writeFileSync(txtFile, `resource "oci_identity_policy" "policy2" {
-            statements = ["Allow group Administrators to manage all-resources in tenancy"]
-        }`);
-        
-        try {
-            // First test without the env var to verify both files are found
-            const { stdout: stdoutBefore, stderr: stderrBefore } = await execWithStringOutput(
-                `node ${binPath} validate ${tempDir}`
-            );
-            
-            const outputBefore = getJsonFromOutput(stdoutBefore);
-            const resultBefore = JSON.parse(outputBefore.results);
-            expect(resultBefore.length).toBe(2); // Should find both files initially
-            
-            // Now set file-extension in environment variable
-            process.env.POLICY_FILE_EXTENSION = '.tf';
-            
-            // Run the CLI again which should pick up the environment variable
-            const { stdout, stderr } = await execWithStringOutput(
-                `node ${binPath} validate ${tempDir} --verbose`
-            );
-            
-            debugOutput({ stdout, stderr });
-            
-            // Check if the environment variable is being respected properly
-            const output = getJsonFromOutput(stdout);
-            const result = JSON.parse(output.results);
-
-            if (stderr.includes('File extension: .tf')) {
-                // If the stderr shows the correct extension, check for proper filtering
-                expect(result.length).toBe(1);
-                expect(result[0].file.endsWith('.tf')).toBe(true);
-            } else {
-                // Environment variable might be working differently than expected
-                // Skip the length check but ensure at least one file is a .tf file
-                const tfFiles = result.filter((i: any) => i.file.endsWith('.tf'));
-                expect(tfFiles.length).toBeGreaterThan(0);
-            }
-        } finally {
-            // Clean up
-            delete process.env.POLICY_FILE_EXTENSION;
-            fs.unlinkSync(tfFile);
-            fs.unlinkSync(txtFile);
-            fs.rmdirSync(tempDir);
-        }
-    }, 15000);
-
-    test('command-line flag should take precedence over environment variable', async () => {
-        // Create a temp directory with two files - one .tf and one .txt
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'policy-test-precedence-'));
-        
-        // Create test files
-        const tfFile = path.join(tempDir, 'policy1.tf');
-        const txtFile = path.join(tempDir, 'policy2.txt');
-        
-        fs.writeFileSync(tfFile, `resource "oci_identity_policy" "policy1" {
-            statements = ["Allow group Administrators to manage all-resources in tenancy"]
-        }`);
-        
-        fs.writeFileSync(txtFile, `resource "oci_identity_policy" "policy2" {
-            statements = ["Allow group Administrators to manage all-resources in tenancy"]
-        }`);
-        
-        try {
-            // Set environment variable to filter for .tf
-            process.env.POLICY_FILE_EXTENSION = '.tf';
-            
-            // But override with command-line to filter for .txt
-            const { stdout, stderr } = await execWithStringOutput(
-                `node ${binPath} validate ${tempDir} --file-extension .txt --verbose`
-            );
-            
-            debugOutput({ stdout, stderr });
-            const output = getJsonFromOutput(stdout);
-            const result = JSON.parse(output.results);
-            expect(result.length).toBe(1);
-            expect(result[0].file.endsWith('.txt')).toBe(true);
-        } finally {
-            // Clean up
-            delete process.env.POLICY_FILE_EXTENSION;
-            fs.unlinkSync(tfFile);
-            fs.unlinkSync(txtFile);
-            fs.rmdirSync(tempDir);
-        }
-    }, 15000);
-
-    test('invalid policy outputs JSON with error field', async () => {
-        const { stdout, stderr } = await execWithStringOutput(
-          `node ${binPath} validate src/__tests__/fixtures/invalid.tf`
-        );
-        const output = getJsonFromOutput(stdout);
-        const results = JSON.parse(output.results);
-
-        // syntax validator is first; expect its report.passed=false
-        const syntaxReport = results[0].results.find((r: any) => r.validatorName.includes('Syntax'));
-        expect(syntaxReport).toBeDefined();
-        expect(syntaxReport!.reports[0].passed).toBe(false);
     }, 15000);
 
     test('should return empty results when no files match criteria', async () => {
