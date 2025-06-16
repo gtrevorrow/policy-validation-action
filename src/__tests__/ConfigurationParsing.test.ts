@@ -1,20 +1,13 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { PlatformOperations } from '../types';
-
-// Extract the parseBooleanInput function for testing
-// This matches the actual implementation from Main.ts
-const parseBooleanInput = (name: string, defaultValue: boolean, platform: PlatformOperations): boolean => {
-  const value = platform.getInput(name);
-  if (!value) return defaultValue;
-  return value.toLowerCase() === 'true';
-};
+import { parseBooleanInput } from '../Main';
 
 // Legacy function that was referenced but doesn't exist in Main.ts
 // Keeping for backward compatibility testing
 const parseBooleanInputFalse = (name: string, platform: PlatformOperations): boolean => {
   const value = platform.getInput(name);
   if (!value) return false;
-  return value.toLowerCase() === 'true';
+  return value.trim().toLowerCase() === 'true';
 };
 
 /**
@@ -66,12 +59,22 @@ describe('Boolean Configuration Parsing', () => {
         });
 
         it('should return "false" for any non-"true" string values', () => {
-            const nonTrueValues = ['1', 'yes', 'on', 'enabled', 'true ', ' true', 'truee', 'random', '   ', '0'];
+            const nonTrueValues = ['1', 'yes', 'on', 'enabled', 'truee', 'random', '   ', '0'];
             
             nonTrueValues.forEach(value => {
                 (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
                 const result = parseBooleanInput('test-input', true, mockPlatform);
                 expect(result).toBe(false);
+            });
+        });
+
+        it('should return "true" for "true" with whitespace', () => {
+            const trueWithWhitespace = ['true ', ' true', ' true ', '\ttrue\n', '\r\ntrue\r\n'];
+            
+            trueWithWhitespace.forEach(value => {
+                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
+                const result = parseBooleanInput('test-input', false, mockPlatform);
+                expect(result).toBe(true);
             });
         });
 

@@ -7,6 +7,19 @@ import { FileValidationResult } from './types';
 import { ValidatorFactory } from './validators/ValidatorFactory';
 
 /**
+ * Helper function to parse boolean inputs with explicit defaults
+ * @param name The name of the input parameter
+ * @param defaultValue The default value to use if input is empty
+ * @param platform The platform operations to get input from
+ * @returns The parsed boolean value
+ */
+export const parseBooleanInput = (name: string, defaultValue: boolean, platform: PlatformOperations): boolean => {
+  const value = platform.getInput(name);
+  if (!value) return defaultValue;
+  return value.trim().toLowerCase() === 'true';
+};
+
+/**
  * Function to process a file and extract policy statements
  * @param filePath The path to the file to process
  * @param pattern Optional regex pattern for extracting policy statements
@@ -235,14 +248,6 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       throw new Error(`Path ${scanPath} is not accessible: ${e.message}`);
     }
    
-
-    // Helper function to parse boolean inputs with explicit defaults
-    const parseBooleanInput = (name: string, defaultValue: boolean): boolean => {
-      const value = platform.getInput(name);
-      if (!value) return defaultValue;
-      return value.toLowerCase() === 'true';
-    };
-    
     // Build options from inputs with appropriate defaults
     const options: ValidationOptions = {
       extractorType: platform.getInput('extractor') || 'regex',
@@ -251,10 +256,10 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       fileNames: platform.getInput('files') ?
         platform.getInput('files').split(',').map(f => f.trim()) :
         undefined,
-      exitOnError: parseBooleanInput('exit-on-error', false),
+      exitOnError: parseBooleanInput('exit-on-error', false, platform),
       validatorConfig: {
-        runLocalValidators: parseBooleanInput('validators-local', true),
-        runGlobalValidators: parseBooleanInput('validators-global', false)
+        runLocalValidators: parseBooleanInput('validators-local', true, platform),
+        runGlobalValidators: parseBooleanInput('validators-global', false, platform)
       }
     };
 

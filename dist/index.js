@@ -41,6 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseBooleanInput = void 0;
 exports.findPolicyFiles = findPolicyFiles;
 exports.processFile = processFile;
 exports.validatePolicies = validatePolicies;
@@ -50,6 +51,20 @@ const path = __importStar(__nccwpck_require__(1017));
 const ExtractorFactory_1 = __nccwpck_require__(9727);
 const ValidationPipeline_1 = __nccwpck_require__(3220);
 const ValidatorFactory_1 = __nccwpck_require__(7101);
+/**
+ * Helper function to parse boolean inputs with explicit defaults
+ * @param name The name of the input parameter
+ * @param defaultValue The default value to use if input is empty
+ * @param platform The platform operations to get input from
+ * @returns The parsed boolean value
+ */
+const parseBooleanInput = (name, defaultValue, platform) => {
+    const value = platform.getInput(name);
+    if (!value)
+        return defaultValue;
+    return value.trim().toLowerCase() === 'true';
+};
+exports.parseBooleanInput = parseBooleanInput;
 /**
  * Function to process a file and extract policy statements
  * @param filePath The path to the file to process
@@ -244,13 +259,6 @@ async function runAction(platform) {
         catch (e) {
             throw new Error(`Path ${scanPath} is not accessible: ${e.message}`);
         }
-        // Helper function to parse boolean inputs with explicit defaults
-        const parseBooleanInput = (name, defaultValue) => {
-            const value = platform.getInput(name);
-            if (!value)
-                return defaultValue;
-            return value.toLowerCase() === 'true';
-        };
         // Build options from inputs with appropriate defaults
         const options = {
             extractorType: platform.getInput('extractor') || 'regex',
@@ -259,10 +267,10 @@ async function runAction(platform) {
             fileNames: platform.getInput('files') ?
                 platform.getInput('files').split(',').map(f => f.trim()) :
                 undefined,
-            exitOnError: parseBooleanInput('exit-on-error', false),
+            exitOnError: (0, exports.parseBooleanInput)('exit-on-error', false, platform),
             validatorConfig: {
-                runLocalValidators: parseBooleanInput('validators-local', true),
-                runGlobalValidators: parseBooleanInput('validators-global', false)
+                runLocalValidators: (0, exports.parseBooleanInput)('validators-local', true, platform),
+                runGlobalValidators: (0, exports.parseBooleanInput)('validators-global', false, platform)
             }
         };
         // Log options
