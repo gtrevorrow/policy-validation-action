@@ -34,38 +34,39 @@ export default class PolicyParser extends Parser {
 	public static readonly T__12 = 13;
 	public static readonly BEFORE = 14;
 	public static readonly BETWEEN = 15;
-	public static readonly NEWLINE = 16;
-	public static readonly QUOTED_STRING = 17;
-	public static readonly WS = 18;
-	public static readonly ANYUSER = 19;
-	public static readonly ANYTENANCY = 20;
-	public static readonly ENDORSE = 21;
-	public static readonly ALLOW = 22;
-	public static readonly DEFINE = 23;
-	public static readonly RESOURCE = 24;
-	public static readonly TO = 25;
-	public static readonly OF = 26;
-	public static readonly IN = 27;
-	public static readonly WHERE = 28;
-	public static readonly WITH = 29;
-	public static readonly DYNAMICGROUP = 30;
-	public static readonly GROUP = 31;
-	public static readonly SERVICE = 32;
-	public static readonly COMPARTMENT = 33;
-	public static readonly TENANCY = 34;
-	public static readonly READ = 35;
-	public static readonly INSPECT = 36;
-	public static readonly MANAGE = 37;
-	public static readonly ASSOCIATE = 38;
-	public static readonly ADMIT = 39;
-	public static readonly USE = 40;
-	public static readonly ANY = 41;
-	public static readonly AND = 42;
-	public static readonly ALL = 43;
-	public static readonly AS = 44;
-	public static readonly ID = 45;
-	public static readonly HCL_VAR = 46;
-	public static readonly WORD = 47;
+	public static readonly NOT = 16;
+	public static readonly NEWLINE = 17;
+	public static readonly QUOTED_STRING = 18;
+	public static readonly WS = 19;
+	public static readonly ANYUSER = 20;
+	public static readonly ANYTENANCY = 21;
+	public static readonly ENDORSE = 22;
+	public static readonly ALLOW = 23;
+	public static readonly DEFINE = 24;
+	public static readonly RESOURCE = 25;
+	public static readonly TO = 26;
+	public static readonly OF = 27;
+	public static readonly IN = 28;
+	public static readonly WHERE = 29;
+	public static readonly WITH = 30;
+	public static readonly DYNAMICGROUP = 31;
+	public static readonly GROUP = 32;
+	public static readonly SERVICE = 33;
+	public static readonly COMPARTMENT = 34;
+	public static readonly TENANCY = 35;
+	public static readonly READ = 36;
+	public static readonly INSPECT = 37;
+	public static readonly MANAGE = 38;
+	public static readonly ASSOCIATE = 39;
+	public static readonly ADMIT = 40;
+	public static readonly USE = 41;
+	public static readonly ANY = 42;
+	public static readonly AND = 43;
+	public static readonly ALL = 44;
+	public static readonly AS = 45;
+	public static readonly ID = 46;
+	public static readonly HCL_VAR = 47;
+	public static readonly WORD = 48;
 	public static override readonly EOF = Token.EOF;
 	public static readonly RULE_policy = 0;
 	public static readonly RULE_allowExpression = 1;
@@ -104,7 +105,7 @@ export default class PolicyParser extends Parser {
                                                             "','", "'}'", 
                                                             "':'", "'/'", 
                                                             "'''", "'.'", 
-                                                            "'='", "'!'", 
+                                                            "'='", "'!='", 
                                                             "'('", "')'", 
                                                             "'*/'", "'/*'" ];
 	public static readonly symbolicNames: (string | null)[] = [ null, null, 
@@ -115,7 +116,7 @@ export default class PolicyParser extends Parser {
                                                              null, null, 
                                                              null, null, 
                                                              "BEFORE", "BETWEEN", 
-                                                             "NEWLINE", 
+                                                             "NOT", "NEWLINE", 
                                                              "QUOTED_STRING", 
                                                              "WS", "ANYUSER", 
                                                              "ANYTENANCY", 
@@ -175,25 +176,25 @@ export default class PolicyParser extends Parser {
 				this.state = 70;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 22:
+				case 23:
 					{
 					this.state = 66;
 					this.allowExpression();
 					}
 					break;
-				case 21:
+				case 22:
 					{
 					this.state = 67;
 					this.endorseExpression();
 					}
 					break;
-				case 23:
+				case 24:
 					{
 					this.state = 68;
 					this.defineExpression();
 					}
 					break;
-				case 39:
+				case 40:
 					{
 					this.state = 69;
 					this.admitExpression();
@@ -206,7 +207,7 @@ export default class PolicyParser extends Parser {
 				this.state = 72;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-			} while (((((_la - 21)) & ~0x1F) === 0 && ((1 << (_la - 21)) & 262151) !== 0));
+			} while (((((_la - 22)) & ~0x1F) === 0 && ((1 << (_la - 22)) & 262151) !== 0));
 			this.state = 74;
 			this.match(PolicyParser.EOF);
 			}
@@ -245,7 +246,7 @@ export default class PolicyParser extends Parser {
 				this.state = 79;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===25) {
+				if (_la===26) {
 					{
 					this.state = 78;
 					this.match(PolicyParser.TO);
@@ -263,7 +264,7 @@ export default class PolicyParser extends Parser {
 				this.state = 85;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===25) {
+				if (_la===26) {
 					{
 					this.state = 84;
 					this.match(PolicyParser.TO);
@@ -282,7 +283,7 @@ export default class PolicyParser extends Parser {
 			this.state = 94;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===28) {
+			if (_la===29) {
 				{
 				this.state = 92;
 				this.match(PolicyParser.WHERE);
@@ -294,7 +295,7 @@ export default class PolicyParser extends Parser {
 			this.state = 97;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===16) {
+			if (_la===17) {
 				{
 				this.state = 96;
 				this.match(PolicyParser.NEWLINE);
@@ -347,7 +348,7 @@ export default class PolicyParser extends Parser {
 				this.state = 106;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===25) {
+				if (_la===26) {
 					{
 					this.state = 105;
 					this.match(PolicyParser.TO);
@@ -361,7 +362,7 @@ export default class PolicyParser extends Parser {
 			}
 			this.state = 111;
 			this.match(PolicyParser.IN);
-			this.state = 119;
+			this.state = 114;
 			this._errHandler.sync(this);
 			switch ( this._interp.adaptivePredict(this._input, 9, this._ctx) ) {
 			case 1:
@@ -372,39 +373,45 @@ export default class PolicyParser extends Parser {
 				break;
 			case 2:
 				{
-				{
 				this.state = 113;
 				this.scope();
-				this.state = 114;
-				this.match(PolicyParser.WITH);
-				this.state = 115;
-				this.resource();
-				this.state = 116;
-				this.match(PolicyParser.IN);
-				this.state = 117;
-				this.endorseScope();
-				}
 				}
 				break;
 			}
-			this.state = 123;
+			this.state = 121;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===28) {
+			if (_la===30) {
 				{
-				this.state = 121;
+				this.state = 116;
+				this.match(PolicyParser.WITH);
+				this.state = 117;
+				this.resource();
+				this.state = 118;
+				this.match(PolicyParser.IN);
+				this.state = 119;
+				this.endorseScope();
+				}
+			}
+
+			this.state = 125;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			if (_la===29) {
+				{
+				this.state = 123;
 				this.match(PolicyParser.WHERE);
-				this.state = 122;
+				this.state = 124;
 				this.condition();
 				}
 			}
 
-			this.state = 126;
+			this.state = 128;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===16) {
+			if (_la===17) {
 				{
-				this.state = 125;
+				this.state = 127;
 				this.match(PolicyParser.NEWLINE);
 				}
 			}
@@ -433,20 +440,20 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 128;
-			this.match(PolicyParser.DEFINE);
-			this.state = 129;
-			this.definedSubject();
 			this.state = 130;
-			this.match(PolicyParser.AS);
+			this.match(PolicyParser.DEFINE);
 			this.state = 131;
-			this.defined();
+			this.definedSubject();
+			this.state = 132;
+			this.match(PolicyParser.AS);
 			this.state = 133;
+			this.defined();
+			this.state = 135;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===16) {
+			if (_la===17) {
 				{
-				this.state = 132;
+				this.state = 134;
 				this.match(PolicyParser.NEWLINE);
 				}
 			}
@@ -475,90 +482,90 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 135;
+			this.state = 137;
 			this.match(PolicyParser.ADMIT);
-			this.state = 136;
+			this.state = 138;
 			this.subject();
-			this.state = 139;
+			this.state = 141;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===26) {
+			if (_la===27) {
 				{
-				this.state = 137;
+				this.state = 139;
 				this.match(PolicyParser.OF);
-				this.state = 138;
+				this.state = 140;
 				this.endorseScope();
 				}
 			}
 
-			this.state = 149;
+			this.state = 151;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 15, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 16, this._ctx) ) {
 			case 1:
 				{
-				this.state = 141;
-				this.match(PolicyParser.TO);
-				this.state = 142;
-				this.endorseVerb();
 				this.state = 143;
+				this.match(PolicyParser.TO);
+				this.state = 144;
+				this.endorseVerb();
+				this.state = 145;
 				this.resource();
 				}
 				break;
 			case 2:
 				{
-				this.state = 146;
+				this.state = 148;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===25) {
+				if (_la===26) {
 					{
-					this.state = 145;
+					this.state = 147;
 					this.match(PolicyParser.TO);
 					}
 				}
 
-				this.state = 148;
+				this.state = 150;
 				this.permissionList();
 				}
 				break;
 			}
-			this.state = 151;
+			this.state = 153;
 			this.match(PolicyParser.IN);
-			this.state = 152;
+			this.state = 154;
 			this.scope();
-			this.state = 158;
+			this.state = 160;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===29) {
+			if (_la===30) {
 				{
-				this.state = 153;
-				this.match(PolicyParser.WITH);
-				this.state = 154;
-				this.resource();
 				this.state = 155;
-				this.match(PolicyParser.IN);
+				this.match(PolicyParser.WITH);
 				this.state = 156;
+				this.resource();
+				this.state = 157;
+				this.match(PolicyParser.IN);
+				this.state = 158;
 				this.endorseScope();
 				}
 			}
 
-			this.state = 162;
+			this.state = 164;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===28) {
+			if (_la===29) {
 				{
-				this.state = 160;
+				this.state = 162;
 				this.match(PolicyParser.WHERE);
-				this.state = 161;
+				this.state = 163;
 				this.condition();
 				}
 			}
 
-			this.state = 165;
+			this.state = 167;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===16) {
+			if (_la===17) {
 				{
-				this.state = 164;
+				this.state = 166;
 				this.match(PolicyParser.NEWLINE);
 				}
 			}
@@ -586,21 +593,21 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 169;
+			this.state = 171;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 35:
 			case 36:
 			case 37:
-			case 40:
+			case 38:
+			case 41:
 				{
-				this.state = 167;
+				this.state = 169;
 				this.verb();
 				}
 				break;
-			case 38:
+			case 39:
 				{
-				this.state = 168;
+				this.state = 170;
 				this.match(PolicyParser.ASSOCIATE);
 				}
 				break;
@@ -631,9 +638,9 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 171;
+			this.state = 173;
 			_la = this._input.LA(1);
-			if(!(((((_la - 35)) & ~0x1F) === 0 && ((1 << (_la - 35)) & 39) !== 0))) {
+			if(!(((((_la - 36)) & ~0x1F) === 0 && ((1 << (_la - 36)) & 39) !== 0))) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
@@ -664,27 +671,41 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 173;
+			this.state = 175;
 			this.match(PolicyParser.T__0);
-			this.state = 174;
-			this.match(PolicyParser.WORD);
-			this.state = 179;
+			this.state = 176;
+			_la = this._input.LA(1);
+			if(!(_la===47 || _la===48)) {
+			this._errHandler.recoverInline(this);
+			}
+			else {
+				this._errHandler.reportMatch(this);
+			    this.consume();
+			}
+			this.state = 181;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 175;
+				this.state = 177;
 				this.match(PolicyParser.T__1);
-				this.state = 176;
-				this.match(PolicyParser.WORD);
+				this.state = 178;
+				_la = this._input.LA(1);
+				if(!(_la===47 || _la===48)) {
+				this._errHandler.recoverInline(this);
+				}
+				else {
+					this._errHandler.reportMatch(this);
+				    this.consume();
 				}
 				}
-				this.state = 181;
+				}
+				this.state = 183;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 182;
+			this.state = 184;
 			this.match(PolicyParser.T__2);
 			}
 		}
@@ -710,45 +731,45 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 197;
+			this.state = 199;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 33:
+			case 34:
 				{
 				{
-				this.state = 184;
-				this.match(PolicyParser.COMPARTMENT);
 				this.state = 186;
+				this.match(PolicyParser.COMPARTMENT);
+				this.state = 188;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===45) {
+				if (_la===46) {
 					{
-					this.state = 185;
+					this.state = 187;
 					this.match(PolicyParser.ID);
 					}
 				}
 
 				}
-				this.state = 188;
+				this.state = 190;
 				_la = this._input.LA(1);
-				if(!(_la===46 || _la===47)) {
+				if(!(_la===47 || _la===48)) {
 				this._errHandler.recoverInline(this);
 				}
 				else {
 					this._errHandler.reportMatch(this);
 				    this.consume();
 				}
-				this.state = 193;
+				this.state = 195;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				while (_la===4) {
 					{
 					{
-					this.state = 189;
+					this.state = 191;
 					this.match(PolicyParser.T__3);
-					this.state = 190;
+					this.state = 192;
 					_la = this._input.LA(1);
-					if(!(_la===46 || _la===47)) {
+					if(!(_la===47 || _la===48)) {
 					this._errHandler.recoverInline(this);
 					}
 					else {
@@ -757,15 +778,15 @@ export default class PolicyParser extends Parser {
 					}
 					}
 					}
-					this.state = 195;
+					this.state = 197;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 				}
 				}
 				break;
-			case 34:
+			case 35:
 				{
-				this.state = 196;
+				this.state = 198;
 				this.match(PolicyParser.TENANCY);
 				}
 				break;
@@ -796,22 +817,22 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 202;
+			this.state = 204;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 20:
+			case 21:
 				{
-				this.state = 199;
+				this.state = 201;
 				this.match(PolicyParser.ANYTENANCY);
 				}
 				break;
-			case 34:
+			case 35:
 				{
-				this.state = 200;
+				this.state = 202;
 				this.match(PolicyParser.TENANCY);
-				this.state = 201;
+				this.state = 203;
 				_la = this._input.LA(1);
-				if(!(_la===46 || _la===47)) {
+				if(!(_la===47 || _la===48)) {
 				this._errHandler.recoverInline(this);
 				}
 				else {
@@ -846,36 +867,36 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 209;
+			this.state = 211;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 31:
+			case 32:
 				{
-				this.state = 204;
+				this.state = 206;
 				this.groupSubject();
 				}
 				break;
-			case 32:
+			case 33:
 				{
-				this.state = 205;
+				this.state = 207;
 				this.serviceSubject();
 				}
 				break;
-			case 30:
+			case 31:
 				{
-				this.state = 206;
+				this.state = 208;
 				this.dynamicGroupSubject();
 				}
 				break;
-			case 24:
+			case 25:
 				{
-				this.state = 207;
+				this.state = 209;
 				this.resourceSubject();
 				}
 				break;
-			case 19:
+			case 20:
 				{
-				this.state = 208;
+				this.state = 210;
 				this.match(PolicyParser.ANYUSER);
 				}
 				break;
@@ -906,50 +927,50 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 211;
+			this.state = 213;
 			this.match(PolicyParser.GROUP);
-			this.state = 214;
+			this.state = 216;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 17:
-			case 46:
+			case 18:
 			case 47:
+			case 48:
 				{
-				this.state = 212;
+				this.state = 214;
 				this.groupName();
 				}
 				break;
-			case 45:
+			case 46:
 				{
-				this.state = 213;
+				this.state = 215;
 				this.groupID();
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 223;
+			this.state = 225;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 216;
+				this.state = 218;
 				this.match(PolicyParser.T__1);
-				this.state = 219;
+				this.state = 221;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 17:
-				case 46:
+				case 18:
 				case 47:
+				case 48:
 					{
-					this.state = 217;
+					this.state = 219;
 					this.groupName();
 					}
 					break;
-				case 45:
+				case 46:
 					{
-					this.state = 218;
+					this.state = 220;
 					this.groupID();
 					}
 					break;
@@ -958,7 +979,7 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 225;
+				this.state = 227;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -986,21 +1007,21 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 226;
+			this.state = 228;
 			this.match(PolicyParser.RESOURCE);
-			this.state = 227;
+			this.state = 229;
 			this.resourceSubjectId();
-			this.state = 231;
+			this.state = 233;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===46 || _la===47) {
+			while (_la===47 || _la===48) {
 				{
 				{
-				this.state = 228;
+				this.state = 230;
 				this.resourceSubjectId();
 				}
 				}
-				this.state = 233;
+				this.state = 235;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1028,23 +1049,23 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 234;
+			this.state = 236;
 			this.match(PolicyParser.SERVICE);
-			this.state = 235;
+			this.state = 237;
 			this.serviceSubjectId();
-			this.state = 240;
+			this.state = 242;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 236;
+				this.state = 238;
 				this.match(PolicyParser.T__1);
-				this.state = 237;
+				this.state = 239;
 				this.serviceSubjectId();
 				}
 				}
-				this.state = 242;
+				this.state = 244;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1071,54 +1092,54 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 255;
+			this.state = 257;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 31, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 32, this._ctx) ) {
 			case 1:
 				{
-				this.state = 243;
+				this.state = 245;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 2:
 				{
-				this.state = 244;
-				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 245;
-				this.match(PolicyParser.T__4);
 				this.state = 246;
+				this.match(PolicyParser.QUOTED_STRING);
+				this.state = 247;
+				this.match(PolicyParser.T__4);
+				this.state = 248;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 3:
 				{
-				this.state = 247;
+				this.state = 249;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 4:
 				{
-				this.state = 248;
-				this.match(PolicyParser.WORD);
-				this.state = 249;
-				this.match(PolicyParser.T__4);
 				this.state = 250;
+				this.match(PolicyParser.WORD);
+				this.state = 251;
+				this.match(PolicyParser.T__4);
+				this.state = 252;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 5:
 				{
-				this.state = 251;
-				this.match(PolicyParser.WORD);
-				this.state = 252;
-				this.match(PolicyParser.T__4);
 				this.state = 253;
+				this.match(PolicyParser.WORD);
+				this.state = 254;
+				this.match(PolicyParser.T__4);
+				this.state = 255;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 6:
 				{
-				this.state = 254;
+				this.state = 256;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
@@ -1148,60 +1169,49 @@ export default class PolicyParser extends Parser {
 			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 257;
+			this.state = 259;
 			_la = this._input.LA(1);
-			if(!(_la===46 || _la===47)) {
+			if(!(_la===47 || _la===48)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
 				this._errHandler.reportMatch(this);
 			    this.consume();
 			}
-			this.state = 266;
+			this.state = 268;
 			this._errHandler.sync(this);
 			_alt = 1 + 1;
 			do {
 				switch (_alt) {
 				case 1 + 1:
 					{
-					this.state = 266;
+					this.state = 268;
 					this._errHandler.sync(this);
-					switch ( this._interp.adaptivePredict(this._input, 32, this._ctx) ) {
+					switch ( this._interp.adaptivePredict(this._input, 33, this._ctx) ) {
 					case 1:
 						{
-						this.state = 258;
+						this.state = 260;
 						this.match(PolicyParser.T__5);
-						this.state = 259;
+						this.state = 261;
 						_la = this._input.LA(1);
-						if(!(_la===46 || _la===47)) {
+						if(!(_la===47 || _la===48)) {
 						this._errHandler.recoverInline(this);
 						}
 						else {
 							this._errHandler.reportMatch(this);
 						    this.consume();
 						}
-						this.state = 260;
+						this.state = 262;
 						this.match(PolicyParser.T__5);
 						}
 						break;
 					case 2:
 						{
-						this.state = 261;
-						this.match(PolicyParser.T__5);
-						this.state = 262;
-						_la = this._input.LA(1);
-						if(!(_la===46 || _la===47)) {
-						this._errHandler.recoverInline(this);
-						}
-						else {
-							this._errHandler.reportMatch(this);
-						    this.consume();
-						}
 						this.state = 263;
-						this.match(PolicyParser.T__4);
+						this.match(PolicyParser.T__5);
 						this.state = 264;
 						_la = this._input.LA(1);
-						if(!(_la===46 || _la===47)) {
+						if(!(_la===47 || _la===48)) {
 						this._errHandler.recoverInline(this);
 						}
 						else {
@@ -1209,6 +1219,17 @@ export default class PolicyParser extends Parser {
 						    this.consume();
 						}
 						this.state = 265;
+						this.match(PolicyParser.T__4);
+						this.state = 266;
+						_la = this._input.LA(1);
+						if(!(_la===47 || _la===48)) {
+						this._errHandler.recoverInline(this);
+						}
+						else {
+							this._errHandler.reportMatch(this);
+						    this.consume();
+						}
+						this.state = 267;
 						this.match(PolicyParser.T__5);
 						}
 						break;
@@ -1218,9 +1239,9 @@ export default class PolicyParser extends Parser {
 				default:
 					throw new NoViableAltException(this);
 				}
-				this.state = 268;
+				this.state = 270;
 				this._errHandler.sync(this);
-				_alt = this._interp.adaptivePredict(this._input, 33, this._ctx);
+				_alt = this._interp.adaptivePredict(this._input, 34, this._ctx);
 			} while (_alt !== 1 && _alt !== ATN.INVALID_ALT_NUMBER);
 			}
 		}
@@ -1246,9 +1267,9 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 270;
+			this.state = 272;
 			_la = this._input.LA(1);
-			if(!(_la===46 || _la===47)) {
+			if(!(_la===47 || _la===48)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
@@ -1279,11 +1300,11 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 272;
+			this.state = 274;
 			this.match(PolicyParser.ID);
-			this.state = 273;
+			this.state = 275;
 			_la = this._input.LA(1);
-			if(!(_la===46 || _la===47)) {
+			if(!(_la===47 || _la===48)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
@@ -1314,50 +1335,50 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 275;
+			this.state = 277;
 			this.match(PolicyParser.DYNAMICGROUP);
-			this.state = 278;
+			this.state = 280;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 17:
-			case 46:
+			case 18:
 			case 47:
+			case 48:
 				{
-				this.state = 276;
+				this.state = 278;
 				this.groupName();
 				}
 				break;
-			case 45:
+			case 46:
 				{
-				this.state = 277;
+				this.state = 279;
 				this.groupID();
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 287;
+			this.state = 289;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 280;
+				this.state = 282;
 				this.match(PolicyParser.T__1);
-				this.state = 283;
+				this.state = 285;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 17:
-				case 46:
+				case 18:
 				case 47:
+				case 48:
 					{
-					this.state = 281;
+					this.state = 283;
 					this.groupName();
 					}
 					break;
-				case 45:
+				case 46:
 					{
-					this.state = 282;
+					this.state = 284;
 					this.groupID();
 					}
 					break;
@@ -1366,7 +1387,7 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 289;
+				this.state = 291;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1394,11 +1415,11 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 290;
+			this.state = 292;
 			this.match(PolicyParser.TENANCY);
-			this.state = 291;
+			this.state = 293;
 			_la = this._input.LA(1);
-			if(!(_la===46 || _la===47)) {
+			if(!(_la===47 || _la===48)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
@@ -1428,30 +1449,30 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 297;
+			this.state = 299;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 31:
-				{
-				this.state = 293;
-				this.groupSubject();
-				}
-				break;
-			case 30:
-				{
-				this.state = 294;
-				this.dynamicGroupSubject();
-				}
-				break;
 			case 32:
 				{
 				this.state = 295;
+				this.groupSubject();
+				}
+				break;
+			case 31:
+				{
+				this.state = 296;
+				this.dynamicGroupSubject();
+				}
+				break;
+			case 33:
+				{
+				this.state = 297;
 				this.serviceSubject();
 				}
 				break;
-			case 34:
+			case 35:
 				{
-				this.state = 296;
+				this.state = 298;
 				this.tenancySubject();
 				}
 				break;
@@ -1482,9 +1503,9 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 299;
+			this.state = 301;
 			_la = this._input.LA(1);
-			if(!(_la===46 || _la===47)) {
+			if(!(_la===47 || _la===48)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
@@ -1515,9 +1536,9 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 301;
+			this.state = 303;
 			_la = this._input.LA(1);
-			if(!(_la===46 || _la===47)) {
+			if(!(_la===47 || _la===48)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
@@ -1547,24 +1568,24 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 306;
+			this.state = 308;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 38, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 39, this._ctx) ) {
 			case 1:
 				{
-				this.state = 303;
+				this.state = 305;
 				this.comparisonList();
 				}
 				break;
 			case 2:
 				{
-				this.state = 304;
+				this.state = 306;
 				this.comparison();
 				}
 				break;
 			case 3:
 				{
-				this.state = 305;
+				this.state = 307;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
@@ -1592,34 +1613,34 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 308;
+			this.state = 310;
 			this.variable();
-			this.state = 309;
+			this.state = 311;
 			this.operator();
-			this.state = 314;
+			this.state = 316;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 39, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 40, this._ctx) ) {
 			case 1:
 				{
-				this.state = 310;
+				this.state = 312;
 				this.value();
 				}
 				break;
 			case 2:
 				{
-				this.state = 311;
+				this.state = 313;
 				this.valueList();
 				}
 				break;
 			case 3:
 				{
-				this.state = 312;
+				this.state = 314;
 				this.timeWindow();
 				}
 				break;
 			case 4:
 				{
-				this.state = 313;
+				this.state = 315;
 				this.patternMatch();
 				}
 				break;
@@ -1648,31 +1669,31 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 316;
+			this.state = 318;
 			_la = this._input.LA(1);
-			if(!(_la===46 || _la===47)) {
+			if(!(_la===47 || _la===48)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
 				this._errHandler.reportMatch(this);
 			    this.consume();
 			}
-			this.state = 323;
+			this.state = 325;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===7) {
 				{
-				this.state = 319;
+				this.state = 321;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 317;
+					this.state = 319;
 					this.match(PolicyParser.T__6);
-					this.state = 318;
+					this.state = 320;
 					_la = this._input.LA(1);
-					if(!(_la===46 || _la===47)) {
+					if(!(_la===47 || _la===48)) {
 					this._errHandler.recoverInline(this);
 					}
 					else {
@@ -1681,7 +1702,7 @@ export default class PolicyParser extends Parser {
 					}
 					}
 					}
-					this.state = 321;
+					this.state = 323;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 				} while (_la===7);
@@ -1711,38 +1732,44 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 331;
+			this.state = 334;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
 			case 8:
 				{
-				this.state = 325;
+				this.state = 327;
 				this.match(PolicyParser.T__7);
 				}
 				break;
 			case 9:
 				{
-				this.state = 326;
+				this.state = 328;
 				this.match(PolicyParser.T__8);
-				this.state = 327;
-				this.match(PolicyParser.T__7);
 				}
 				break;
 			case 14:
 				{
-				this.state = 328;
+				this.state = 329;
 				this.match(PolicyParser.BEFORE);
 				}
 				break;
-			case 27:
+			case 28:
 				{
-				this.state = 329;
+				this.state = 330;
+				this.match(PolicyParser.IN);
+				}
+				break;
+			case 16:
+				{
+				this.state = 331;
+				this.match(PolicyParser.NOT);
+				this.state = 332;
 				this.match(PolicyParser.IN);
 				}
 				break;
 			case 15:
 				{
-				this.state = 330;
+				this.state = 333;
 				this.match(PolicyParser.BETWEEN);
 				}
 				break;
@@ -1773,66 +1800,66 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 349;
+			this.state = 352;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 44, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 45, this._ctx) ) {
 			case 1:
 				{
-				this.state = 333;
+				this.state = 336;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 2:
 				{
-				this.state = 334;
+				this.state = 337;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
 			case 3:
 				{
-				this.state = 335;
+				this.state = 338;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 336;
+				this.state = 339;
 				this.match(PolicyParser.T__4);
-				this.state = 337;
+				this.state = 340;
 				this.match(PolicyParser.WORD);
 				}
 				break;
 			case 4:
 				{
-				this.state = 338;
-				this.match(PolicyParser.QUOTED_STRING);
 				this.state = 341;
+				this.match(PolicyParser.QUOTED_STRING);
+				this.state = 344;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 339;
+					this.state = 342;
 					this.match(PolicyParser.WS);
-					this.state = 340;
+					this.state = 343;
 					this.match(PolicyParser.WORD);
 					}
 					}
-					this.state = 343;
+					this.state = 346;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
-				} while (_la===18);
+				} while (_la===19);
 				}
 				break;
 			case 5:
 				{
-				this.state = 345;
+				this.state = 348;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 346;
+				this.state = 349;
 				this.match(PolicyParser.T__5);
-				this.state = 347;
+				this.state = 350;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 348;
+				this.state = 351;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -1861,66 +1888,66 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 351;
+			this.state = 354;
 			this.match(PolicyParser.T__9);
-			this.state = 357;
+			this.state = 360;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 17:
+			case 18:
 				{
-				this.state = 352;
+				this.state = 355;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
-			case 46:
+			case 47:
 				{
-				this.state = 353;
+				this.state = 356;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 354;
+				this.state = 357;
 				this.match(PolicyParser.T__5);
-				this.state = 355;
+				this.state = 358;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 356;
+				this.state = 359;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 369;
+			this.state = 372;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 359;
+				this.state = 362;
 				this.match(PolicyParser.T__1);
-				this.state = 365;
+				this.state = 368;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 17:
+				case 18:
 					{
-					this.state = 360;
+					this.state = 363;
 					this.match(PolicyParser.QUOTED_STRING);
 					}
 					break;
-				case 46:
+				case 47:
 					{
-					this.state = 361;
+					this.state = 364;
 					this.match(PolicyParser.HCL_VAR);
 					}
 					break;
 				case 6:
 					{
-					this.state = 362;
+					this.state = 365;
 					this.match(PolicyParser.T__5);
-					this.state = 363;
+					this.state = 366;
 					this.match(PolicyParser.HCL_VAR);
-					this.state = 364;
+					this.state = 367;
 					this.match(PolicyParser.T__5);
 					}
 					break;
@@ -1929,11 +1956,11 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 371;
+				this.state = 374;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 372;
+			this.state = 375;
 			this.match(PolicyParser.T__10);
 			}
 		}
@@ -1958,58 +1985,58 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 379;
+			this.state = 382;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 17:
+			case 18:
 				{
-				this.state = 374;
+				this.state = 377;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
-			case 46:
+			case 47:
 				{
-				this.state = 375;
+				this.state = 378;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 376;
+				this.state = 379;
 				this.match(PolicyParser.T__5);
-				this.state = 377;
+				this.state = 380;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 378;
+				this.state = 381;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 381;
+			this.state = 384;
 			this.match(PolicyParser.AND);
-			this.state = 387;
+			this.state = 390;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 17:
+			case 18:
 				{
-				this.state = 382;
+				this.state = 385;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
-			case 46:
+			case 47:
 				{
-				this.state = 383;
+				this.state = 386;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
 			case 6:
 				{
-				this.state = 384;
+				this.state = 387;
 				this.match(PolicyParser.T__5);
-				this.state = 385;
+				this.state = 388;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 386;
+				this.state = 389;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -2040,29 +2067,29 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 389;
+			this.state = 392;
 			this.logicalCombine();
-			this.state = 390;
+			this.state = 393;
 			this.match(PolicyParser.T__0);
-			this.state = 391;
+			this.state = 394;
 			this.condition();
-			this.state = 396;
+			this.state = 399;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			while (_la===2) {
 				{
 				{
-				this.state = 392;
+				this.state = 395;
 				this.match(PolicyParser.T__1);
-				this.state = 393;
+				this.state = 396;
 				this.condition();
 				}
 				}
-				this.state = 398;
+				this.state = 401;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 399;
+			this.state = 402;
 			this.match(PolicyParser.T__2);
 			}
 		}
@@ -2088,9 +2115,9 @@ export default class PolicyParser extends Parser {
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 401;
+			this.state = 404;
 			_la = this._input.LA(1);
-			if(!(_la===41 || _la===43)) {
+			if(!(_la===42 || _la===44)) {
 			this._errHandler.recoverInline(this);
 			}
 			else {
@@ -2117,49 +2144,78 @@ export default class PolicyParser extends Parser {
 	public patternMatch(): PatternMatchContext {
 		let localctx: PatternMatchContext = new PatternMatchContext(this, this._ctx, this.state);
 		this.enterRule(localctx, 64, PolicyParser.RULE_patternMatch);
+		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
-			this.state = 415;
+			this.state = 418;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 51, this._ctx) ) {
+			switch ( this._interp.adaptivePredict(this._input, 52, this._ctx) ) {
 			case 1:
 				{
-				this.state = 403;
+				this.state = 406;
 				this.match(PolicyParser.T__4);
-				this.state = 404;
-				this.match(PolicyParser.WORD);
-				this.state = 405;
+				this.state = 407;
+				_la = this._input.LA(1);
+				if(!(_la===47 || _la===48)) {
+				this._errHandler.recoverInline(this);
+				}
+				else {
+					this._errHandler.reportMatch(this);
+				    this.consume();
+				}
+				this.state = 408;
 				this.match(PolicyParser.T__11);
 				}
 				break;
 			case 2:
 				{
-				this.state = 406;
+				this.state = 409;
 				this.match(PolicyParser.T__12);
-				this.state = 407;
-				this.match(PolicyParser.WORD);
-				this.state = 408;
+				this.state = 410;
+				_la = this._input.LA(1);
+				if(!(_la===47 || _la===48)) {
+				this._errHandler.recoverInline(this);
+				}
+				else {
+					this._errHandler.reportMatch(this);
+				    this.consume();
+				}
+				this.state = 411;
 				this.match(PolicyParser.T__4);
 				}
 				break;
 			case 3:
 				{
-				this.state = 409;
+				this.state = 412;
 				this.match(PolicyParser.T__4);
-				this.state = 410;
-				this.match(PolicyParser.WORD);
-				this.state = 411;
+				this.state = 413;
+				_la = this._input.LA(1);
+				if(!(_la===47 || _la===48)) {
+				this._errHandler.recoverInline(this);
+				}
+				else {
+					this._errHandler.reportMatch(this);
+				    this.consume();
+				}
+				this.state = 414;
 				this.match(PolicyParser.T__4);
 				}
 				break;
 			case 4:
 				{
-				this.state = 412;
+				this.state = 415;
 				this.match(PolicyParser.T__12);
-				this.state = 413;
-				this.match(PolicyParser.WORD);
-				this.state = 414;
+				this.state = 416;
+				_la = this._input.LA(1);
+				if(!(_la===47 || _la===48)) {
+				this._errHandler.recoverInline(this);
+				}
+				else {
+					this._errHandler.reportMatch(this);
+				    this.consume();
+				}
+				this.state = 417;
 				this.match(PolicyParser.T__11);
 				}
 				break;
@@ -2181,7 +2237,7 @@ export default class PolicyParser extends Parser {
 		return localctx;
 	}
 
-	public static readonly _serializedATN: number[] = [4,1,47,418,2,0,7,0,2,
+	public static readonly _serializedATN: number[] = [4,1,48,421,2,0,7,0,2,
 	1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,2,
 	10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,2,15,7,15,2,16,7,16,2,17,
 	7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,2,22,7,22,2,23,7,23,2,24,7,
@@ -2189,138 +2245,139 @@ export default class PolicyParser extends Parser {
 	2,32,7,32,1,0,1,0,1,0,1,0,4,0,71,8,0,11,0,12,0,72,1,0,1,0,1,1,1,1,1,1,3,
 	1,80,8,1,1,1,1,1,1,1,1,1,3,1,86,8,1,1,1,3,1,89,8,1,1,1,1,1,1,1,1,1,3,1,
 	95,8,1,1,1,3,1,98,8,1,1,2,1,2,1,2,1,2,1,2,1,2,1,2,3,2,107,8,2,1,2,3,2,110,
-	8,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,3,2,120,8,2,1,2,1,2,3,2,124,8,2,1,2,
-	3,2,127,8,2,1,3,1,3,1,3,1,3,1,3,3,3,134,8,3,1,4,1,4,1,4,1,4,3,4,140,8,4,
-	1,4,1,4,1,4,1,4,1,4,3,4,147,8,4,1,4,3,4,150,8,4,1,4,1,4,1,4,1,4,1,4,1,4,
-	1,4,3,4,159,8,4,1,4,1,4,3,4,163,8,4,1,4,3,4,166,8,4,1,5,1,5,3,5,170,8,5,
-	1,6,1,6,1,7,1,7,1,7,1,7,5,7,178,8,7,10,7,12,7,181,9,7,1,7,1,7,1,8,1,8,3,
-	8,187,8,8,1,8,1,8,1,8,5,8,192,8,8,10,8,12,8,195,9,8,1,8,3,8,198,8,8,1,9,
-	1,9,1,9,3,9,203,8,9,1,10,1,10,1,10,1,10,1,10,3,10,210,8,10,1,11,1,11,1,
-	11,3,11,215,8,11,1,11,1,11,1,11,3,11,220,8,11,5,11,222,8,11,10,11,12,11,
-	225,9,11,1,12,1,12,1,12,5,12,230,8,12,10,12,12,12,233,9,12,1,13,1,13,1,
-	13,1,13,5,13,239,8,13,10,13,12,13,242,9,13,1,14,1,14,1,14,1,14,1,14,1,14,
-	1,14,1,14,1,14,1,14,1,14,1,14,3,14,256,8,14,1,15,1,15,1,15,1,15,1,15,1,
-	15,1,15,1,15,1,15,4,15,267,8,15,11,15,12,15,268,1,16,1,16,1,17,1,17,1,17,
-	1,18,1,18,1,18,3,18,279,8,18,1,18,1,18,1,18,3,18,284,8,18,5,18,286,8,18,
-	10,18,12,18,289,9,18,1,19,1,19,1,19,1,20,1,20,1,20,1,20,3,20,298,8,20,1,
-	21,1,21,1,22,1,22,1,23,1,23,1,23,3,23,307,8,23,1,24,1,24,1,24,1,24,1,24,
-	1,24,3,24,315,8,24,1,25,1,25,1,25,4,25,320,8,25,11,25,12,25,321,3,25,324,
-	8,25,1,26,1,26,1,26,1,26,1,26,1,26,3,26,332,8,26,1,27,1,27,1,27,1,27,1,
-	27,1,27,1,27,1,27,4,27,342,8,27,11,27,12,27,343,1,27,1,27,1,27,1,27,3,27,
-	350,8,27,1,28,1,28,1,28,1,28,1,28,1,28,3,28,358,8,28,1,28,1,28,1,28,1,28,
-	1,28,1,28,3,28,366,8,28,5,28,368,8,28,10,28,12,28,371,9,28,1,28,1,28,1,
-	29,1,29,1,29,1,29,1,29,3,29,380,8,29,1,29,1,29,1,29,1,29,1,29,1,29,3,29,
-	388,8,29,1,30,1,30,1,30,1,30,1,30,5,30,395,8,30,10,30,12,30,398,9,30,1,
-	30,1,30,1,31,1,31,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,32,
-	1,32,3,32,416,8,32,1,32,1,268,0,33,0,2,4,6,8,10,12,14,16,18,20,22,24,26,
-	28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,0,3,2,0,35,37,
-	40,40,1,0,46,47,2,0,41,41,43,43,463,0,70,1,0,0,0,2,76,1,0,0,0,4,99,1,0,
-	0,0,6,128,1,0,0,0,8,135,1,0,0,0,10,169,1,0,0,0,12,171,1,0,0,0,14,173,1,
-	0,0,0,16,197,1,0,0,0,18,202,1,0,0,0,20,209,1,0,0,0,22,211,1,0,0,0,24,226,
-	1,0,0,0,26,234,1,0,0,0,28,255,1,0,0,0,30,257,1,0,0,0,32,270,1,0,0,0,34,
-	272,1,0,0,0,36,275,1,0,0,0,38,290,1,0,0,0,40,297,1,0,0,0,42,299,1,0,0,0,
-	44,301,1,0,0,0,46,306,1,0,0,0,48,308,1,0,0,0,50,316,1,0,0,0,52,331,1,0,
-	0,0,54,349,1,0,0,0,56,351,1,0,0,0,58,379,1,0,0,0,60,389,1,0,0,0,62,401,
-	1,0,0,0,64,415,1,0,0,0,66,71,3,2,1,0,67,71,3,4,2,0,68,71,3,6,3,0,69,71,
-	3,8,4,0,70,66,1,0,0,0,70,67,1,0,0,0,70,68,1,0,0,0,70,69,1,0,0,0,71,72,1,
-	0,0,0,72,70,1,0,0,0,72,73,1,0,0,0,73,74,1,0,0,0,74,75,5,0,0,1,75,1,1,0,
-	0,0,76,77,5,22,0,0,77,88,3,20,10,0,78,80,5,25,0,0,79,78,1,0,0,0,79,80,1,
-	0,0,0,80,81,1,0,0,0,81,82,3,12,6,0,82,83,3,44,22,0,83,89,1,0,0,0,84,86,
-	5,25,0,0,85,84,1,0,0,0,85,86,1,0,0,0,86,87,1,0,0,0,87,89,3,14,7,0,88,79,
-	1,0,0,0,88,85,1,0,0,0,89,90,1,0,0,0,90,91,5,27,0,0,91,94,3,16,8,0,92,93,
-	5,28,0,0,93,95,3,46,23,0,94,92,1,0,0,0,94,95,1,0,0,0,95,97,1,0,0,0,96,98,
-	5,16,0,0,97,96,1,0,0,0,97,98,1,0,0,0,98,3,1,0,0,0,99,100,5,21,0,0,100,109,
-	3,20,10,0,101,102,5,25,0,0,102,103,3,10,5,0,103,104,3,44,22,0,104,110,1,
-	0,0,0,105,107,5,25,0,0,106,105,1,0,0,0,106,107,1,0,0,0,107,108,1,0,0,0,
-	108,110,3,14,7,0,109,101,1,0,0,0,109,106,1,0,0,0,110,111,1,0,0,0,111,119,
-	5,27,0,0,112,120,3,18,9,0,113,114,3,16,8,0,114,115,5,29,0,0,115,116,3,44,
-	22,0,116,117,5,27,0,0,117,118,3,18,9,0,118,120,1,0,0,0,119,112,1,0,0,0,
-	119,113,1,0,0,0,120,123,1,0,0,0,121,122,5,28,0,0,122,124,3,46,23,0,123,
-	121,1,0,0,0,123,124,1,0,0,0,124,126,1,0,0,0,125,127,5,16,0,0,126,125,1,
-	0,0,0,126,127,1,0,0,0,127,5,1,0,0,0,128,129,5,23,0,0,129,130,3,40,20,0,
-	130,131,5,44,0,0,131,133,3,42,21,0,132,134,5,16,0,0,133,132,1,0,0,0,133,
-	134,1,0,0,0,134,7,1,0,0,0,135,136,5,39,0,0,136,139,3,20,10,0,137,138,5,
-	26,0,0,138,140,3,18,9,0,139,137,1,0,0,0,139,140,1,0,0,0,140,149,1,0,0,0,
-	141,142,5,25,0,0,142,143,3,10,5,0,143,144,3,44,22,0,144,150,1,0,0,0,145,
-	147,5,25,0,0,146,145,1,0,0,0,146,147,1,0,0,0,147,148,1,0,0,0,148,150,3,
-	14,7,0,149,141,1,0,0,0,149,146,1,0,0,0,150,151,1,0,0,0,151,152,5,27,0,0,
-	152,158,3,16,8,0,153,154,5,29,0,0,154,155,3,44,22,0,155,156,5,27,0,0,156,
-	157,3,18,9,0,157,159,1,0,0,0,158,153,1,0,0,0,158,159,1,0,0,0,159,162,1,
-	0,0,0,160,161,5,28,0,0,161,163,3,46,23,0,162,160,1,0,0,0,162,163,1,0,0,
-	0,163,165,1,0,0,0,164,166,5,16,0,0,165,164,1,0,0,0,165,166,1,0,0,0,166,
-	9,1,0,0,0,167,170,3,12,6,0,168,170,5,38,0,0,169,167,1,0,0,0,169,168,1,0,
-	0,0,170,11,1,0,0,0,171,172,7,0,0,0,172,13,1,0,0,0,173,174,5,1,0,0,174,179,
-	5,47,0,0,175,176,5,2,0,0,176,178,5,47,0,0,177,175,1,0,0,0,178,181,1,0,0,
-	0,179,177,1,0,0,0,179,180,1,0,0,0,180,182,1,0,0,0,181,179,1,0,0,0,182,183,
-	5,3,0,0,183,15,1,0,0,0,184,186,5,33,0,0,185,187,5,45,0,0,186,185,1,0,0,
-	0,186,187,1,0,0,0,187,188,1,0,0,0,188,193,7,1,0,0,189,190,5,4,0,0,190,192,
-	7,1,0,0,191,189,1,0,0,0,192,195,1,0,0,0,193,191,1,0,0,0,193,194,1,0,0,0,
-	194,198,1,0,0,0,195,193,1,0,0,0,196,198,5,34,0,0,197,184,1,0,0,0,197,196,
-	1,0,0,0,198,17,1,0,0,0,199,203,5,20,0,0,200,201,5,34,0,0,201,203,7,1,0,
-	0,202,199,1,0,0,0,202,200,1,0,0,0,203,19,1,0,0,0,204,210,3,22,11,0,205,
-	210,3,26,13,0,206,210,3,36,18,0,207,210,3,24,12,0,208,210,5,19,0,0,209,
-	204,1,0,0,0,209,205,1,0,0,0,209,206,1,0,0,0,209,207,1,0,0,0,209,208,1,0,
-	0,0,210,21,1,0,0,0,211,214,5,31,0,0,212,215,3,28,14,0,213,215,3,34,17,0,
-	214,212,1,0,0,0,214,213,1,0,0,0,215,223,1,0,0,0,216,219,5,2,0,0,217,220,
-	3,28,14,0,218,220,3,34,17,0,219,217,1,0,0,0,219,218,1,0,0,0,220,222,1,0,
-	0,0,221,216,1,0,0,0,222,225,1,0,0,0,223,221,1,0,0,0,223,224,1,0,0,0,224,
-	23,1,0,0,0,225,223,1,0,0,0,226,227,5,24,0,0,227,231,3,30,15,0,228,230,3,
-	30,15,0,229,228,1,0,0,0,230,233,1,0,0,0,231,229,1,0,0,0,231,232,1,0,0,0,
-	232,25,1,0,0,0,233,231,1,0,0,0,234,235,5,32,0,0,235,240,3,32,16,0,236,237,
-	5,2,0,0,237,239,3,32,16,0,238,236,1,0,0,0,239,242,1,0,0,0,240,238,1,0,0,
-	0,240,241,1,0,0,0,241,27,1,0,0,0,242,240,1,0,0,0,243,256,5,47,0,0,244,245,
-	5,17,0,0,245,246,5,5,0,0,246,256,5,17,0,0,247,256,5,17,0,0,248,249,5,47,
-	0,0,249,250,5,5,0,0,250,256,5,47,0,0,251,252,5,47,0,0,252,253,5,5,0,0,253,
-	256,5,17,0,0,254,256,5,46,0,0,255,243,1,0,0,0,255,244,1,0,0,0,255,247,1,
-	0,0,0,255,248,1,0,0,0,255,251,1,0,0,0,255,254,1,0,0,0,256,29,1,0,0,0,257,
-	266,7,1,0,0,258,259,5,6,0,0,259,260,7,1,0,0,260,267,5,6,0,0,261,262,5,6,
-	0,0,262,263,7,1,0,0,263,264,5,5,0,0,264,265,7,1,0,0,265,267,5,6,0,0,266,
-	258,1,0,0,0,266,261,1,0,0,0,267,268,1,0,0,0,268,269,1,0,0,0,268,266,1,0,
-	0,0,269,31,1,0,0,0,270,271,7,1,0,0,271,33,1,0,0,0,272,273,5,45,0,0,273,
-	274,7,1,0,0,274,35,1,0,0,0,275,278,5,30,0,0,276,279,3,28,14,0,277,279,3,
-	34,17,0,278,276,1,0,0,0,278,277,1,0,0,0,279,287,1,0,0,0,280,283,5,2,0,0,
-	281,284,3,28,14,0,282,284,3,34,17,0,283,281,1,0,0,0,283,282,1,0,0,0,284,
-	286,1,0,0,0,285,280,1,0,0,0,286,289,1,0,0,0,287,285,1,0,0,0,287,288,1,0,
-	0,0,288,37,1,0,0,0,289,287,1,0,0,0,290,291,5,34,0,0,291,292,7,1,0,0,292,
-	39,1,0,0,0,293,298,3,22,11,0,294,298,3,36,18,0,295,298,3,26,13,0,296,298,
-	3,38,19,0,297,293,1,0,0,0,297,294,1,0,0,0,297,295,1,0,0,0,297,296,1,0,0,
-	0,298,41,1,0,0,0,299,300,7,1,0,0,300,43,1,0,0,0,301,302,7,1,0,0,302,45,
-	1,0,0,0,303,307,3,60,30,0,304,307,3,48,24,0,305,307,5,46,0,0,306,303,1,
-	0,0,0,306,304,1,0,0,0,306,305,1,0,0,0,307,47,1,0,0,0,308,309,3,50,25,0,
-	309,314,3,52,26,0,310,315,3,54,27,0,311,315,3,56,28,0,312,315,3,58,29,0,
-	313,315,3,64,32,0,314,310,1,0,0,0,314,311,1,0,0,0,314,312,1,0,0,0,314,313,
-	1,0,0,0,315,49,1,0,0,0,316,323,7,1,0,0,317,318,5,7,0,0,318,320,7,1,0,0,
-	319,317,1,0,0,0,320,321,1,0,0,0,321,319,1,0,0,0,321,322,1,0,0,0,322,324,
-	1,0,0,0,323,319,1,0,0,0,323,324,1,0,0,0,324,51,1,0,0,0,325,332,5,8,0,0,
-	326,327,5,9,0,0,327,332,5,8,0,0,328,332,5,14,0,0,329,332,5,27,0,0,330,332,
-	5,15,0,0,331,325,1,0,0,0,331,326,1,0,0,0,331,328,1,0,0,0,331,329,1,0,0,
-	0,331,330,1,0,0,0,332,53,1,0,0,0,333,350,5,47,0,0,334,350,5,17,0,0,335,
-	336,5,17,0,0,336,337,5,5,0,0,337,350,5,47,0,0,338,341,5,17,0,0,339,340,
-	5,18,0,0,340,342,5,47,0,0,341,339,1,0,0,0,342,343,1,0,0,0,343,341,1,0,0,
-	0,343,344,1,0,0,0,344,350,1,0,0,0,345,350,5,46,0,0,346,347,5,6,0,0,347,
-	348,5,46,0,0,348,350,5,6,0,0,349,333,1,0,0,0,349,334,1,0,0,0,349,335,1,
-	0,0,0,349,338,1,0,0,0,349,345,1,0,0,0,349,346,1,0,0,0,350,55,1,0,0,0,351,
-	357,5,10,0,0,352,358,5,17,0,0,353,358,5,46,0,0,354,355,5,6,0,0,355,356,
-	5,46,0,0,356,358,5,6,0,0,357,352,1,0,0,0,357,353,1,0,0,0,357,354,1,0,0,
-	0,358,369,1,0,0,0,359,365,5,2,0,0,360,366,5,17,0,0,361,366,5,46,0,0,362,
-	363,5,6,0,0,363,364,5,46,0,0,364,366,5,6,0,0,365,360,1,0,0,0,365,361,1,
-	0,0,0,365,362,1,0,0,0,366,368,1,0,0,0,367,359,1,0,0,0,368,371,1,0,0,0,369,
-	367,1,0,0,0,369,370,1,0,0,0,370,372,1,0,0,0,371,369,1,0,0,0,372,373,5,11,
-	0,0,373,57,1,0,0,0,374,380,5,17,0,0,375,380,5,46,0,0,376,377,5,6,0,0,377,
-	378,5,46,0,0,378,380,5,6,0,0,379,374,1,0,0,0,379,375,1,0,0,0,379,376,1,
-	0,0,0,380,381,1,0,0,0,381,387,5,42,0,0,382,388,5,17,0,0,383,388,5,46,0,
-	0,384,385,5,6,0,0,385,386,5,46,0,0,386,388,5,6,0,0,387,382,1,0,0,0,387,
-	383,1,0,0,0,387,384,1,0,0,0,388,59,1,0,0,0,389,390,3,62,31,0,390,391,5,
-	1,0,0,391,396,3,46,23,0,392,393,5,2,0,0,393,395,3,46,23,0,394,392,1,0,0,
-	0,395,398,1,0,0,0,396,394,1,0,0,0,396,397,1,0,0,0,397,399,1,0,0,0,398,396,
-	1,0,0,0,399,400,5,3,0,0,400,61,1,0,0,0,401,402,7,2,0,0,402,63,1,0,0,0,403,
-	404,5,5,0,0,404,405,5,47,0,0,405,416,5,12,0,0,406,407,5,13,0,0,407,408,
-	5,47,0,0,408,416,5,5,0,0,409,410,5,5,0,0,410,411,5,47,0,0,411,416,5,5,0,
-	0,412,413,5,13,0,0,413,414,5,47,0,0,414,416,5,12,0,0,415,403,1,0,0,0,415,
-	406,1,0,0,0,415,409,1,0,0,0,415,412,1,0,0,0,416,65,1,0,0,0,52,70,72,79,
-	85,88,94,97,106,109,119,123,126,133,139,146,149,158,162,165,169,179,186,
-	193,197,202,209,214,219,223,231,240,255,266,268,278,283,287,297,306,314,
-	321,323,331,343,349,357,365,369,379,387,396,415];
+	8,2,1,2,1,2,1,2,3,2,115,8,2,1,2,1,2,1,2,1,2,1,2,3,2,122,8,2,1,2,1,2,3,2,
+	126,8,2,1,2,3,2,129,8,2,1,3,1,3,1,3,1,3,1,3,3,3,136,8,3,1,4,1,4,1,4,1,4,
+	3,4,142,8,4,1,4,1,4,1,4,1,4,1,4,3,4,149,8,4,1,4,3,4,152,8,4,1,4,1,4,1,4,
+	1,4,1,4,1,4,1,4,3,4,161,8,4,1,4,1,4,3,4,165,8,4,1,4,3,4,168,8,4,1,5,1,5,
+	3,5,172,8,5,1,6,1,6,1,7,1,7,1,7,1,7,5,7,180,8,7,10,7,12,7,183,9,7,1,7,1,
+	7,1,8,1,8,3,8,189,8,8,1,8,1,8,1,8,5,8,194,8,8,10,8,12,8,197,9,8,1,8,3,8,
+	200,8,8,1,9,1,9,1,9,3,9,205,8,9,1,10,1,10,1,10,1,10,1,10,3,10,212,8,10,
+	1,11,1,11,1,11,3,11,217,8,11,1,11,1,11,1,11,3,11,222,8,11,5,11,224,8,11,
+	10,11,12,11,227,9,11,1,12,1,12,1,12,5,12,232,8,12,10,12,12,12,235,9,12,
+	1,13,1,13,1,13,1,13,5,13,241,8,13,10,13,12,13,244,9,13,1,14,1,14,1,14,1,
+	14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,3,14,258,8,14,1,15,1,15,1,15,
+	1,15,1,15,1,15,1,15,1,15,1,15,4,15,269,8,15,11,15,12,15,270,1,16,1,16,1,
+	17,1,17,1,17,1,18,1,18,1,18,3,18,281,8,18,1,18,1,18,1,18,3,18,286,8,18,
+	5,18,288,8,18,10,18,12,18,291,9,18,1,19,1,19,1,19,1,20,1,20,1,20,1,20,3,
+	20,300,8,20,1,21,1,21,1,22,1,22,1,23,1,23,1,23,3,23,309,8,23,1,24,1,24,
+	1,24,1,24,1,24,1,24,3,24,317,8,24,1,25,1,25,1,25,4,25,322,8,25,11,25,12,
+	25,323,3,25,326,8,25,1,26,1,26,1,26,1,26,1,26,1,26,1,26,3,26,335,8,26,1,
+	27,1,27,1,27,1,27,1,27,1,27,1,27,1,27,4,27,345,8,27,11,27,12,27,346,1,27,
+	1,27,1,27,1,27,3,27,353,8,27,1,28,1,28,1,28,1,28,1,28,1,28,3,28,361,8,28,
+	1,28,1,28,1,28,1,28,1,28,1,28,3,28,369,8,28,5,28,371,8,28,10,28,12,28,374,
+	9,28,1,28,1,28,1,29,1,29,1,29,1,29,1,29,3,29,383,8,29,1,29,1,29,1,29,1,
+	29,1,29,1,29,3,29,391,8,29,1,30,1,30,1,30,1,30,1,30,5,30,398,8,30,10,30,
+	12,30,401,9,30,1,30,1,30,1,31,1,31,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,
+	32,1,32,1,32,1,32,1,32,3,32,419,8,32,1,32,1,270,0,33,0,2,4,6,8,10,12,14,
+	16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,
+	64,0,3,2,0,36,38,41,41,1,0,47,48,2,0,42,42,44,44,468,0,70,1,0,0,0,2,76,
+	1,0,0,0,4,99,1,0,0,0,6,130,1,0,0,0,8,137,1,0,0,0,10,171,1,0,0,0,12,173,
+	1,0,0,0,14,175,1,0,0,0,16,199,1,0,0,0,18,204,1,0,0,0,20,211,1,0,0,0,22,
+	213,1,0,0,0,24,228,1,0,0,0,26,236,1,0,0,0,28,257,1,0,0,0,30,259,1,0,0,0,
+	32,272,1,0,0,0,34,274,1,0,0,0,36,277,1,0,0,0,38,292,1,0,0,0,40,299,1,0,
+	0,0,42,301,1,0,0,0,44,303,1,0,0,0,46,308,1,0,0,0,48,310,1,0,0,0,50,318,
+	1,0,0,0,52,334,1,0,0,0,54,352,1,0,0,0,56,354,1,0,0,0,58,382,1,0,0,0,60,
+	392,1,0,0,0,62,404,1,0,0,0,64,418,1,0,0,0,66,71,3,2,1,0,67,71,3,4,2,0,68,
+	71,3,6,3,0,69,71,3,8,4,0,70,66,1,0,0,0,70,67,1,0,0,0,70,68,1,0,0,0,70,69,
+	1,0,0,0,71,72,1,0,0,0,72,70,1,0,0,0,72,73,1,0,0,0,73,74,1,0,0,0,74,75,5,
+	0,0,1,75,1,1,0,0,0,76,77,5,23,0,0,77,88,3,20,10,0,78,80,5,26,0,0,79,78,
+	1,0,0,0,79,80,1,0,0,0,80,81,1,0,0,0,81,82,3,12,6,0,82,83,3,44,22,0,83,89,
+	1,0,0,0,84,86,5,26,0,0,85,84,1,0,0,0,85,86,1,0,0,0,86,87,1,0,0,0,87,89,
+	3,14,7,0,88,79,1,0,0,0,88,85,1,0,0,0,89,90,1,0,0,0,90,91,5,28,0,0,91,94,
+	3,16,8,0,92,93,5,29,0,0,93,95,3,46,23,0,94,92,1,0,0,0,94,95,1,0,0,0,95,
+	97,1,0,0,0,96,98,5,17,0,0,97,96,1,0,0,0,97,98,1,0,0,0,98,3,1,0,0,0,99,100,
+	5,22,0,0,100,109,3,20,10,0,101,102,5,26,0,0,102,103,3,10,5,0,103,104,3,
+	44,22,0,104,110,1,0,0,0,105,107,5,26,0,0,106,105,1,0,0,0,106,107,1,0,0,
+	0,107,108,1,0,0,0,108,110,3,14,7,0,109,101,1,0,0,0,109,106,1,0,0,0,110,
+	111,1,0,0,0,111,114,5,28,0,0,112,115,3,18,9,0,113,115,3,16,8,0,114,112,
+	1,0,0,0,114,113,1,0,0,0,115,121,1,0,0,0,116,117,5,30,0,0,117,118,3,44,22,
+	0,118,119,5,28,0,0,119,120,3,18,9,0,120,122,1,0,0,0,121,116,1,0,0,0,121,
+	122,1,0,0,0,122,125,1,0,0,0,123,124,5,29,0,0,124,126,3,46,23,0,125,123,
+	1,0,0,0,125,126,1,0,0,0,126,128,1,0,0,0,127,129,5,17,0,0,128,127,1,0,0,
+	0,128,129,1,0,0,0,129,5,1,0,0,0,130,131,5,24,0,0,131,132,3,40,20,0,132,
+	133,5,45,0,0,133,135,3,42,21,0,134,136,5,17,0,0,135,134,1,0,0,0,135,136,
+	1,0,0,0,136,7,1,0,0,0,137,138,5,40,0,0,138,141,3,20,10,0,139,140,5,27,0,
+	0,140,142,3,18,9,0,141,139,1,0,0,0,141,142,1,0,0,0,142,151,1,0,0,0,143,
+	144,5,26,0,0,144,145,3,10,5,0,145,146,3,44,22,0,146,152,1,0,0,0,147,149,
+	5,26,0,0,148,147,1,0,0,0,148,149,1,0,0,0,149,150,1,0,0,0,150,152,3,14,7,
+	0,151,143,1,0,0,0,151,148,1,0,0,0,152,153,1,0,0,0,153,154,5,28,0,0,154,
+	160,3,16,8,0,155,156,5,30,0,0,156,157,3,44,22,0,157,158,5,28,0,0,158,159,
+	3,18,9,0,159,161,1,0,0,0,160,155,1,0,0,0,160,161,1,0,0,0,161,164,1,0,0,
+	0,162,163,5,29,0,0,163,165,3,46,23,0,164,162,1,0,0,0,164,165,1,0,0,0,165,
+	167,1,0,0,0,166,168,5,17,0,0,167,166,1,0,0,0,167,168,1,0,0,0,168,9,1,0,
+	0,0,169,172,3,12,6,0,170,172,5,39,0,0,171,169,1,0,0,0,171,170,1,0,0,0,172,
+	11,1,0,0,0,173,174,7,0,0,0,174,13,1,0,0,0,175,176,5,1,0,0,176,181,7,1,0,
+	0,177,178,5,2,0,0,178,180,7,1,0,0,179,177,1,0,0,0,180,183,1,0,0,0,181,179,
+	1,0,0,0,181,182,1,0,0,0,182,184,1,0,0,0,183,181,1,0,0,0,184,185,5,3,0,0,
+	185,15,1,0,0,0,186,188,5,34,0,0,187,189,5,46,0,0,188,187,1,0,0,0,188,189,
+	1,0,0,0,189,190,1,0,0,0,190,195,7,1,0,0,191,192,5,4,0,0,192,194,7,1,0,0,
+	193,191,1,0,0,0,194,197,1,0,0,0,195,193,1,0,0,0,195,196,1,0,0,0,196,200,
+	1,0,0,0,197,195,1,0,0,0,198,200,5,35,0,0,199,186,1,0,0,0,199,198,1,0,0,
+	0,200,17,1,0,0,0,201,205,5,21,0,0,202,203,5,35,0,0,203,205,7,1,0,0,204,
+	201,1,0,0,0,204,202,1,0,0,0,205,19,1,0,0,0,206,212,3,22,11,0,207,212,3,
+	26,13,0,208,212,3,36,18,0,209,212,3,24,12,0,210,212,5,20,0,0,211,206,1,
+	0,0,0,211,207,1,0,0,0,211,208,1,0,0,0,211,209,1,0,0,0,211,210,1,0,0,0,212,
+	21,1,0,0,0,213,216,5,32,0,0,214,217,3,28,14,0,215,217,3,34,17,0,216,214,
+	1,0,0,0,216,215,1,0,0,0,217,225,1,0,0,0,218,221,5,2,0,0,219,222,3,28,14,
+	0,220,222,3,34,17,0,221,219,1,0,0,0,221,220,1,0,0,0,222,224,1,0,0,0,223,
+	218,1,0,0,0,224,227,1,0,0,0,225,223,1,0,0,0,225,226,1,0,0,0,226,23,1,0,
+	0,0,227,225,1,0,0,0,228,229,5,25,0,0,229,233,3,30,15,0,230,232,3,30,15,
+	0,231,230,1,0,0,0,232,235,1,0,0,0,233,231,1,0,0,0,233,234,1,0,0,0,234,25,
+	1,0,0,0,235,233,1,0,0,0,236,237,5,33,0,0,237,242,3,32,16,0,238,239,5,2,
+	0,0,239,241,3,32,16,0,240,238,1,0,0,0,241,244,1,0,0,0,242,240,1,0,0,0,242,
+	243,1,0,0,0,243,27,1,0,0,0,244,242,1,0,0,0,245,258,5,48,0,0,246,247,5,18,
+	0,0,247,248,5,5,0,0,248,258,5,18,0,0,249,258,5,18,0,0,250,251,5,48,0,0,
+	251,252,5,5,0,0,252,258,5,48,0,0,253,254,5,48,0,0,254,255,5,5,0,0,255,258,
+	5,18,0,0,256,258,5,47,0,0,257,245,1,0,0,0,257,246,1,0,0,0,257,249,1,0,0,
+	0,257,250,1,0,0,0,257,253,1,0,0,0,257,256,1,0,0,0,258,29,1,0,0,0,259,268,
+	7,1,0,0,260,261,5,6,0,0,261,262,7,1,0,0,262,269,5,6,0,0,263,264,5,6,0,0,
+	264,265,7,1,0,0,265,266,5,5,0,0,266,267,7,1,0,0,267,269,5,6,0,0,268,260,
+	1,0,0,0,268,263,1,0,0,0,269,270,1,0,0,0,270,271,1,0,0,0,270,268,1,0,0,0,
+	271,31,1,0,0,0,272,273,7,1,0,0,273,33,1,0,0,0,274,275,5,46,0,0,275,276,
+	7,1,0,0,276,35,1,0,0,0,277,280,5,31,0,0,278,281,3,28,14,0,279,281,3,34,
+	17,0,280,278,1,0,0,0,280,279,1,0,0,0,281,289,1,0,0,0,282,285,5,2,0,0,283,
+	286,3,28,14,0,284,286,3,34,17,0,285,283,1,0,0,0,285,284,1,0,0,0,286,288,
+	1,0,0,0,287,282,1,0,0,0,288,291,1,0,0,0,289,287,1,0,0,0,289,290,1,0,0,0,
+	290,37,1,0,0,0,291,289,1,0,0,0,292,293,5,35,0,0,293,294,7,1,0,0,294,39,
+	1,0,0,0,295,300,3,22,11,0,296,300,3,36,18,0,297,300,3,26,13,0,298,300,3,
+	38,19,0,299,295,1,0,0,0,299,296,1,0,0,0,299,297,1,0,0,0,299,298,1,0,0,0,
+	300,41,1,0,0,0,301,302,7,1,0,0,302,43,1,0,0,0,303,304,7,1,0,0,304,45,1,
+	0,0,0,305,309,3,60,30,0,306,309,3,48,24,0,307,309,5,47,0,0,308,305,1,0,
+	0,0,308,306,1,0,0,0,308,307,1,0,0,0,309,47,1,0,0,0,310,311,3,50,25,0,311,
+	316,3,52,26,0,312,317,3,54,27,0,313,317,3,56,28,0,314,317,3,58,29,0,315,
+	317,3,64,32,0,316,312,1,0,0,0,316,313,1,0,0,0,316,314,1,0,0,0,316,315,1,
+	0,0,0,317,49,1,0,0,0,318,325,7,1,0,0,319,320,5,7,0,0,320,322,7,1,0,0,321,
+	319,1,0,0,0,322,323,1,0,0,0,323,321,1,0,0,0,323,324,1,0,0,0,324,326,1,0,
+	0,0,325,321,1,0,0,0,325,326,1,0,0,0,326,51,1,0,0,0,327,335,5,8,0,0,328,
+	335,5,9,0,0,329,335,5,14,0,0,330,335,5,28,0,0,331,332,5,16,0,0,332,335,
+	5,28,0,0,333,335,5,15,0,0,334,327,1,0,0,0,334,328,1,0,0,0,334,329,1,0,0,
+	0,334,330,1,0,0,0,334,331,1,0,0,0,334,333,1,0,0,0,335,53,1,0,0,0,336,353,
+	5,48,0,0,337,353,5,18,0,0,338,339,5,18,0,0,339,340,5,5,0,0,340,353,5,48,
+	0,0,341,344,5,18,0,0,342,343,5,19,0,0,343,345,5,48,0,0,344,342,1,0,0,0,
+	345,346,1,0,0,0,346,344,1,0,0,0,346,347,1,0,0,0,347,353,1,0,0,0,348,353,
+	5,47,0,0,349,350,5,6,0,0,350,351,5,47,0,0,351,353,5,6,0,0,352,336,1,0,0,
+	0,352,337,1,0,0,0,352,338,1,0,0,0,352,341,1,0,0,0,352,348,1,0,0,0,352,349,
+	1,0,0,0,353,55,1,0,0,0,354,360,5,10,0,0,355,361,5,18,0,0,356,361,5,47,0,
+	0,357,358,5,6,0,0,358,359,5,47,0,0,359,361,5,6,0,0,360,355,1,0,0,0,360,
+	356,1,0,0,0,360,357,1,0,0,0,361,372,1,0,0,0,362,368,5,2,0,0,363,369,5,18,
+	0,0,364,369,5,47,0,0,365,366,5,6,0,0,366,367,5,47,0,0,367,369,5,6,0,0,368,
+	363,1,0,0,0,368,364,1,0,0,0,368,365,1,0,0,0,369,371,1,0,0,0,370,362,1,0,
+	0,0,371,374,1,0,0,0,372,370,1,0,0,0,372,373,1,0,0,0,373,375,1,0,0,0,374,
+	372,1,0,0,0,375,376,5,11,0,0,376,57,1,0,0,0,377,383,5,18,0,0,378,383,5,
+	47,0,0,379,380,5,6,0,0,380,381,5,47,0,0,381,383,5,6,0,0,382,377,1,0,0,0,
+	382,378,1,0,0,0,382,379,1,0,0,0,383,384,1,0,0,0,384,390,5,43,0,0,385,391,
+	5,18,0,0,386,391,5,47,0,0,387,388,5,6,0,0,388,389,5,47,0,0,389,391,5,6,
+	0,0,390,385,1,0,0,0,390,386,1,0,0,0,390,387,1,0,0,0,391,59,1,0,0,0,392,
+	393,3,62,31,0,393,394,5,1,0,0,394,399,3,46,23,0,395,396,5,2,0,0,396,398,
+	3,46,23,0,397,395,1,0,0,0,398,401,1,0,0,0,399,397,1,0,0,0,399,400,1,0,0,
+	0,400,402,1,0,0,0,401,399,1,0,0,0,402,403,5,3,0,0,403,61,1,0,0,0,404,405,
+	7,2,0,0,405,63,1,0,0,0,406,407,5,5,0,0,407,408,7,1,0,0,408,419,5,12,0,0,
+	409,410,5,13,0,0,410,411,7,1,0,0,411,419,5,5,0,0,412,413,5,5,0,0,413,414,
+	7,1,0,0,414,419,5,5,0,0,415,416,5,13,0,0,416,417,7,1,0,0,417,419,5,12,0,
+	0,418,406,1,0,0,0,418,409,1,0,0,0,418,412,1,0,0,0,418,415,1,0,0,0,419,65,
+	1,0,0,0,53,70,72,79,85,88,94,97,106,109,114,121,125,128,135,141,148,151,
+	160,164,167,171,181,188,195,199,204,211,216,221,225,233,242,257,268,270,
+	280,285,289,299,308,316,323,325,334,346,352,360,368,372,382,390,399,418];
 
 	private static __ATN: ATN;
 	public static get _ATN(): ATN {
@@ -2486,8 +2543,17 @@ export class EndorseExpressionContext extends ParserRuleContext {
 	public permissionList(): PermissionListContext {
 		return this.getTypedRuleContext(PermissionListContext, 0) as PermissionListContext;
 	}
-	public endorseScope(): EndorseScopeContext {
-		return this.getTypedRuleContext(EndorseScopeContext, 0) as EndorseScopeContext;
+	public endorseScope_list(): EndorseScopeContext[] {
+		return this.getTypedRuleContexts(EndorseScopeContext) as EndorseScopeContext[];
+	}
+	public endorseScope(i: number): EndorseScopeContext {
+		return this.getTypedRuleContext(EndorseScopeContext, i) as EndorseScopeContext;
+	}
+	public scope(): ScopeContext {
+		return this.getTypedRuleContext(ScopeContext, 0) as ScopeContext;
+	}
+	public WITH(): TerminalNode {
+		return this.getToken(PolicyParser.WITH, 0);
 	}
 	public WHERE(): TerminalNode {
 		return this.getToken(PolicyParser.WHERE, 0);
@@ -2497,12 +2563,6 @@ export class EndorseExpressionContext extends ParserRuleContext {
 	}
 	public NEWLINE(): TerminalNode {
 		return this.getToken(PolicyParser.NEWLINE, 0);
-	}
-	public scope(): ScopeContext {
-		return this.getTypedRuleContext(ScopeContext, 0) as ScopeContext;
-	}
-	public WITH(): TerminalNode {
-		return this.getToken(PolicyParser.WITH, 0);
 	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_endorseExpression;
@@ -2738,6 +2798,12 @@ export class PermissionListContext extends ParserRuleContext {
 	}
 	public WORD(i: number): TerminalNode {
 		return this.getToken(PolicyParser.WORD, i);
+	}
+	public HCL_VAR_list(): TerminalNode[] {
+	    	return this.getTokens(PolicyParser.HCL_VAR);
+	}
+	public HCL_VAR(i: number): TerminalNode {
+		return this.getToken(PolicyParser.HCL_VAR, i);
 	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_permissionList;
@@ -3506,6 +3572,9 @@ export class OperatorContext extends ParserRuleContext {
 	public IN(): TerminalNode {
 		return this.getToken(PolicyParser.IN, 0);
 	}
+	public NOT(): TerminalNode {
+		return this.getToken(PolicyParser.NOT, 0);
+	}
 	public BETWEEN(): TerminalNode {
 		return this.getToken(PolicyParser.BETWEEN, 0);
 	}
@@ -3745,6 +3814,9 @@ export class PatternMatchContext extends ParserRuleContext {
 	}
 	public WORD(): TerminalNode {
 		return this.getToken(PolicyParser.WORD, 0);
+	}
+	public HCL_VAR(): TerminalNode {
+		return this.getToken(PolicyParser.HCL_VAR, 0);
 	}
     public get ruleIndex(): number {
     	return PolicyParser.RULE_patternMatch;

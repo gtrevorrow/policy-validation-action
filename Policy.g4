@@ -6,13 +6,13 @@ grammar Policy;
  policy              : ( allowExpression | endorseExpression | defineExpression | admitExpression )+  EOF ;
 
  allowExpression     : ALLOW subject (TO? verb resource | TO? permissionList) IN scope (WHERE condition)? NEWLINE?;
- endorseExpression   : ENDORSE subject (TO endorseVerb resource | TO? permissionList) IN (endorseScope | (scope WITH resource IN endorseScope)) (WHERE condition)? NEWLINE?;
+ endorseExpression   : ENDORSE subject (TO endorseVerb resource | TO? permissionList) IN (endorseScope | scope) (WITH resource IN endorseScope)? (WHERE condition)? NEWLINE?;
  defineExpression    : DEFINE definedSubject AS defined NEWLINE?;
  admitExpression     : ADMIT subject (OF endorseScope)?  (TO endorseVerb resource | TO? permissionList) IN scope (WITH resource IN endorseScope)? (WHERE condition)? NEWLINE?;
 
  endorseVerb         : (verb | ASSOCIATE);
  verb                : (INSPECT | READ | USE | MANAGE) ;
- permissionList      : '{'  WORD  (',' WORD)* '}'  ; // e.g {USER_UPDATE, USER_UIPASS_SET, USER_UIPASS_SET}
+ permissionList      : '{'  (WORD | HCL_VAR)  (',' (WORD | HCL_VAR))* '}'  ; // e.g {USER_UPDATE, USER_UIPASS_SET, ${var.permission}}
  scope               : ((COMPARTMENT ID?)  (WORD | HCL_VAR) (':' (WORD | HCL_VAR))* | TENANCY) ;
  endorseScope        : (ANYTENANCY| TENANCY (WORD | HCL_VAR));
  subject             : (groupSubject | serviceSubject | dynamicGroupSubject | resourceSubject | ANYUSER) ;
@@ -31,7 +31,7 @@ grammar Policy;
  condition           : (comparisonList | comparison | HCL_VAR) ; // Added HCL_VAR to allow conditions to be HCL variables
  comparison          : variable operator (value|valueList|timeWindow| patternMatch) ;
  variable            : (WORD | HCL_VAR) (('.' (WORD | HCL_VAR) )+)? ;
- operator            : ('=' | '!''=' | BEFORE | IN | BETWEEN) ;
+ operator            : ('=' | '!=' | BEFORE | IN | NOT IN | BETWEEN) ;
  value               : (WORD 
                      | QUOTED_STRING 
                      | QUOTED_STRING '/' WORD 
@@ -44,13 +44,14 @@ grammar Policy;
 
  comparisonList      : logicalCombine '{' condition  (',' condition)* '}' ;
  logicalCombine      : ( ALL | ANY ) ;
- patternMatch        : ('/' WORD '*/'|'/*' WORD '/'| '/' WORD '/'|'/*' WORD '*/') ;
+ patternMatch        : ('/' (WORD | HCL_VAR) '*/'|'/*' (WORD | HCL_VAR) '/'| '/' (WORD | HCL_VAR) '/'|'/*' (WORD | HCL_VAR) '*/') ;
 
  /*
   * Lexer Rules
   */
  BEFORE              : B E F O R E ;
  BETWEEN             : B E T W E E N;
+ NOT                 : N O T ;
  NEWLINE             : ('\r'? '\n' | '\r')+ -> skip;
  QUOTED_STRING       : '\'' (LETTER | DIGIT | ' ' | '-' | '.' | ':' | '@' | '_' | '/')+ '\'' ;
  WS                  : ' '+  -> skip;
@@ -78,7 +79,7 @@ grammar Policy;
  USE                 : U S E  ;
  ANY                 : A N Y  ;
  AND                 : A N D;
- ALL                 : A L L  ;
+ ALL                 : A L L;
  AS                  : A S;
  ID                  : I D;
 
