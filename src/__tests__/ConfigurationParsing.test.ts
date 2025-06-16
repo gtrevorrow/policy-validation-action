@@ -29,72 +29,7 @@ describe('Boolean Configuration Parsing', () => {
         jest.clearAllMocks();
     });
 
-    describe('parseBooleanInput core functionality', () => {
-        it('should return "true" for exact string "true" (case-insensitive)', () => {
-            const trueValues = ['true', 'TRUE', 'True', 'TrUe'];
-            
-            trueValues.forEach(value => {
-                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
-                const result = parseBooleanInput('test-input', false, mockPlatform); // Use false default to ensure input overrides
-                expect(result).toBe(true);
-            });
-        });
-
-        it('should return "false" for string "false" (case-insensitive)', () => {
-            const falseValues = ['false', 'FALSE', 'False', 'FaLsE'];
-            
-            falseValues.forEach(value => {
-                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
-                const result = parseBooleanInput('test-input', true, mockPlatform); // Use true default to ensure input overrides
-                expect(result).toBe(false);
-            });
-        });
-
-        it('should return "false" for any non-"true" string values', () => {
-            const nonTrueValues = ['1', 'yes', 'on', 'enabled', 'truee', 'random', '   ', '0'];
-            
-            nonTrueValues.forEach(value => {
-                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
-                const result = parseBooleanInput('test-input', true, mockPlatform);
-                expect(result).toBe(false);
-            });
-        });
-
-        it('should return "true" for "true" with whitespace', () => {
-            const trueWithWhitespace = ['true ', ' true', ' true ', '\ttrue\n', '\r\ntrue\r\n'];
-            
-            trueWithWhitespace.forEach(value => {
-                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
-                const result = parseBooleanInput('test-input', false, mockPlatform);
-                expect(result).toBe(true);
-            });
-        });
-
-        it('should return default value for empty/falsy inputs', () => {
-            const falsyValues = ['', null, undefined];
-            
-            falsyValues.forEach(value => {
-                // Test with default true
-                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
-                const resultTrue = parseBooleanInput('test-input', true, mockPlatform);
-                expect(resultTrue).toBe(true);
-
-                // Test with default false
-                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
-                const resultFalse = parseBooleanInput('test-input', false, mockPlatform);
-                expect(resultFalse).toBe(false);
-            });
-        });
-
-        it('should call platform.getInput with correct parameter name', () => {
-            (mockPlatform.getInput as jest.Mock).mockReturnValue('true');
-            parseBooleanInput('my-config-option', false, mockPlatform);
-            expect(mockPlatform.getInput).toHaveBeenCalledWith('my-config-option');
-            expect(mockPlatform.getInput).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('Real-world configuration scenarios', () => {
+    describe('Configuration Scenarios', () => {
         it('should work with actual Main.ts configuration options', () => {
             const configs = [
                 { name: 'exit-on-error', defaultValue: false },
@@ -115,22 +50,68 @@ describe('Boolean Configuration Parsing', () => {
             });
         });
 
-        it('should handle typical CI/CD boolean input patterns', () => {
+        it('should handle all boolean input patterns and edge cases', () => {
             const patterns = [
-                { input: 'true', expected: true, description: 'standard true' },
-                { input: 'TRUE', expected: true, description: 'uppercase true' },  
-                { input: 'false', expected: false, description: 'standard false' },
-                { input: 'FALSE', expected: false, description: 'uppercase false' },
-                { input: '', expected: true, description: 'empty with true default' },
-                { input: '', expected: false, description: 'empty with false default' }
+                // Standard cases
+                { input: 'true', expected: true, defaultValue: false, description: 'standard true' },
+                { input: 'TRUE', expected: true, defaultValue: false, description: 'uppercase true' },  
+                { input: 'True', expected: true, defaultValue: false, description: 'mixed case true' },
+                { input: 'TrUe', expected: true, defaultValue: false, description: 'random case true' },
+                { input: 'false', expected: false, defaultValue: true, description: 'standard false' },
+                { input: 'FALSE', expected: false, defaultValue: true, description: 'uppercase false' },
+                { input: 'False', expected: false, defaultValue: true, description: 'mixed case false' },
+                { input: 'FaLsE', expected: false, defaultValue: true, description: 'random case false' },
+                
+                // Whitespace cases
+                { input: 'true ', expected: true, defaultValue: false, description: 'true with trailing space' },
+                { input: ' true', expected: true, defaultValue: false, description: 'true with leading space' },
+                { input: ' true ', expected: true, defaultValue: false, description: 'true with surrounding spaces' },
+                { input: '\ttrue\n', expected: true, defaultValue: false, description: 'true with tab and newline' },
+                { input: '\r\ntrue\r\n', expected: true, defaultValue: false, description: 'true with CRLF' },
+                
+                // Non-true values
+                { input: '1', expected: false, defaultValue: true, description: 'numeric 1' },
+                { input: 'yes', expected: false, defaultValue: true, description: 'yes string' },
+                { input: 'on', expected: false, defaultValue: true, description: 'on string' },
+                { input: 'enabled', expected: false, defaultValue: true, description: 'enabled string' },
+                { input: 'truee', expected: false, defaultValue: true, description: 'typo truee' },
+                { input: 'random', expected: false, defaultValue: true, description: 'random string' },
+                { input: '   ', expected: false, defaultValue: true, description: 'spaces only' },
+                { input: '0', expected: false, defaultValue: true, description: 'numeric 0' },
+                
+                // Empty/falsy cases with different defaults
+                { input: '', expected: true, defaultValue: true, description: 'empty with true default' },
+                { input: '', expected: false, defaultValue: false, description: 'empty with false default' }
             ];
 
             patterns.forEach(pattern => {
-                const defaultValue = pattern.description.includes('true default') ? true : false;
                 (mockPlatform.getInput as jest.Mock).mockReturnValue(pattern.input);
-                const result = parseBooleanInput('ci-option', defaultValue, mockPlatform);
+                const result = parseBooleanInput('test-option', pattern.defaultValue, mockPlatform);
                 expect(result).toBe(pattern.expected);
             });
+        });
+
+        it('should handle null and undefined inputs correctly', () => {
+            const falsyValues = [null, undefined];
+            
+            falsyValues.forEach(value => {
+                // Test with default true
+                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
+                const resultTrue = parseBooleanInput('test-input', true, mockPlatform);
+                expect(resultTrue).toBe(true);
+
+                // Test with default false
+                (mockPlatform.getInput as jest.Mock).mockReturnValue(value);
+                const resultFalse = parseBooleanInput('test-input', false, mockPlatform);
+                expect(resultFalse).toBe(false);
+            });
+        });
+
+        it('should call platform.getInput with correct parameter name', () => {
+            (mockPlatform.getInput as jest.Mock).mockReturnValue('true');
+            parseBooleanInput('my-config-option', false, mockPlatform);
+            expect(mockPlatform.getInput).toHaveBeenCalledWith('my-config-option');
+            expect(mockPlatform.getInput).toHaveBeenCalledTimes(1);
         });
     });
 
