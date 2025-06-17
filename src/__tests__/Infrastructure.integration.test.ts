@@ -65,35 +65,6 @@ describe('Infrastructure Integration Tests', () => {
         isDirectory: () => true
     } as unknown as fs.Stats;
 
-    // Helper function to setup common file system mocks
-    const setupFsMocks = (options: {
-        dirExists?: boolean;
-        hasSubdir?: boolean;
-        customFiles?: fs.Dirent[];
-    } = {}) => {
-        const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-        const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-        const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
-
-        mockAccess.mockResolvedValue(undefined);
-        
-        if (options.dirExists !== false) {
-            // Directory check
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            
-            // Main directory contents
-            mockReaddir.mockResolvedValueOnce(options.customFiles || MOCK_FILES);
-            
-            if (options.hasSubdir !== false) {
-                // Subdir check
-                mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-                mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
-            }
-        }
-
-        return { mockAccess, mockStat, mockReaddir };
-    };
-
     // Clear mocks between tests
     beforeEach(() => {
         jest.clearAllMocks();
@@ -165,7 +136,13 @@ describe('Infrastructure Integration Tests', () => {
                 { name: 'file3.tfvars', isFile: () => true, isDirectory: () => false }
             ] as unknown as fs.Dirent[];
             
-            setupFsMocks({ customFiles, hasSubdir: false });
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(customFiles);
             
             const files = await findPolicyFiles('/test/dir', {
                 fileExtension: '.hcl'
@@ -176,7 +153,17 @@ describe('Infrastructure Integration Tests', () => {
 
         it('should return all files by default and filter by extension when explicitly asked', async () => {
             // Test default behavior (all files)
-            setupFsMocks();
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
+            // Subdir check
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
+            
             const files = await findPolicyFiles('/test/dir');
             expect(files).toEqual([
                 '/test/dir/file1.tf',
@@ -186,7 +173,13 @@ describe('Infrastructure Integration Tests', () => {
             
             // Reset mocks and test filtered behavior (.tf only)
             jest.clearAllMocks();
-            setupFsMocks();
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
+            // Subdir check
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
+            
             const filteredFiles = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
             expect(filteredFiles).toEqual([
                 '/test/dir/file1.tf',
@@ -280,7 +273,13 @@ describe('Infrastructure Integration Tests', () => {
                 { name: 'invalid.tf', isFile: () => true, isDirectory: () => false }
             ] as unknown as fs.Dirent[];
             
-            setupFsMocks({ customFiles: fixtureFiles, hasSubdir: false });
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(fixtureFiles);
             
             const fixturesDir = path.join(__dirname, 'fixtures');
             const foundFiles = await findPolicyFiles(fixturesDir, {}, mockLogger);
@@ -466,7 +465,13 @@ describe('Infrastructure Integration Tests', () => {
                 { name: 'config.json', isFile: () => true, isDirectory: () => false }
             ] as unknown as fs.Dirent[];
             
-            setupFsMocks({ customFiles: nonMatchingFiles, hasSubdir: false });
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(nonMatchingFiles);
             
             const options = {
                 extractorType: 'regex' as ExtractorType,
@@ -488,7 +493,13 @@ describe('Infrastructure Integration Tests', () => {
 
         it('should return empty array when directory has no files at all', async () => {
             // Setup mocks with empty directory
-            setupFsMocks({ customFiles: [], hasSubdir: false });
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce([]);
             
             const options = {
                 extractorType: 'regex' as ExtractorType,
