@@ -65,6 +65,11 @@ describe('Infrastructure Integration Tests', () => {
         isDirectory: () => true
     } as unknown as fs.Stats;
 
+    const MOCK_FILE_STAT = { 
+        isFile: () => true,
+        isDirectory: () => false
+    } as unknown as fs.Stats;
+
     // Clear mocks between tests
     beforeEach(() => {
         jest.clearAllMocks();
@@ -85,10 +90,7 @@ describe('Infrastructure Integration Tests', () => {
             const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
             
             mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValue({ 
-                isFile: () => true, 
-                isDirectory: () => false 
-            } as unknown as fs.Stats);
+            mockStat.mockResolvedValue(MOCK_FILE_STAT);
             
             const files = await findPolicyFiles('/test/dir/file.tf');
             expect(files).toEqual(['/test/dir/file.tf']);
@@ -101,22 +103,14 @@ describe('Infrastructure Integration Tests', () => {
             mockAccess.mockResolvedValue(undefined);
             
             // Check if dir is directory
-            mockStat.mockResolvedValueOnce({ 
-                isFile: () => false,
-                isDirectory: () => true
-            } as unknown as fs.Stats);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
             
             // Check policy1.tf
-            mockStat.mockResolvedValueOnce({ 
-                isFile: () => true,
-                isDirectory: () => false
-            } as unknown as fs.Stats);
+            mockStat.mockResolvedValueOnce(MOCK_FILE_STAT);
+              
             
             // Check policy2.tf
-            mockStat.mockResolvedValueOnce({ 
-                isFile: () => true,
-                isDirectory: () => false
-            } as unknown as fs.Stats);
+            mockStat.mockResolvedValueOnce(MOCK_FILE_STAT);
             
             const files = await findPolicyFiles('/test/dir', {
                 fileNames: ['policy1.tf', 'policy2.tf']
@@ -128,7 +122,46 @@ describe('Infrastructure Integration Tests', () => {
             ]);
         });
 
-        it('should use custom file extension when specified', async () => {
+        it('should return all files by default (no filtering)', async () => {
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
+            // Subdir check
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
+            
+            const files = await findPolicyFiles('/test/dir');
+            expect(files).toEqual([
+                '/test/dir/file1.tf',
+                '/test/dir/file2.txt',
+                '/test/dir/subdir/file3.tf'
+            ]);
+        });
+
+        it('should filter files by extension when specified', async () => {
+            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+            mockAccess.mockResolvedValue(undefined);
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
+            // Subdir check
+            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
+            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
+            
+            const files = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
+            expect(files).toEqual([
+                '/test/dir/file1.tf',
+                '/test/dir/subdir/file3.tf'
+            ]);
+        });
+
+        it('should filter files by custom extension when specified', async () => {
             // Setup mocks with custom files including .hcl
             const customFiles = [
                 { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
@@ -149,42 +182,6 @@ describe('Infrastructure Integration Tests', () => {
             });
             
             expect(files).toEqual(['/test/dir/file2.hcl']);
-        });
-
-        it('should return all files by default and filter by extension when explicitly asked', async () => {
-            // Test default behavior (all files)
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
-
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
-            // Subdir check
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
-            
-            const files = await findPolicyFiles('/test/dir');
-            expect(files).toEqual([
-                '/test/dir/file1.tf',
-                '/test/dir/file2.txt',
-                '/test/dir/subdir/file3.tf'
-            ]);
-            
-            // Reset mocks and test filtered behavior (.tf only)
-            jest.clearAllMocks();
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
-            // Subdir check
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
-            
-            const filteredFiles = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
-            expect(filteredFiles).toEqual([
-                '/test/dir/file1.tf',
-                '/test/dir/subdir/file3.tf'
-            ]);
         });
     });
     
