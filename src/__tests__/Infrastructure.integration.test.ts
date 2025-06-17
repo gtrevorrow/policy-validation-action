@@ -241,7 +241,10 @@ describe('Infrastructure Integration Tests', () => {
         it('should extract policies from valid fixture file with custom regex pattern', async () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
             
-            // Test custom regex pattern for variable assignments
+            // First, test default pattern (undefined pattern)
+            const defaultExpressions = await processFile(fixturePath, undefined, 'regex', mockLogger);
+            
+            // Then test custom regex pattern that matches any array assignment
             const customPattern = "\\s*=\\s*\\[([\\s\\S]*?)\\]";
             const customExpressions = await processFile(
                 fixturePath,
@@ -250,11 +253,20 @@ describe('Infrastructure Integration Tests', () => {
                 mockLogger
             );
             
-            expect(customExpressions.length).toBeGreaterThan(0);
+            // Custom pattern should extract MORE policies than default pattern
+            // because it matches 'policies=', 'more_policies=' AND 'statements=' 
+            // while default only matches 'statements='
+            expect(customExpressions.length).toBeGreaterThan(defaultExpressions.length);
+            
             // Should find policies from both resource blocks and locals blocks
             expect(customExpressions.some(e => e.includes('Administrators_locals'))).toBe(true);
             expect(customExpressions.some(e => e.includes('Administrators'))).toBe(true);
             expect(customExpressions.some(e => e.includes('${var.') || e.includes('${local.'))).toBe(true);
+            
+            // Verify the custom pattern extracts content the default pattern wouldn't
+            // The locals block 'policies=' should only be found by custom pattern
+            expect(customExpressions.some(e => e.includes('Allow group Administrators_locals'))).toBe(true);
+            expect(defaultExpressions.some(e => e.includes('Allow group Administrators_locals'))).toBe(false);
         });
         
         it('should extract policies from invalid fixture file', async () => {
