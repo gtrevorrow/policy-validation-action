@@ -228,15 +228,18 @@ describe('Infrastructure Integration Tests', () => {
      * - Complex policy statements from real-world examples like OCI Core Landing Zone
      */
     describe('processFile', () => {
-        it('should extract policies from valid fixture file with default and custom regex patterns', async () => {
+        it('should extract policies from valid fixture file with default regex pattern', async () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
             
-            // Test default regex pattern
             const defaultExpressions = await processFile(fixturePath, undefined, 'regex', mockLogger);
             expect(defaultExpressions.length).toBeGreaterThan(0);
             expect(defaultExpressions).toContain('Allow group Administrators to manage all-resources in tenancy');
             expect(defaultExpressions).toContain('Allow group Developers to use instances in compartment dev');
             expect(defaultExpressions.some(e => e.includes('${var.'))).toBe(true);
+        });
+
+        it('should extract policies from valid fixture file with custom regex pattern', async () => {
+            const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
             
             // Test custom regex pattern for variable assignments
             const customPattern = "\\s*=\\s*\\[([\\s\\S]*?)\\]";
