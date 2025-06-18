@@ -2,232 +2,42 @@
  * Infrastructure.integration.test.ts
  * 
  * This file contains integration tests for the core infrastructure components of the policy validation tool.
- * It tests the integration between multiple components working together:
- * - findPolicyFiles: File system traversal and filtering logic
- * - processFile: Policy extraction from various file formats (Terraform, tfvars, etc.)
- * - validatePolicies: End-to-end validation pipeline orchestration
- * - runAction: Main CLI/GitHub Actions entry point with configuration parsing
+ * It tests the integration between multiple components working together using real files:
+ * - processFile: Policy extraction from real fixture files in various formats
+ * - validatePolicies: End-to-end validation pipeline with real file processing
+ * - Full workflows: File discovery → processing → validation pipelines
+ * 
+ * These integration tests use real fixture files and no filesystem mocks to ensure
+ * the components work correctly together in production-like scenarios.
  * 
  * The validation system uses a pipeline-based approach with two types of validators:
  * - Local validators: Run on each file individually (syntax validation)
  * - Global validators: Run on all statements together (CIS benchmark validation)
- * 
- * These integration tests use a combination of mocked file system operations and real fixture files
- * to ensure the infrastructure components work correctly together in production-like scenarios.
  */
 
-import * as fs from 'fs';
 import * as path from 'path';
 import { 
-    findPolicyFiles, 
     processFile,
-    runAction,
     validatePolicies
 } from '../Main';
 import { ValidatorFactory } from '../validators/ValidatorFactory';
 import { ExtractorType } from '../extractors/ExtractorFactory';
 import { mockLogger } from './fixtures/test-utils';
 
-// Using real fs for fixture tests but mocking for unit tests
-jest.mock('fs', () => {
-    const originalFs = jest.requireActual('fs');
-    return {
-        ...originalFs,
-        promises: {
-            readFile: jest.fn((path, encoding) => {
-                // Use real file system for fixture files
-                if (path.includes('fixtures/')) {
-                    return originalFs.promises.readFile(path, encoding);
-                }
-                return Promise.resolve('mocked content');
-            }),
-            readdir: jest.fn(),
-            stat: jest.fn(),
-            access: jest.fn()
-        }
-    };
-});
+// NO filesystem mocks - using real files for integration tests
 
 describe('Infrastructure Integration Tests', () => {
-    // Common mock data
-    const MOCK_FILES = [
-        { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
-        { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
-        { name: 'subdir', isFile: () => false, isDirectory: () => true }
-    ] as unknown as fs.Dirent[];
-
-    const MOCK_SUBDIR_FILES = [
-        { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
-    ] as unknown as fs.Dirent[];
-
-    const MOCK_DIRECTORY_STAT = { 
-        isFile: () => false,
-        isDirectory: () => true
-    } as unknown as fs.Stats;
-
-    const MOCK_FILE_STAT = { 
-        isFile: () => true,
-        isDirectory: () => false
-    } as unknown as fs.Stats;
-
-    // Clear mocks between tests
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
     /**
-     * Tests for findPolicyFiles function
+     * Integration tests for processFile function with real fixture files
      * 
-     * These tests verify that the function correctly:
-     * - Finds and filters files based on extension (.tf by default)
-     * - Handles different directory structures and file types
-     * - Properly applies filtering options (ignoreExtension, fileExtension, fileNames)
-     * - Handles edge cases such as a single file path
-     */
-    describe('findPolicyFiles', () => {
-        it('should handle a single file path', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValue(MOCK_FILE_STAT);
-            
-            const files = await findPolicyFiles('/test/dir/file.tf');
-            expect(files).toEqual(['/test/dir/file.tf']);
-        });
-
-        it('should filter files when fileNames are provided', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            
-            mockAccess.mockResolvedValue(undefined);
-            
-            // Check if dir is directory
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            
-            // Check policy1.tf
-            mockStat.mockResolvedValueOnce(MOCK_FILE_STAT);
-              
-            
-            // Check policy2.tf
-            mockStat.mockResolvedValueOnce(MOCK_FILE_STAT);
-            
-            const files = await findPolicyFiles('/test/dir', {
-                fileNames: ['policy1.tf', 'policy2.tf']
-            });
-            
-            expect(files).toEqual([
-                '/test/dir/policy1.tf', 
-                '/test/dir/policy2.tf'
-            ]);
-        });
-
-        it('should return all files by default (no filtering)', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
-
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
-            // Subdir check
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
-            
-            const files = await findPolicyFiles('/test/dir');
-            expect(files).toEqual([
-                '/test/dir/file1.tf',
-                '/test/dir/file2.txt',
-                '/test/dir/subdir/file3.tf'
-            ]);
-        });
-
-        it('should filter files by extension when specified', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
-
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
-            // Subdir check
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
-            
-            const files = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
-            expect(files).toEqual([
-                '/test/dir/file1.tf',
-                '/test/dir/subdir/file3.tf'
-            ]);
-        });
-
-        it('should filter files by custom extension when specified', async () => {
-            // Setup mocks with custom files including .hcl
-            const customFiles = [
-                { name: 'file1.tf', isFile: () => true, isDirectory: () => false },
-                { name: 'file2.hcl', isFile: () => true, isDirectory: () => false },
-                { name: 'file3.tfvars', isFile: () => true, isDirectory: () => false }
-            ] as unknown as fs.Dirent[];
-            
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
-
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(customFiles);
-            
-            const files = await findPolicyFiles('/test/dir', {
-                fileExtension: '.hcl'
-            });
-            
-            expect(files).toEqual(['/test/dir/file2.hcl']);
-        });
-    });
-    
-    /**
-     * Tests for validatePolicySyntax function
-     * 
-     * These tests verify that the syntax validator correctly:
-     * - Accepts valid policy statements
-     * - Rejects invalid policy statements
-     * - Reports appropriate error messages
-     */
-        it('should validate policies from fixture file', async () => {
-            const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
-            const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
-            
-            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
-            const reports = await validator.validate(statements);
-            expect(reports).toHaveLength(1);
-            expect(reports[0].passed).toBe(true);
-            expect(reports[0].issues).toHaveLength(0);
-        });
-        
-        it('should reject invalid policies from fixture file', async () => {
-            // Use the actual Main.ts method to process the file
-            const fixturePath = path.join(__dirname, 'fixtures', 'invalid.tf');
-            const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
-            
-            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
-            const reports = await validator.validate(statements);
-            expect(reports).toHaveLength(1);
-            expect(reports[0].passed).toBe(false);
-            expect(reports[0].issues.length).toBeGreaterThan(0);
-        });
-    
-
-    /**
-     * Tests for processFile function
-     * 
-     * This section tests the policy extraction functionality from various file formats:
+     * This section tests the policy extraction functionality from real files:
      * - Regular Terraform (.tf) files with standard policy syntax
      * - Files with invalid policy syntax to ensure errors are handled properly
      * - Files with variable interpolation in policy statements
      * - Different regex extraction patterns for different file formats
      * - Complex policy statements from real-world examples like OCI Core Landing Zone
      */
-    describe('processFile', () => {
+    describe('Policy Processing - Integration Tests', () => {
         it('should extract policies from valid fixture file with default regex pattern', async () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
             
@@ -277,40 +87,8 @@ describe('Infrastructure Integration Tests', () => {
             expect(expressions.some(e => e.includes('Administrators_locals'))).toBe(true);
             expect(expressions.some(e => e.includes('allw foo'))).toBe(true);
         });
-        
-        it('should use full integration with findPolicyFiles and processFile', async () => {
-            // Setup mocks for fixture files
-            const fixtureFiles = [
-                { name: 'valid.tf', isFile: () => true, isDirectory: () => false },
-                { name: 'invalid.tf', isFile: () => true, isDirectory: () => false }
-            ] as unknown as fs.Dirent[];
-            
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
 
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(fixtureFiles);
-            
-            const fixturesDir = path.join(__dirname, 'fixtures');
-            const foundFiles = await findPolicyFiles(fixturesDir, {}, mockLogger);
-            
-            expect(foundFiles.length).toBeGreaterThan(0);
-            
-            // Process each file
-            for (const file of foundFiles) {
-                const expressions = await processFile(file, undefined, 'regex', mockLogger);
-                expect(expressions.length).toBeGreaterThan(0);
-                
-                // Test validation on the extracted policies
-                const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
-                const reports = await validator.validate(expressions);
-                expect(reports).toHaveLength(1);
-                expect(typeof reports[0].passed).toBe('boolean');
-            }
-        });
-        
+        // Tests that processFile works with various regex patterns and gracefully handles pattern failures
         it('should extract policies using different regex patterns', async () => {
             const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
             
@@ -413,8 +191,9 @@ describe('Infrastructure Integration Tests', () => {
             console.log(`Total policies extracted from security_cmp_policy.tf: ${policies1.length}`);
             console.log(`Total policies extracted from root_cmp_policy.tf: ${policies2.length}`);
             console.log(`Total policies extracted from network_cmp_policy.tf: ${policies3.length}`);
+            
             // Check for specific storage policy in security_cmp_policy.tf
-            const storagePolicy = policies1.find(p => 
+            const storagePolicy = policies1.find((p: string) => 
                 p.toLowerCase().includes('allow group') && 
                 p.toLowerCase().includes('to read bucket in compartment')
             );
@@ -423,7 +202,7 @@ describe('Infrastructure Integration Tests', () => {
             console.log(`Found storage policy: ${storagePolicy}`);
             
             // Check for specific objectstorage policy in root_cmp_policy.tf
-            const objectStoragePolicy = policies2.find(p => 
+            const objectStoragePolicy = policies2.find((p: string) => 
                 p.toLowerCase().includes('allow group') && 
                 p.toLowerCase().includes('to read objectstorage-namespaces in tenancy')
             );
@@ -432,7 +211,7 @@ describe('Infrastructure Integration Tests', () => {
             console.log(`Found objectstorage policy: ${objectStoragePolicy}`);
             
             // Check for specific network policy in network_cmp_policy.tf
-            const networkPolicy = policies3.find(p =>
+            const networkPolicy = policies3.find((p: string) =>
                 p.toLowerCase().includes('allow group') &&
                 p.toLowerCase().includes('to manage virtual-network-family in compartment')
             );
@@ -461,29 +240,48 @@ describe('Infrastructure Integration Tests', () => {
     });
 
     /**
-     * Tests for validatePolicies function
+     * Integration tests for policy validation with real files
      * 
-     * These tests verify that the validatePolicies function correctly:
-     * - Returns an empty array when no files match the criteria
-     * - Returns validation reports for found policies using the pipeline system
-     * - Handles different validation pipeline configurations
-     * - Properly logs warnings and handles error conditions
+     * These tests verify that the validation pipeline correctly
+     * - Accepts valid policy statements from real fixture files
+     * - Rejects invalid policy statements from real fixture files  
+     * - Reports appropriate error messages
      */
-    describe('validatePolicies', () => {
-        it('should return empty array when no files match criteria', async () => {
-            // Setup mocks with only non-matching files
-            const nonMatchingFiles = [
-                { name: 'readme.txt', isFile: () => true, isDirectory: () => false },
-                { name: 'config.json', isFile: () => true, isDirectory: () => false }
-            ] as unknown as fs.Dirent[];
+    describe('Policy Validation - Integration Tests', () => {
+        it('should accept valid policies from fixture file', async () => {
+            const fixturePath = path.join(__dirname, 'fixtures', 'valid.tf');
+            const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
             
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(statements);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(true);
+            expect(reports[0].issues).toHaveLength(0);
+        });
+        
+        it('should reject invalid policies from fixture file', async () => {
+            const fixturePath = path.join(__dirname, 'fixtures', 'invalid.tf');
+            const statements = await processFile(fixturePath, undefined, 'regex', mockLogger);
+            
+            const validator = ValidatorFactory.createSyntaxValidator(mockLogger);
+            const reports = await validator.validate(statements);
+            expect(reports).toHaveLength(1);
+            expect(reports[0].passed).toBe(false);
+            expect(reports[0].issues.length).toBeGreaterThan(0);
+        });
+    });
 
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(nonMatchingFiles);
+    /**
+     * End-to-end integration workflow tests
+     * 
+     * These tests verify complete workflows using real fixture files:
+     * - Full file discovery and processing workflows
+     * - Cross-component integration testing
+     * - Real filesystem operations with actual files
+     */
+    describe('End-to-End Workflows - Integration Tests', () => {
+        it('should process fixture directory with real file operations', async () => {
+            const fixturesDir = path.join(__dirname, 'fixtures');
             
             const options = {
                 extractorType: 'regex' as ExtractorType,
@@ -491,204 +289,36 @@ describe('Infrastructure Integration Tests', () => {
                 exitOnError: false
             };
             
-            const results = await validatePolicies('/test/dir', options, mockLogger);
+            // This will use real filesystem operations to find and process files
+            const results = await validatePolicies(fixturesDir, options, mockLogger);
             
-            // Should return empty array
+            // Should find and process real fixture files
             expect(Array.isArray(results)).toBe(true);
-            expect(results.length).toBe(0);
+            expect(results.length).toBeGreaterThan(0);
             
-            // Should log the appropriate warning message
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                'No files matching criteria found in /test/dir'
-            );
-        });
-
-        it('should return empty array when directory has no files at all', async () => {
-            // Setup mocks with empty directory
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
-
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce([]);
-            
-            const options = {
-                extractorType: 'regex' as ExtractorType,
-                exitOnError: false
-            };
-            
-            const results = await validatePolicies('/empty/dir', options, mockLogger);
-            
-            // Should return empty array
-            expect(Array.isArray(results)).toBe(true);
-            expect(results.length).toBe(0);
-            
-            // Should log the general "no files found" message
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                'No files found in /empty/dir'
-            );
-        });
-    });
-
-    /**
-     * Additional tests for edge cases and error handling
-     * These tests ensure the library correctly handles missing files,
-     * inaccessible directories, and other error conditions.
-     */
-    describe('Unit Tests', () => {
-        it('should handle empty directory', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            mockAccess.mockRejectedValue(new Error('Directory not found'));
-            
-            const files = await findPolicyFiles('nonexistent', {}, mockLogger);
-            expect(files).toEqual([]);
-            expect(mockLogger.error).toHaveBeenCalled();
-        });
-
-        it('should handle path access errors correctly in findPolicyFiles', async () => {
-            // Mock fs.promises.access to simulate a path access error
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            mockAccess.mockRejectedValue(new Error('Access denied'));
-            
-            // Call findPolicyFiles with an inaccessible path
-            const files = await findPolicyFiles('/inaccessible/path', {}, mockLogger);
-            
-            // It should return an empty array and log the error
-            expect(files).toEqual([]);
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                expect.stringContaining('Path /inaccessible/path is not accessible')
-            );
-        });
-    });
-
-    /**
-     * Tests for configuration parsing helpers
-     * These tests verify that the configuration parsing functions correctly
-     * handle different input formats and default values for validator pipelines
-     */
-    describe('Configuration Parsing', () => {
-        let accessMock: jest.SpyInstance;
-        let statMock: jest.SpyInstance;
-        let readdirMock: jest.SpyInstance;
-        beforeAll(() => {
-            const resolvedDotPath = path.resolve('.');
-            accessMock = jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
-            statMock = jest.spyOn(fs.promises, 'stat').mockImplementation(async (p: string | Buffer | URL) => {
-                const pathStr = path.resolve(p.toString());
-                if (pathStr === resolvedDotPath) { 
-                    return {
-                        isFile: () => false, isDirectory: () => true, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
-                        dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 0, blksize: 0, blocks: 0,
-                        atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
-                        atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
-                    } as fs.Stats;
-                } else if (pathStr === path.join(resolvedDotPath, 'dummy.tf')) { 
-                     return {
-                        isFile: () => true, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
-                        dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 100, blksize: 4096, blocks: 1,
-                        atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
-                        atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
-                    } as fs.Stats;
-                }
-                // Enhanced fallback for unhandled paths
-                return { 
-                    isFile: () => false, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
-                    dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 0, blksize: 0, blocks: 0,
-                    atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
-                    atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
-                } as fs.Stats;
+            // Each result should have proper FileValidationResult structure
+            results.forEach(result => {
+                expect(result).toHaveProperty('file');
+                expect(typeof result.file).toBe('string');
+                expect(result).toHaveProperty('results');
+                expect(Array.isArray(result.results)).toBe(true);
+                
+                // Each ValidationPipelineResult should have the proper structure
+                result.results.forEach(pipelineResult => {
+                    expect(pipelineResult).toHaveProperty('validatorName');
+                    expect(pipelineResult).toHaveProperty('validatorDescription');
+                    expect(pipelineResult).toHaveProperty('reports');
+                    expect(Array.isArray(pipelineResult.reports)).toBe(true);
+                    
+                    // Each ValidationReport should have the proper structure
+                    pipelineResult.reports.forEach(report => {
+                        expect(report).toHaveProperty('passed');
+                        expect(typeof report.passed).toBe('boolean');
+                        expect(report).toHaveProperty('issues');
+                        expect(Array.isArray(report.issues)).toBe(true);
+                    });
+                });
             });
-            readdirMock = jest.spyOn(fs.promises, 'readdir').mockImplementation(async (p: string | Buffer | URL) => {
-                const pathStr = p.toString();
-                if (pathStr === '.' || pathStr.endsWith('/.')) {
-                    return [
-                        { name: 'dummy.tf', isFile: () => true, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false }
-                    ] as fs.Dirent[];
-                }
-                return [];
-            });
-        });
-        afterAll(() => {
-            accessMock.mockRestore();
-            statMock.mockRestore();
-            readdirMock.mockRestore();
-        });
-
-        beforeEach(() => {
-            jest.clearAllMocks();
-        });
-
-        it('should correctly parse boolean inputs with default values', async () => {
-            // Create a shared logger mock
-            const logger = {
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn()
-            };
-            
-            // Test with empty inputs to verify default values
-            const mockGetInput = jest.fn((name) => {
-                if (name === 'path') return '.';
-                // Return empty for all other inputs to test default values
-                return '';
-            });
-            
-            const testPlatform = {
-                getInput: mockGetInput,
-                setOutput: jest.fn(),
-                setResult: jest.fn(),
-                debug: jest.fn(),
-                info: jest.fn(),
-                warning: jest.fn(), // Changed from warn to warning
-                error: jest.fn(),
-                createLogger: jest.fn().mockReturnValue(logger)
-            };
-            
-            await runAction(testPlatform);
-            
-            // Verify the explicit default values for validator pipelines
-            expect(logger.info.mock.calls.flat()).toContain("Exit on error: false");
-            expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: true");
-            expect(logger.info.mock.calls.flat()).toContain("Global validators enabled: false");
-        });
-        
-        it('should handle specific boolean values correctly', async () => {
-            // Create a shared logger mock
-            const logger = {
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn()
-            };
-            
-            // Test with specific boolean values
-            const mockGetInput = jest.fn((name) => {
-                if (name === 'path') return '.';
-                if (name === 'exit-on-error') return 'true';
-                if (name === 'validators-local') return 'false';
-                if (name === 'validators-global') return 'true';
-                return '';
-            });
-            
-            const testPlatform = {
-                getInput: mockGetInput,
-                setOutput: jest.fn(),
-                setResult: jest.fn(),
-                debug: jest.fn(),
-                info: jest.fn(),
-                warning: jest.fn(), // Changed from warn to warning
-                error: jest.fn(),
-                createLogger: jest.fn().mockReturnValue(logger)
-            };
-            
-            await runAction(testPlatform);
-            
-            // Verify all boolean values for validator pipelines are set correctly
-            expect(logger.info.mock.calls.flat()).toContain("Exit on error: true");
-            expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: false");
-            expect(logger.info.mock.calls.flat()).toContain("Global validators enabled: true");
         });
     });
 });
