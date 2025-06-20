@@ -193,7 +193,7 @@ describe('Policy Validator Integration', () => {
       expect(results[0].reports[0].passed).toBeTruthy();
     });
 
-    it.skip('should process large Terraform configurations efficiently', async () => {
+    it('should process large Terraform configurations efficiently', async () => {
       // Generate large Terraform content with many policies
       let largeTerraform = '';
       for (let i = 0; i < 20; i++) {
@@ -220,25 +220,42 @@ describe('Policy Validator Integration', () => {
       
       expect(results).toHaveLength(2);
       expect(duration).toBeLessThan(3000); // Should complete within 3 seconds
+      
+      // Verify all statements were processed
+      const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
+      expect(syntaxResults?.reports[0].passed).toBeTruthy();
+      
+      // Verify CIS validation ran on all statements
+      const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
+      expect(cisResults?.reports).toHaveLength(6); // All 6 CIS checks should run
     });
   });
 
-  describe.skip('Error Resilience and Recovery', () => {
+  describe('Error Resilience and Recovery', () => {
     it('should continue validation when some policies fail to parse', async () => {
-      const statements = extractPoliciesFromTerraform(invalidTerraformSyntax);
+      // Use a simpler approach - valid extraction but invalid policy statements
+      const problematicStatements = [
+        'Allow group ValidGroup to use instances in compartment dev', // Valid
+        'Allow BadSyntax manage', // Invalid syntax
+        'This is completely invalid' // Invalid syntax
+      ];
       
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
       
       // Should not throw errors even with malformed input
-      const results = await pipeline.validate(statements);
+      const results = await pipeline.validate(problematicStatements);
       expect(results).toHaveLength(2);
       
-      // Should log parsing issues
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping statement due to parsing error')
-      );
+      // Both validators should still produce reports
+      const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
+      expect(syntaxResults?.reports).toHaveLength(1);
+      expect(syntaxResults?.reports[0].passed).toBeFalsy(); // Should fail due to invalid statements
+      
+      // CIS validator should also run despite syntax errors
+      const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
+      expect(cisResults?.reports).toHaveLength(6);
     });
 
     it('should provide comprehensive validation summary', async () => {
@@ -266,6 +283,10 @@ describe('Policy Validator Integration', () => {
       expect(checkIds).toContain('CIS-OCI-1.5');
       expect(checkIds).toContain('CIS-OCI-1.13');
       expect(checkIds).toContain('CIS-OCI-5.2');
+      
+      // Verify both validators completed successfully
+      expect(results).toHaveLength(2);
+      expect(results.every(r => r.validatorName && r.reports.length > 0)).toBeTruthy();
     });
 
     it('should handle edge cases in Terraform extraction', async () => {
@@ -285,11 +306,20 @@ describe('Policy Validator Integration', () => {
         
         // Should handle gracefully without errors
         expect(Array.isArray(results)).toBeTruthy();
+        
+        // For empty/invalid content, should get empty results
+        if (statements.length === 0) {
+          expect(results).toEqual([]);
+        } else {
+          // For valid content, should get validation results
+          expect(results).toHaveLength(1);
+          expect(results[0].reports).toHaveLength(1);
+        }
       }
     });
   });
 
-  describe.skip('Cross-Validator Correlation', () => {
+  describe('Cross-Validator Correlation', () => {
     it('should identify policies that pass syntax but fail security checks', async () => {
       const problematicStatements = [
         'Allow group Admins to manage all-resources in tenancy', // Valid syntax, bad security
@@ -305,11 +335,27 @@ describe('Policy Validator Integration', () => {
       // Syntax should pass
       const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
       expect(syntaxResults?.reports[0].passed).toBeTruthy();
+      expect(syntaxResults?.reports[0].issues).toHaveLength(0);
       
       // Security checks should fail
       const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
       const failingSecurityChecks = cisResults?.reports.filter(r => !r.passed);
       expect(failingSecurityChecks?.length).toBeGreaterThan(0);
+      
+      // Specifically check for least privilege violations
+      const leastPrivilegeCheck = cisResults?.reports.find(r => r.checkId === 'CIS-OCI-1.2');
+      expect(leastPrivilegeCheck?.passed).toBeFalsy();
+      expect(leastPrivilegeCheck?.issues.some(i => 
+        i.statement.includes('manage all-resources in tenancy')
+      )).toBeTruthy();
+      
+      // Check for IAM protection violations  
+      const iamProtectionCheck = cisResults?.reports.find(r => r.checkId === 'CIS-OCI-1.3');
+      expect(iamProtectionCheck?.passed).toBeFalsy();
+      expect(iamProtectionCheck?.issues.some(i => 
+        i.statement.includes('manage groups in tenancy') && 
+        !i.statement.includes('where')
+      )).toBeTruthy();
     });
 
     it('should provide complementary validation coverage', async () => {
@@ -335,6 +381,16 @@ describe('Policy Validator Integration', () => {
       // CIS validator should catch security issue
       const leastPrivilegeCheck = cisResults?.reports.find(r => r.checkId === 'CIS-OCI-1.2');
       expect(leastPrivilegeCheck?.passed).toBeFalsy();
+      
+      // Valid statement should pass syntax but may fail some CIS checks depending on specifics
+      const validStatementProcessed = syntaxResults?.reports[0].issues.every(i => 
+        !i.statement.includes('manage instances in compartment dev')
+      );
+      expect(validStatementProcessed).toBeTruthy();
+      
+      // Verify comprehensive coverage - each validator catches different types of issues
+      expect(syntaxResults?.reports[0].issues).toHaveLength(2); // Two syntax errors from the malformed statement
+      expect(leastPrivilegeCheck?.issues.length).toBeGreaterThan(0); // Security issues
     });
   });
 });

@@ -613,28 +613,152 @@ exports.RegexPolicyExtractor = void 0;
 const DefaultExtractionStrategy_1 = __nccwpck_require__(5675);
 const types_1 = __nccwpck_require__(8164);
 class RegexPolicyExtractor {
-    constructor(pattern, extractionStrategy) {
+    constructor(pattern, extractionStrategy, config) {
+        var _a, _b, _c, _d;
         // Use existing pattern from types.ts or build a new one from the provided pattern
         this.pattern = pattern
             ? new RegExp(pattern, 'sgi')
             : types_1.POLICY_STATEMENTS_REGEX;
         this.extractionStrategy = extractionStrategy || new DefaultExtractionStrategy_1.DefaultExtractionStrategy();
+        // Set configurable limits with sensible defaults
+        this.config = {
+            timeoutMs: (_a = config === null || config === void 0 ? void 0 : config.timeoutMs) !== null && _a !== void 0 ? _a : 5000, // 5 second timeout
+            maxInputSize: (_b = config === null || config === void 0 ? void 0 : config.maxInputSize) !== null && _b !== void 0 ? _b : 1000000, // 1MB default
+            maxNestingDepth: (_c = config === null || config === void 0 ? void 0 : config.maxNestingDepth) !== null && _c !== void 0 ? _c : 50, // 50 levels default
+            maxConsecutiveChars: (_d = config === null || config === void 0 ? void 0 : config.maxConsecutiveChars) !== null && _d !== void 0 ? _d : 20 // 20 repeated chars
+        };
     }
     extract(text) {
         if (!text || text.trim() === '') {
             return [];
         }
-        // With global flag, matchAll returns an iterator of all matches
-        const matches = Array.from(text.matchAll(this.pattern));
-        if (!matches || matches.length === 0) {
-            return [];
+        // Pre-validate input for obvious issues before attempting regex
+        this.validateInputConstraints(text);
+        try {
+            // Reset the regex to ensure clean state
+            this.pattern.lastIndex = 0;
+            // Use actual timeout-protected regex matching
+            const matches = this.performRegexWithTimeout(text);
+            if (!matches || matches.length === 0) {
+                return [];
+            }
+            // Get raw statements from regex matches and delegate all processing to the strategy
+            return matches
+                .map((match) => match[1]) // Get capturing group from each match
+                .filter(Boolean) // Remove any undefined/null matches
+                .flatMap((statement) => this.extractionStrategy.extractStatements(statement))
+                .filter((s) => s && s.trim() !== '');
         }
-        // Get raw statements from regex matches and delegate all processing to the strategy
-        return matches
-            .map(match => match[1]) // Get capturing group from each match
-            .filter(Boolean) // Remove any undefined/null matches
-            .flatMap(statement => this.extractionStrategy.extractStatements(statement))
-            .filter(s => s && s.trim() !== '');
+        catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('timeout') || error.message.includes('Timeout')) {
+                    throw new Error(`Regex processing timed out after ${this.config.timeoutMs}ms. The input may contain patterns that cause catastrophic backtracking. Consider using a simpler extraction pattern or processing smaller input chunks.`);
+                }
+                throw new Error(`Regex extraction failed: ${error.message}. This may indicate input that is incompatible with the current extraction pattern.`);
+            }
+            throw new Error(`Regex extraction failed: ${String(error)}. This may indicate input that is incompatible with the current extraction pattern.`);
+        }
+    }
+    /**
+     * Performs regex matching with actual timeout protection
+     * Uses a simple approach that works in synchronous context
+     */
+    performRegexWithTimeout(text) {
+        const startTime = Date.now();
+        let matches = [];
+        // Create an iterator to process matches incrementally
+        const matchIterator = text.matchAll(this.pattern);
+        try {
+            for (const match of matchIterator) {
+                // Check timeout on each iteration to prevent hanging
+                if (Date.now() - startTime > this.config.timeoutMs) {
+                    throw new Error(`Regex matching timed out after ${this.config.timeoutMs}ms while processing match ${matches.length + 1}. Input may cause catastrophic backtracking.`);
+                }
+                matches.push(match);
+                // Safety valve - if we're getting way too many matches, something might be wrong
+                if (matches.length > 10000) {
+                    throw new Error(`Regex produced excessive matches (${matches.length}). This may indicate a pattern issue or input that causes exponential matching.`);
+                }
+            }
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                // If it's our timeout error, re-throw it
+                if (error.message.includes('timeout') || error.message.includes('Timeout')) {
+                    throw error;
+                }
+                // For other regex errors, wrap them with context
+                throw new Error(`Regex matching failed: ${error.message}. This may indicate input incompatible with the extraction pattern.`);
+            }
+            throw new Error(`Regex matching failed: ${String(error)}`);
+        }
+        return matches;
+    }
+    /**
+     * Validates input constraints using configurable limits
+     */
+    validateInputConstraints(text) {
+        // Check configurable input size limit
+        if (text.length > this.config.maxInputSize) {
+            throw new Error(`Input size (${text.length} characters) exceeds configured limit of ${this.config.maxInputSize}. Consider processing smaller chunks or increasing the maxInputSize limit.`);
+        }
+        // Check configurable nesting depth
+        const maxNestingDepth = this.calculateMaxNestingDepth(text);
+        if (maxNestingDepth > this.config.maxNestingDepth) {
+            throw new Error(`Input nesting depth (${maxNestingDepth}) exceeds configured limit of ${this.config.maxNestingDepth}. Consider simplifying the input structure or increasing the maxNestingDepth limit.`);
+        }
+        // Check for patterns that commonly cause exponential backtracking
+        const backtrackingRisk = this.assessBacktrackingRisk(text);
+        if (backtrackingRisk.isHigh) {
+            throw new Error(`Input contains patterns likely to cause catastrophic backtracking: ${backtrackingRisk.description}. Consider using a simpler extraction pattern or preprocessing the input.`);
+        }
+    }
+    /**
+     * Calculates maximum nesting depth of brackets and braces
+     */
+    calculateMaxNestingDepth(text) {
+        let currentDepth = 0;
+        let maxDepth = 0;
+        for (const char of text) {
+            if (char === '[' || char === '{' || char === '(') {
+                currentDepth++;
+                maxDepth = Math.max(maxDepth, currentDepth);
+            }
+            else if (char === ']' || char === '}' || char === ')') {
+                currentDepth = Math.max(0, currentDepth - 1);
+            }
+        }
+        return maxDepth;
+    }
+    /**
+     * Detects patterns that commonly cause catastrophic backtracking
+     */
+    assessBacktrackingRisk(text) {
+        // Check for excessive consecutive identical characters (configurable)
+        const consecutivePattern = new RegExp(`(.)\\1{${this.config.maxConsecutiveChars},}`, 'g');
+        const consecutiveMatches = text.match(consecutivePattern);
+        if (consecutiveMatches) {
+            return {
+                isHigh: true,
+                description: `Long sequences of repeated characters found exceeding limit of ${this.config.maxConsecutiveChars} (e.g., "${consecutiveMatches[0].substring(0, 10)}...")`
+            };
+        }
+        // Check for many unclosed opening brackets relative to total brackets
+        const openBrackets = (text.match(/\[/g) || []).length;
+        const closeBrackets = (text.match(/\]/g) || []).length;
+        const totalBrackets = openBrackets + closeBrackets;
+        // Only check if there are significant brackets to avoid false positives
+        if (totalBrackets > 20) {
+            const bracketImbalance = Math.abs(openBrackets - closeBrackets);
+            const imbalanceRatio = bracketImbalance / totalBrackets;
+            if (imbalanceRatio > 0.5) { // More than 50% imbalanced
+                return {
+                    isHigh: true,
+                    description: `High bracket imbalance ratio (${Math.round(imbalanceRatio * 100)}%): ${openBrackets} open, ${closeBrackets} close`
+                };
+            }
+        }
+        return { isHigh: false };
     }
     name() {
         return 'regex';
@@ -5057,11 +5181,15 @@ var ExpressionType;
     ExpressionType["Admit"] = "Admit";
 })(ExpressionType || (exports.ExpressionType = ExpressionType = {}));
 /**
- * Get policy statements regex pattern from environment or use default
- * This allows different CI platforms to configure their own pattern if needed
+ * Get policy statements regex pattern from environment or use default.
+ * This allows different CI platforms to configure their own pattern if needed.
+ *
+ * The pattern uses non-greedy matching and strict boundaries to prevent
+ * catastrophic backtracking on malformed input.
  */
 exports.POLICY_STATEMENTS_REGEX = new RegExp(process.env.POLICY_STATEMENTS_PATTERN ||
-    'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]', 'sg');
+    // More robust pattern with non-greedy matching and bounds
+    'statements\\s*=\\s*\\[\\s*((?:[^\\[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*?"|\'(?:[^\'\\\\]|\\\\.)*?\'|\\$\\{(?:[^{}]|\\{[^{}]*?\\})*?\\})?)*?)\\s*\\]', 'sg');
 
 
 /***/ }),

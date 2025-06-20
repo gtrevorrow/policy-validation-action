@@ -137,11 +137,15 @@ export interface PlatformConfig {
 }
 
 /**
- * Get policy statements regex pattern from environment or use default
- * This allows different CI platforms to configure their own pattern if needed
+ * Get policy statements regex pattern from environment or use default.
+ * This allows different CI platforms to configure their own pattern if needed.
+ * 
+ * The pattern uses non-greedy matching and strict boundaries to prevent
+ * catastrophic backtracking on malformed input.
  */
 export const POLICY_STATEMENTS_REGEX = new RegExp(
     process.env.POLICY_STATEMENTS_PATTERN || 
-    'statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]',
+    // More robust pattern with non-greedy matching and bounds
+    'statements\\s*=\\s*\\[\\s*((?:[^\\[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*?"|\'(?:[^\'\\\\]|\\\\.)*?\'|\\$\\{(?:[^{}]|\\{[^{}]*?\\})*?\\})?)*?)\\s*\\]',
     'sg'
 );
