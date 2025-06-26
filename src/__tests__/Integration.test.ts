@@ -31,7 +31,7 @@ describe('Integration Tests - Complete Policy Validation Workflow', () => {
      * 
      * These tests verify the complete file processing pipeline:
      * - File reading and parsing
-     * - Policy extraction using different strategies
+     * - Policy extraction with different patterns and configurations
      * - Handling of various file formats and edge cases
      */
     describe('End-to-End File Processing', () => {
@@ -54,6 +54,33 @@ describe('Integration Tests - Complete Policy Validation Workflow', () => {
             // processFile returns empty array for non-existent files instead of throwing
             const result = await processFile(nonExistentPath, undefined, 'regex', mockLogger);
             expect(result).toEqual([]);
+        });
+
+        it('should extract policies using different pattern approaches', async () => {
+            const fixturePath = path.join(__dirname, 'fixtures', 'custom-pattern.tf');
+            
+            // Test default pattern extraction (looks for statements = [...] arrays)
+            const defaultPolicies = await processFile(fixturePath, undefined, 'regex', mockLogger);
+            
+            // Test custom pattern extraction (looks for statement = "..." individual statements)
+            const customPattern = 'statement\\s*=\\s*"([^"]+)"';
+            const customPolicies = await processFile(fixturePath, customPattern, 'regex', mockLogger);
+            
+            // The default pattern should not find anything in this custom format file
+            // because it looks for 'statements = [...]' but the file has 'statement = "..."'
+            expect(defaultPolicies).toEqual([]);
+            
+            // The custom pattern should extract the individual statement values
+            expect(customPolicies.length).toBe(2);
+            expect(customPolicies).toContain('Allow group Admins to manage all-resources in tenancy');
+            expect(customPolicies).toContain('Allow group Users to read instances in compartment dev');
+            
+            // Verify the custom pattern extracted clean policy text (no wrapper syntax)
+            customPolicies.forEach(policy => {
+                expect(policy).not.toMatch(/^statement\s*=/);
+                expect(policy).not.toMatch(/[{}]/);
+                expect(policy.startsWith('Allow ')).toBe(true);
+            });
         });
     });
 
@@ -225,17 +252,6 @@ describe('Integration Tests - Complete Policy Validation Workflow', () => {
             
             // Should process within reasonable time (less than 5 seconds)
             expect(endTime - startTime).toBeLessThan(5000);
-        });
-
-        it('should handle custom pattern extraction', async () => {
-            const fixturePath = path.join(__dirname, 'fixtures', 'custom-pattern.tf');
-            
-            const customPattern = 'statement\\s*=\\s*"([^"]+)"';
-            const policies = await processFile(fixturePath, customPattern, 'regex', mockLogger);
-            
-            expect(policies.length).toBe(2);
-            expect(policies).toContain('Allow group Admins to manage all-resources in tenancy');
-            expect(policies).toContain('Allow group Users to read instances in compartment dev');
         });
     });
 
