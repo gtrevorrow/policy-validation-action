@@ -31,8 +31,8 @@ describe('Integration Tests - Complete Policy Validation Workflow', () => {
      * 
      * These tests verify the complete file processing pipeline:
      * - File reading and parsing
-     * - Policy extraction with different patterns and configurations
-     * - Handling of various file formats and edge cases
+     * - Policy extraction with different patterns and configurations  
+     * - Error handling for non-existent files
      */
     describe('End-to-End File Processing', () => {
         
