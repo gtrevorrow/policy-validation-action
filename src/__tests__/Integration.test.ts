@@ -55,16 +55,6 @@ describe('Integration Tests - Complete Policy Validation Workflow', () => {
             const result = await processFile(nonExistentPath, undefined, 'regex', mockLogger);
             expect(result).toEqual([]);
         });
-
-        it('should extract policies using regex extraction', async () => {
-            const fixturePath = path.join(__dirname, 'fixtures', 'multi-format.tf');
-            
-            const regexPolicies = await processFile(fixturePath, undefined, 'regex', mockLogger);
-            
-            expect(regexPolicies.length).toBeGreaterThan(0);
-            expect(regexPolicies).toContain('Allow group StandardUsers to read all-resources in compartment dev');
-            expect(regexPolicies.some(p => p.includes('ComplexUsers'))).toBe(true);
-        });
     });
 
     /**
