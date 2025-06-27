@@ -194,11 +194,11 @@ export async function validatePolicies(
   
   // Create pipelines using the ValidatorFactory
   const localPipeline = validatorConfig.runLocalValidators ? 
-    ValidatorFactory.createPipeline('local', options, logger) : 
+    ValidatorFactory.createLocalPipeline(logger, options) : 
     new ValidationPipeline(logger);
     
   const globalPipeline = validatorConfig.runGlobalValidators ?
-    ValidatorFactory.createPipeline('global', options, logger) :
+    ValidatorFactory.createGlobalPipeline(logger, options) :
     new ValidationPipeline(logger);
   
   // Per-file local pipeline

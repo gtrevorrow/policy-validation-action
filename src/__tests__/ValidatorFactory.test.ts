@@ -45,12 +45,12 @@ describe('ValidatorFactory', () => {
 
     describe('Pipeline Creation', () => {
         it('should create a local validation pipeline', () => {
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             expect(pipeline).toBeInstanceOf(ValidationPipeline);
         });
 
         it('should create a global validation pipeline', () => {
-            const pipeline = ValidatorFactory.createPipeline('global', {}, mockLogger);
+            const pipeline = ValidatorFactory.createGlobalPipeline(mockLogger, {});
             expect(pipeline).toBeInstanceOf(ValidationPipeline);
         });
 
@@ -58,8 +58,8 @@ describe('ValidatorFactory', () => {
             const config1 = { enableDebug: true };
             const config2 = { enableDebug: false };
             
-            const pipeline1 = ValidatorFactory.createPipeline('local', config1, mockLogger);
-            const pipeline2 = ValidatorFactory.createPipeline('local', config2, mockLogger);
+            const pipeline1 = ValidatorFactory.createLocalPipeline(mockLogger, config1);
+            const pipeline2 = ValidatorFactory.createLocalPipeline(mockLogger, config2);
             
             expect(pipeline1).toBeInstanceOf(ValidationPipeline);
             expect(pipeline2).toBeInstanceOf(ValidationPipeline);
@@ -69,7 +69,7 @@ describe('ValidatorFactory', () => {
 
     describe('Pipeline Functionality Verification', () => {
         it('should create functional local pipeline that validates syntax', async () => {
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             const validPolicies = ['Allow group Administrators to manage all-resources in tenancy'];
             
             const results = await pipeline.validate(validPolicies);
@@ -81,7 +81,7 @@ describe('ValidatorFactory', () => {
         });
         
         it('should create functional global pipeline that validates CIS benchmark', async () => {
-            const pipeline = ValidatorFactory.createPipeline('global', {}, mockLogger);
+            const pipeline = ValidatorFactory.createGlobalPipeline(mockLogger, {});
             const testStatement = 'Allow group Administrators to manage all-resources in tenancy';
             
             const results = await pipeline.validate([testStatement]);
@@ -93,14 +93,8 @@ describe('ValidatorFactory', () => {
             );
         });
 
-        it('should handle invalid pipeline type gracefully', () => {
-            expect(() => {
-                ValidatorFactory.createPipeline('invalid' as any, {}, mockLogger);
-            }).toThrow();
-        });
-
         it('should detect syntax errors through pipeline', async () => {
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             const invalidPolicies = ['Allow BadSyntax manage'];
             
             const results = await pipeline.validate(invalidPolicies);

@@ -67,30 +67,38 @@ export class ValidatorFactory {
   }
   
   /**
-   * Creates a validation pipeline with configured validators
+   * Creates a local validation pipeline with configured validators
+   * Local pipelines run on each file individually
    * 
-   * @param validatorType The type of validators to include ('local' or 'global')
-   * @param options Configuration options for the validators
    * @param logger Optional logger for recording diagnostic info
-   * @returns A configured ValidationPipeline instance
+   * @param options Optional configuration options for local validators
+   * @returns A configured ValidationPipeline instance with local validators
    */
-  static createPipeline(
-    validatorType: 'local' | 'global',
-    options: any = {},
-    logger?: Logger
+  static createLocalPipeline(
+    logger?: Logger,
+    options?: Record<string, any>
   ): ValidationPipeline {
     const pipeline = new ValidationPipeline(logger);
-    
-    if (validatorType === 'local') {
-      const validators = ValidatorFactory.createLocalValidators(logger, options);
-      validators.forEach(validator => pipeline.addValidator(validator));
-    } else if (validatorType === 'global') {
-      const validators = ValidatorFactory.createGlobalValidators(options, logger);
-      validators.forEach(validator => pipeline.addValidator(validator));
-    } else {
-      throw new Error(`Invalid pipeline type: ${validatorType}. Must be 'local' or 'global'.`);
-    }
-    
+    const validators = ValidatorFactory.createLocalValidators(logger, options);
+    validators.forEach(validator => pipeline.addValidator(validator));
+    return pipeline;
+  }
+  
+  /**
+   * Creates a global validation pipeline with configured validators  
+   * Global pipelines run on all statements from all files together
+   * 
+   * @param logger Optional logger for recording diagnostic info
+   * @param options Optional configuration options for global validators
+   * @returns A configured ValidationPipeline instance with global validators
+   */
+  static createGlobalPipeline(
+    logger?: Logger,
+    options: any = {}
+  ): ValidationPipeline {
+    const pipeline = new ValidationPipeline(logger);
+    const validators = ValidatorFactory.createGlobalValidators(options, logger);
+    validators.forEach(validator => pipeline.addValidator(validator));
     return pipeline;
   }
 }

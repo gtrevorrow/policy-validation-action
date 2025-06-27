@@ -117,7 +117,7 @@ describe('Policy Validation Integration', () => {
                 'Allow group Developers to use instances in compartment dev'
             ];
             
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             const results = await pipeline.validate(policies);
             
             expect(results).toHaveLength(1);
@@ -129,7 +129,7 @@ describe('Policy Validation Integration', () => {
         it('should detect and report validation failures', async () => {
             const policies = ['Allow BadSyntax manage'];
             
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             const results = await pipeline.validate(policies);
             
             expect(results).toHaveLength(1);
@@ -150,7 +150,7 @@ describe('Policy Validation Integration', () => {
                 'Endorse group foo to manage virtual-network-family in tenancy ${var.acceptor_tenant}'
             ];
             
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             const results = await pipeline.validate(policies);
             
             expect(results).toHaveLength(1);
@@ -167,7 +167,7 @@ describe('Policy Validation Integration', () => {
                 'Endorsegroup NetworkAdmins to manage something in tenancy'
             ];
             
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             const results = await pipeline.validate(invalidPolicies);
             
             expect(results).toHaveLength(1);
@@ -185,7 +185,7 @@ describe('Policy Validation Integration', () => {
         });
 
         it('should handle edge cases: empty policies, null inputs, large datasets', async () => {
-            const pipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const pipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             
             // Empty array
             let results = await pipeline.validate([]);
@@ -207,13 +207,13 @@ describe('Policy Validation Integration', () => {
             const policies = ['Allow group Administrators to manage all-resources in tenancy'];
             
             // Test local pipeline
-            const localPipeline = ValidatorFactory.createPipeline('local', {}, mockLogger);
+            const localPipeline = ValidatorFactory.createLocalPipeline(mockLogger, {});
             const localResults = await localPipeline.validate(policies);
             expect(localResults).toHaveLength(1);
             expect(localResults[0].validatorName).toBe('OCI Syntax Validator');
             
             // Test global pipeline
-            const globalPipeline = ValidatorFactory.createPipeline('global', {}, mockLogger);
+            const globalPipeline = ValidatorFactory.createGlobalPipeline(mockLogger, {});
             const globalResults = await globalPipeline.validate(policies);
             expect(globalResults).toHaveLength(1);
             expect(globalResults[0].validatorName).toBe('OCI CIS Benchmark Validator');

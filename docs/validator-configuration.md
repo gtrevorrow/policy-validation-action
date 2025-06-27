@@ -57,10 +57,10 @@ If you're extending the action or writing custom validators, the `ValidatorFacto
 import { ValidatorFactory } from './validators/ValidatorFactory';
 
 // Create a local validation pipeline (includes syntax validator)
-const localPipeline = ValidatorFactory.createPipeline('local', {}, logger);
+const localPipeline = ValidatorFactory.createLocalPipeline(logger, {});
 
 // Create a global validation pipeline (includes CIS benchmark validator)
-const globalPipeline = ValidatorFactory.createPipeline('global', {}, logger);
+const globalPipeline = ValidatorFactory.createGlobalPipeline(logger, {});
 ```
 
 ## Adding New Validators

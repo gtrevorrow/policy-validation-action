@@ -215,10 +215,10 @@ async function validatePolicies(scanPath, options, logger) {
     };
     // Create pipelines using the ValidatorFactory
     const localPipeline = validatorConfig.runLocalValidators ?
-        ValidatorFactory_1.ValidatorFactory.createPipeline('local', options, logger) :
+        ValidatorFactory_1.ValidatorFactory.createLocalPipeline(logger, options) :
         new ValidationPipeline_1.ValidationPipeline(logger);
     const globalPipeline = validatorConfig.runGlobalValidators ?
-        ValidatorFactory_1.ValidatorFactory.createPipeline('global', options, logger) :
+        ValidatorFactory_1.ValidatorFactory.createGlobalPipeline(logger, options) :
         new ValidationPipeline_1.ValidationPipeline(logger);
     // Per-file local pipeline
     for (const file of filesToProcess) {
@@ -632,13 +632,15 @@ class RegexPolicyExtractor {
         if (!text || text.trim() === '') {
             return [];
         }
-        // Pre-validate input for obvious issues before attempting regex
-        this.validateInputConstraints(text);
+        // Basic input validation with configurable limits
+        if (text.length > this.config.maxInputSize) {
+            throw new Error(`Input size (${text.length} characters) exceeds limit of ${this.config.maxInputSize}`);
+        }
         try {
             // Reset the regex to ensure clean state
             this.pattern.lastIndex = 0;
-            // Use actual timeout-protected regex matching
-            const matches = this.performRegexWithTimeout(text);
+            // Use the original simple approach for compatibility, but with a safety wrapper
+            const matches = Array.from(text.matchAll(this.pattern));
             if (!matches || matches.length === 0) {
                 return [];
             }
@@ -651,12 +653,9 @@ class RegexPolicyExtractor {
         }
         catch (error) {
             if (error instanceof Error) {
-                if (error.message.includes('timeout') || error.message.includes('Timeout')) {
-                    throw new Error(`Regex processing timed out after ${this.config.timeoutMs}ms. The input may contain patterns that cause catastrophic backtracking. Consider using a simpler extraction pattern or processing smaller input chunks.`);
-                }
-                throw new Error(`Regex extraction failed: ${error.message}. This may indicate input that is incompatible with the current extraction pattern.`);
+                throw new Error(`Regex extraction failed: ${error.message}`);
             }
-            throw new Error(`Regex extraction failed: ${String(error)}. This may indicate input that is incompatible with the current extraction pattern.`);
+            throw new Error(`Regex extraction failed: ${String(error)}`);
         }
     }
     /**
@@ -734,13 +733,14 @@ class RegexPolicyExtractor {
      * Detects patterns that commonly cause catastrophic backtracking
      */
     assessBacktrackingRisk(text) {
-        // Check for excessive consecutive identical characters (configurable)
-        const consecutivePattern = new RegExp(`(.)\\1{${this.config.maxConsecutiveChars},}`, 'g');
+        // Check for excessive consecutive identical non-whitespace characters (configurable)
+        // Exclude whitespace characters (spaces, tabs, newlines) as they are normal for indentation
+        const consecutivePattern = new RegExp(`([^\\s])\\1{${this.config.maxConsecutiveChars},}`, 'g');
         const consecutiveMatches = text.match(consecutivePattern);
         if (consecutiveMatches) {
             return {
                 isHigh: true,
-                description: `Long sequences of repeated characters found exceeding limit of ${this.config.maxConsecutiveChars} (e.g., "${consecutiveMatches[0].substring(0, 10)}...")`
+                description: `Long sequences of repeated non-whitespace characters found exceeding limit of ${this.config.maxConsecutiveChars} (e.g., "${consecutiveMatches[0].substring(0, 10)}...")`
             };
         }
         // Check for many unclosed opening brackets relative to total brackets
@@ -5888,26 +5888,31 @@ class ValidatorFactory {
         return validators;
     }
     /**
-     * Creates a validation pipeline with configured validators
+     * Creates a local validation pipeline with configured validators
+     * Local pipelines run on each file individually
      *
-     * @param validatorType The type of validators to include ('local' or 'global')
-     * @param options Configuration options for the validators
      * @param logger Optional logger for recording diagnostic info
-     * @returns A configured ValidationPipeline instance
+     * @param options Optional configuration options for local validators
+     * @returns A configured ValidationPipeline instance with local validators
      */
-    static createPipeline(validatorType, options = {}, logger) {
+    static createLocalPipeline(logger, options) {
         const pipeline = new ValidationPipeline_1.ValidationPipeline(logger);
-        if (validatorType === 'local') {
-            const validators = ValidatorFactory.createLocalValidators(logger, options);
-            validators.forEach(validator => pipeline.addValidator(validator));
-        }
-        else if (validatorType === 'global') {
-            const validators = ValidatorFactory.createGlobalValidators(options, logger);
-            validators.forEach(validator => pipeline.addValidator(validator));
-        }
-        else {
-            throw new Error(`Invalid pipeline type: ${validatorType}. Must be 'local' or 'global'.`);
-        }
+        const validators = ValidatorFactory.createLocalValidators(logger, options);
+        validators.forEach(validator => pipeline.addValidator(validator));
+        return pipeline;
+    }
+    /**
+     * Creates a global validation pipeline with configured validators
+     * Global pipelines run on all statements from all files together
+     *
+     * @param logger Optional logger for recording diagnostic info
+     * @param options Optional configuration options for global validators
+     * @returns A configured ValidationPipeline instance with global validators
+     */
+    static createGlobalPipeline(logger, options = {}) {
+        const pipeline = new ValidationPipeline_1.ValidationPipeline(logger);
+        const validators = ValidatorFactory.createGlobalValidators(options, logger);
+        validators.forEach(validator => pipeline.addValidator(validator));
         return pipeline;
     }
 }
