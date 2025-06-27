@@ -1,6 +1,6 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { PlatformOperations } from '../types';
-import { parseBooleanInput } from '../Main';
+import { parseBooleanInput, parseFileNames } from '../Main';
 
 /**
  * Tests for configuration parsing helpers in Main.ts
@@ -136,52 +136,44 @@ describe('Boolean Configuration Parsing', () => {
     });
 
     describe('File Names Parsing', () => {
-        describe('Edge cases for files input parsing', () => {
+        describe('parseFileNames function', () => {
             test('should handle comma-separated files with spaces', () => {
-                const filesInput = 'file1.tf, file2.tf , file3.tf';
-                const result = filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+                const result = parseFileNames('file1.tf, file2.tf , file3.tf');
                 expect(result).toEqual(['file1.tf', 'file2.tf', 'file3.tf']);
             });
 
             test('should handle single file', () => {
-                const filesInput = 'single.tf';
-                const result = filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+                const result = parseFileNames('single.tf');
                 expect(result).toEqual(['single.tf']);
             });
 
             test('should handle trailing commas', () => {
-                const filesInput = 'file1.tf,file2.tf,';
-                const result = filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+                const result = parseFileNames('file1.tf,file2.tf,');
                 expect(result).toEqual(['file1.tf', 'file2.tf']);
             });
 
             test('should handle consecutive commas', () => {
-                const filesInput = 'file1.tf,,file2.tf,,,file3.tf';
-                const result = filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+                const result = parseFileNames('file1.tf,,file2.tf,,,file3.tf');
                 expect(result).toEqual(['file1.tf', 'file2.tf', 'file3.tf']);
             });
 
             test('should handle only whitespace and commas', () => {
-                const filesInput = ' , , , ';
-                const result = filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+                const result = parseFileNames(' , , , ');
                 expect(result).toEqual([]);
-            });        test('should handle empty string', () => {
-            const filesInput = '';
-            const result = filesInput.length > 0 ? filesInput.split(',').map((f: string) => f.trim()).filter((f: string) => f.length > 0) : undefined;
-            expect(result).toBeUndefined();
-        });
+            });
 
-        test('should handle undefined input', () => {
-            const filesInput: string | undefined = undefined;
-            // Test the conditional logic from Main.ts
-            expect(filesInput).toBeUndefined();
-            const result = filesInput ? 'would split' : undefined;
-            expect(result).toBeUndefined();
-        });
+            test('should handle empty string', () => {
+                const result = parseFileNames('');
+                expect(result).toBeUndefined();
+            });
+
+            test('should handle undefined input', () => {
+                const result = parseFileNames(undefined);
+                expect(result).toBeUndefined();
+            });
 
             test('should handle files with spaces in names', () => {
-                const filesInput = 'my file.tf, another file.tf, normal.tf';
-                const result = filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+                const result = parseFileNames('my file.tf, another file.tf, normal.tf');
                 expect(result).toEqual(['my file.tf', 'another file.tf', 'normal.tf']);
             });
         });

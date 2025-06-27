@@ -20,6 +20,16 @@ export const parseBooleanInput = (name: string, defaultValue: boolean, platform:
 };
 
 /**
+ * Helper function to parse comma-separated file names input
+ * @param filesInput The input string containing comma-separated file names
+ * @returns Array of trimmed, non-empty file names, or undefined if input is falsy
+ */
+export const parseFileNames = (filesInput: string | undefined): string[] | undefined => {
+  if (!filesInput) return undefined;
+  return filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+};
+
+/**
  * Function to process a file and extract policy statements
  * @param filePath The path to the file to process
  * @param pattern Optional regex pattern for extracting policy statements
@@ -253,9 +263,7 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       extractorType: platform.getInput('extractor') || 'regex',
       pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN,
       fileExtension: platform.getInput('file-extension'),
-      fileNames: platform.getInput('files') ?
-        platform.getInput('files').split(',').map(f => f.trim()).filter(f => f.length > 0) :
-        undefined,
+      fileNames: parseFileNames(platform.getInput('files')),
       exitOnError: parseBooleanInput('exit-on-error', false, platform),
       validatorConfig: {
         runLocalValidators: parseBooleanInput('validators-local', true, platform),
