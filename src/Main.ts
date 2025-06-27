@@ -254,7 +254,7 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN,
       fileExtension: platform.getInput('file-extension'),
       fileNames: platform.getInput('files') ?
-        platform.getInput('files').split(',').map(f => f.trim()) :
+        platform.getInput('files').split(',').map(f => f.trim()).filter(f => f.length > 0) :
         undefined,
       exitOnError: parseBooleanInput('exit-on-error', false, platform),
       validatorConfig: {
