@@ -41,7 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseBooleanInput = void 0;
+exports.parseFileNames = exports.parseBooleanInput = void 0;
 exports.findPolicyFiles = findPolicyFiles;
 exports.processFile = processFile;
 exports.validatePolicies = validatePolicies;
@@ -65,6 +65,17 @@ const parseBooleanInput = (name, defaultValue, platform) => {
     return value.trim().toLowerCase() === 'true';
 };
 exports.parseBooleanInput = parseBooleanInput;
+/**
+ * Helper function to parse comma-separated file names input
+ * @param filesInput The input string containing comma-separated file names
+ * @returns Array of trimmed, non-empty file names, or undefined if input is falsy
+ */
+const parseFileNames = (filesInput) => {
+    if (!filesInput)
+        return undefined;
+    return filesInput.split(',').map(f => f.trim()).filter(f => f.length > 0);
+};
+exports.parseFileNames = parseFileNames;
 /**
  * Function to process a file and extract policy statements
  * @param filePath The path to the file to process
@@ -248,9 +259,7 @@ async function validatePolicies(scanPath, options, logger) {
 async function runAction(platform) {
     const logger = platform.createLogger();
     try {
-        // Get inputs using the platform abstraction
-        const inputPath = platform.getInput('path') || '.';
-        const scanPath = resolvePath(inputPath);
+        const scanPath = resolvePath(platform.getInput('path') || '.');
         logger.info(`Resolved path: ${scanPath}`);
         // fail fast if the top‐level path is inaccessible
         try {
@@ -264,9 +273,7 @@ async function runAction(platform) {
             extractorType: platform.getInput('extractor') || 'regex',
             pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN,
             fileExtension: platform.getInput('file-extension'),
-            fileNames: platform.getInput('files') ?
-                platform.getInput('files').split(',').map(f => f.trim()).filter(f => f.length > 0) :
-                undefined,
+            fileNames: (0, exports.parseFileNames)(platform.getInput('files')),
             exitOnError: (0, exports.parseBooleanInput)('exit-on-error', false, platform),
             validatorConfig: {
                 runLocalValidators: (0, exports.parseBooleanInput)('validators-local', true, platform),
@@ -5668,11 +5675,20 @@ class OciSyntaxValidator {
     constructor(logger) {
         this.syntaxChecks = [
             {
-                id: 'OCI-SYNTAX-1',
+                id: OciSyntaxValidator.CHECK_ID,
                 name: 'OCI Policy Syntax',
                 description: 'Ensures OCI IAM policy statements follow the correct syntax'
             }
         ];
+        /**
+         * Private helper to log messages with validator name prefix
+         */
+        this.log = {
+            debug: (message) => { var _a; return (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`${this.name()}: ${message}`); },
+            info: (message) => { var _a; return (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`${this.name()}: ${message}`); },
+            warn: (message) => { var _a; return (_a = this.logger) === null || _a === void 0 ? void 0 : _a.warn(`${this.name()}: ${message}`); },
+            error: (message) => { var _a; return (_a = this.logger) === null || _a === void 0 ? void 0 : _a.error(`${this.name()}: ${message}`); }
+        };
         this.logger = logger;
     }
     name() {
@@ -5685,10 +5701,9 @@ class OciSyntaxValidator {
         return this.syntaxChecks;
     }
     async validate(statements) {
-        var _a, _b, _c, _d, _e, _f, _g;
-        (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Validating ${statements.length} policy statements for syntax correctness`);
+        this.log.debug(`Validating ${statements.length} policy statements for syntax correctness`);
         if (statements.length === 0) {
-            (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info('No policy statements to validate');
+            this.log.info(`No policy statements to validate`);
             return [];
         }
         const issues = [];
@@ -5707,13 +5722,12 @@ class OciSyntaxValidator {
                 parser.removeErrorListeners();
                 parser.addErrorListener({
                     syntaxError: (recognizer, offendingSymbol, line, charPositionInLine, msg, e) => {
-                        var _a, _b, _c;
                         // Reproduce the original detailed error logging format
-                        (_a = this.logger) === null || _a === void 0 ? void 0 : _a.error('Failed to parse policy statement:');
-                        (_b = this.logger) === null || _b === void 0 ? void 0 : _b.error(`Statement: "${trimmedStatement}"`);
-                        (_c = this.logger) === null || _c === void 0 ? void 0 : _c.error(`Position: ${' '.repeat(charPositionInLine + 2)}^ ${msg}`);
+                        this.log.error('Failed to parse policy statement:');
+                        this.log.error(`Statement: "${trimmedStatement}"`);
+                        this.log.error(`Position: ${' '.repeat(charPositionInLine + 2)}^ ${msg}`);
                         issues.push({
-                            checkId: 'OCI-SYNTAX-1',
+                            checkId: OciSyntaxValidator.CHECK_ID,
                             statement: trimmedStatement,
                             message: `Syntax error at position ${charPositionInLine}: ${msg}`,
                             recommendation: 'Review OCI IAM policy syntax documentation and correct the statement',
@@ -5725,14 +5739,14 @@ class OciSyntaxValidator {
                 parser.policy();
             }
             catch (error) {
-                (_c = this.logger) === null || _c === void 0 ? void 0 : _c.debug(`Exception while parsing statement: ${trimmedStatement}`);
-                (_d = this.logger) === null || _d === void 0 ? void 0 : _d.debug(`Error: ${error}`);
+                this.log.debug(`Exception while parsing statement: ${trimmedStatement}`);
+                this.log.debug(`Error: ${error}`);
                 // Log the error in the same format as syntax errors
-                (_e = this.logger) === null || _e === void 0 ? void 0 : _e.error('Failed to parse policy statement:');
-                (_f = this.logger) === null || _f === void 0 ? void 0 : _f.error(`Statement: "${trimmedStatement}"`);
-                (_g = this.logger) === null || _g === void 0 ? void 0 : _g.error(`Position: ^ ${error instanceof Error ? error.message : String(error)}`);
+                this.log.error('Failed to parse policy statement:');
+                this.log.error(`Statement: "${trimmedStatement}"`);
+                this.log.error(`Position: ^ ${error instanceof Error ? error.message : String(error)}`);
                 issues.push({
-                    checkId: 'OCI-SYNTAX-1',
+                    checkId: OciSyntaxValidator.CHECK_ID,
                     statement: trimmedStatement,
                     message: `Failed to parse policy: ${error instanceof Error ? error.message : String(error)}`,
                     recommendation: 'Review OCI IAM policy syntax documentation and correct the statement',
@@ -5742,7 +5756,7 @@ class OciSyntaxValidator {
         }
         // Create validation report
         const report = {
-            checkId: 'OCI-SYNTAX-1',
+            checkId: OciSyntaxValidator.CHECK_ID,
             name: 'OCI Policy Syntax',
             description: 'Ensures OCI IAM policy statements follow the correct syntax',
             passed: issues.length === 0,
@@ -5752,6 +5766,7 @@ class OciSyntaxValidator {
     }
 }
 exports.OciSyntaxValidator = OciSyntaxValidator;
+OciSyntaxValidator.CHECK_ID = 'OCI-SYNTAX-1';
 
 
 /***/ }),

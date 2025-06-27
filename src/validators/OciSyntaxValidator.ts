@@ -9,10 +9,11 @@ import PolicyParser from '../generated/PolicyParser';
  */
 export class OciSyntaxValidator implements PolicyValidator {
   private logger?: Logger;
-  
+  private static readonly CHECK_ID = 'OCI-SYNTAX-1';
+
   private syntaxChecks: ValidationCheck[] = [
     {
-      id: 'OCI-SYNTAX-1',
+      id: OciSyntaxValidator.CHECK_ID,
       name: 'OCI Policy Syntax',
       description: 'Ensures OCI IAM policy statements follow the correct syntax'
     }
@@ -21,6 +22,16 @@ export class OciSyntaxValidator implements PolicyValidator {
   constructor(logger?: Logger) {
     this.logger = logger;
   }
+
+  /**
+   * Private helper to log messages with validator name prefix
+   */
+  private log = {
+    debug: (message: string) => this.logger?.debug(`${this.name()}: ${message}`),
+    info: (message: string) => this.logger?.info(`${this.name()}: ${message}`),
+    warn: (message: string) => this.logger?.warn(`${this.name()}: ${message}`),
+    error: (message: string) => this.logger?.error(`${this.name()}: ${message}`)
+  };
   
   name(): string {
     return 'OCI Syntax Validator';
@@ -35,10 +46,10 @@ export class OciSyntaxValidator implements PolicyValidator {
   }
   
   async validate(statements: string[]): Promise<ValidationReport[]> {
-    this.logger?.debug(`Validating ${statements.length} policy statements for syntax correctness`);
+    this.log.debug(`Validating ${statements.length} policy statements for syntax correctness`);
     
     if (statements.length === 0) {
-      this.logger?.info('No policy statements to validate');
+      this.log.info(`No policy statements to validate`);
       return [];
     }
     
@@ -67,12 +78,12 @@ export class OciSyntaxValidator implements PolicyValidator {
             e: RecognitionException | undefined
           ): void => {
             // Reproduce the original detailed error logging format
-            this.logger?.error('Failed to parse policy statement:');
-            this.logger?.error(`Statement: "${trimmedStatement}"`);
-            this.logger?.error(`Position: ${' '.repeat(charPositionInLine+2)}^ ${msg}`);
+            this.log.error('Failed to parse policy statement:');
+            this.log.error(`Statement: "${trimmedStatement}"`);
+            this.log.error(`Position: ${' '.repeat(charPositionInLine+2)}^ ${msg}`);
             
             issues.push({
-              checkId: 'OCI-SYNTAX-1',
+              checkId: OciSyntaxValidator.CHECK_ID,
               statement: trimmedStatement,
               message: `Syntax error at position ${charPositionInLine}: ${msg}`,
               recommendation: 'Review OCI IAM policy syntax documentation and correct the statement',
@@ -84,16 +95,16 @@ export class OciSyntaxValidator implements PolicyValidator {
         // Attempt to parse the policy
         parser.policy();
       } catch (error) {
-        this.logger?.debug(`Exception while parsing statement: ${trimmedStatement}`);
-        this.logger?.debug(`Error: ${error}`);
+        this.log.debug(`Exception while parsing statement: ${trimmedStatement}`);
+        this.log.debug(`Error: ${error}`);
         
         // Log the error in the same format as syntax errors
-        this.logger?.error('Failed to parse policy statement:');
-        this.logger?.error(`Statement: "${trimmedStatement}"`);
-        this.logger?.error(`Position: ^ ${error instanceof Error ? error.message : String(error)}`);
+        this.log.error('Failed to parse policy statement:');
+        this.log.error(`Statement: "${trimmedStatement}"`);
+        this.log.error(`Position: ^ ${error instanceof Error ? error.message : String(error)}`);
         
         issues.push({
-          checkId: 'OCI-SYNTAX-1',
+          checkId: OciSyntaxValidator.CHECK_ID,
           statement: trimmedStatement,
           message: `Failed to parse policy: ${error instanceof Error ? error.message : String(error)}`,
           recommendation: 'Review OCI IAM policy syntax documentation and correct the statement',
@@ -104,7 +115,7 @@ export class OciSyntaxValidator implements PolicyValidator {
     
     // Create validation report
     const report: ValidationReport = {
-      checkId: 'OCI-SYNTAX-1',
+      checkId: OciSyntaxValidator.CHECK_ID,
       name: 'OCI Policy Syntax',
       description: 'Ensures OCI IAM policy statements follow the correct syntax',
       passed: issues.length === 0,

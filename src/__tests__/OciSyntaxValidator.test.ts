@@ -102,9 +102,9 @@ describe('OciSyntaxValidator', () => {
             const validator = new OciSyntaxValidator(mockLogger);
             await validator.validate(['AllowBadSyntax manage']);
             
-            expect(mockLogger.error).toHaveBeenCalledWith('Failed to parse policy statement:');
-            expect(mockLogger.error).toHaveBeenCalledWith(expect.stringMatching(/Statement: ".*"/));
-            expect(mockLogger.error).toHaveBeenCalledWith(expect.stringMatching(/Position: .*\^.*/));
+            expect(mockLogger.error).toHaveBeenCalledWith('OCI Syntax Validator: Failed to parse policy statement:');
+            expect(mockLogger.error).toHaveBeenCalledWith(expect.stringMatching(/OCI Syntax Validator: Statement: ".*"/));
+            expect(mockLogger.error).toHaveBeenCalledWith(expect.stringMatching(/OCI Syntax Validator: Position: .*\^.*/));
         });
 
         it('should handle malformed variable interpolation', async () => {
@@ -145,7 +145,7 @@ describe('OciSyntaxValidator', () => {
             const reports = await validator.validate([]);
             
             expect(reports).toEqual([]);
-            expect(mockLogger.info).toHaveBeenCalledWith('No policy statements to validate');
+            expect(mockLogger.info).toHaveBeenCalledWith('OCI Syntax Validator: No policy statements to validate');
         });
 
         it('should handle empty or whitespace-only statements', async () => {

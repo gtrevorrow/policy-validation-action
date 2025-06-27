@@ -245,11 +245,8 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
   const logger = platform.createLogger();
   try {
 
-    // Get inputs using the platform abstraction
-    const inputPath = platform.getInput('path') || '.';
-    const scanPath = resolvePath(inputPath);
+    const scanPath = resolvePath(platform.getInput('path') || '.');
     logger.info(`Resolved path: ${scanPath}`);
-
     
     // fail fast if the top‐level path is inaccessible
     try {
