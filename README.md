@@ -122,7 +122,7 @@ This approach allows you to use the CLI directly from the source code without pu
 | `--extractor`         | `-e`  | Policy extractor type (`regex` or `hcl`)                            | `regex` |
 | `--files`             |       | Comma-separated list of specific files to process                  | `none`  |
 | `--exit-on-error`     |       | Exit with non-zero status if validation fails                       | `true`  |
-| `--extension-filter`  |       | Filter files by extension (.tf)                                     | `false`  |
+| `--file-extension`  | `--ext` | Filter files by extension (e.g., .tf)                                     | `none`  |
 
 
 ### Environment Variables
@@ -137,7 +137,7 @@ CLI options can also be set via environment variables. These are useful in CI/CD
 | `POLICY_PATTERN`               | `--pattern`              | Custom regex pattern for policy extraction   |
 | `POLICY_FILES`                 | `--files`                | Comma-separated list of specific files       |
 | `POLICY_EXIT_ON_ERROR`         | `--exit-on-error`        | Exit with non-zero status if validation fails|
-| `POLICY_EXTENSION_FILTER`      | `--extension-filter`     | Filter files by extension (.tf)              |
+| `POLICY_FILE_EXTENSION`      | `--file-extension`     | Filter files by extension (e.g., .tf)              |
 
 ### Example with Environment Variables
 
@@ -148,6 +148,7 @@ export POLICY_EXTRACTOR=regex
 export POLICY_PATTERN="statements\\s*=\\s*\\[(.*?)\\]"
 export POLICY_FILES="file1.tf,file2.tf"
 export POLICY_EXIT_ON_ERROR=true
+export POLICY_FILE_EXTENSION=.tf
 
 policy-validation-action validate
 ```
@@ -208,11 +209,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Validate policies
-        uses: policy-validation-action@v1
+        uses: gtrevorrow/policy-validation-action@v1
         with:
           path: './terraform'
           extractor: 'regex'  # Optional: defaults to regex
-          extractorPattern: 'your-custom-pattern'  # Optional
+          pattern: 'your-custom-pattern'  # Optional
+          exit-on-error: 'true' # Optional
+          files: 'file1.tf,file2.tf' # Optional
+          file-extension: '.tf' # Optional
           validators-local: 'true'  # Enable syntax validation (default: true)
           validators-global: 'true' # Enable global validators (default: true)
 ```
@@ -222,9 +226,11 @@ jobs:
 | Name                | Description                                                          | Required | Default |
 |---------------------|----------------------------------------------------------------------|----------|---------|
 | `path`              | Path to policy file or directory                                     | No       | `.`     |
-| `extractor`         | Type of policy extractor to use (regex, json)                        | No       | `regex` |
-| `extractorPattern`  | Custom pattern for the policy extractor                              | No       | -       |
-| `exitOnError`       | Exit immediately if policy validation fails                          | No       | `true`  |
+| `extractor`         | Type of policy extractor to use (regex, hcl)                        | No       | `regex` |
+| `pattern`  | Custom pattern for the policy extractor                              | No       | -       |
+| `exit-on-error`       | Exit immediately if policy validation fails                          | No       | `true`  |
+| `files`             | Comma-separated list of specific files to process                  | No       | `none`  |
+| `file-extension`    | Filter files by specified extension (e.g., .tf)                      | No       | `none`  |
 | `validators-local`  | Enable local validators (syntax validation)                          | No       | `true`  |
 | `validators-global` | Enable global validators (includes CIS benchmark)                   | No       | `true`  |
 
@@ -246,6 +252,7 @@ validate_policies:
     - export POLICY_VERBOSE=true
     - export POLICY_EXTRACTOR=regex
     - export POLICY_EXIT_ON_ERROR=true
+    - export POLICY_FILE_EXTENSION=.tf
     # Run policy validation
     - policy-validation-action validate
 ```
@@ -266,6 +273,7 @@ pipelines:
           - export POLICY_VERBOSE=true
           - export POLICY_EXTRACTOR=regex
           - export POLICY_EXIT_ON_ERROR=true
+          - export POLICY_FILE_EXTENSION=.tf
           # Run policy validation
           - policy-validation-action validate
 ```

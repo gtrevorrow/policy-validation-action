@@ -36,5 +36,5 @@ outputs:
   error:
     description: 'Error message if the validation process fails'
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
