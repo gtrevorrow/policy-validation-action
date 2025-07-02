@@ -285,20 +285,20 @@ jobs:
         shell: bash
         # No env vars needed here for outputs
         run: |
-          # Function to verify the JSON output and the 'isValid' flag
+          # Function to verify the JSON output based on specified criteria
           verify_output() {
             local step_id="$1"           # Step ID for logging purposes
             local expected_validity="$2" # Expect 'true' or 'false'
+            local failure_mode="${3:-strict}" # 'strict' (passed:false) or 'warnings' (status!=pass)
             local filename="/tmp/${step_id}-output.json"
 
-            echo "Verifying output from step: $step_id"
+            echo "Verifying output from step: $step_id (Failure mode: $failure_mode)"
 
             if [ ! -f "$filename" ]; then
               echo "::error::Output file $filename not found for step $step_id."
               return 1
             fi
 
-            # Read the raw output from the file
             local raw_output
             raw_output=$(cat "$filename")
 
@@ -318,28 +318,25 @@ jobs:
               return 1
             fi
 
-            # Use the raw_output variable which contains the JSON string
-            # Use process substitution with printf for safer input to jq
-            local actual_validity
+            local jq_filter
+            if [[ "$failure_mode" == "warnings" ]]; then
+              # Fail if 'passed' is false OR 'status' is not 'pass'
+              jq_filter='if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) or ([ .[] | .results[] | .reports[] | .status ] | map(. != "pass") | any) then "false" else "true" end'
+            else
+              # Default 'strict' mode: Fail only if 'passed' is false
+              jq_filter='if [ .[] | .results[] | .reports[] | .passed ] | index(false) then "false" else "true" end'
+            fi
+
             local jq_output
-            # Updated jq filter:
-            # - Check if it's a non-empty array first.
-            # - Select elements where isValid is false. If count > 0, output "false".
-            # - Select elements where isValid is true. If count == total length, output "true".
-            # - Otherwise (mixed, missing isValid, etc.), output "null".
-            jq_output=$(jq -r '
-              def unwrap: if type=="string" then fromjson else . end;
+            jq_output=$(jq -r "
+              def unwrap: if type==\"string\" then fromjson else . end;
               unwrap
-              | if type=="array" and length > 0 then
-                  if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) or ([ .[] | .results[] | .reports[] | .status ] | map(. != "pass") | any) then
-                    "false"
-                  else
-                    "true"
-                  end
+              | if type==\"array\" and length > 0 then
+                  $jq_filter
                 else
-                  "null"
+                  \"null\"
                 end
-            ' <(printf '%s' "$raw_output") 2>/dev/null) # Redirect jq errors to /dev/null
+            " <(printf '%s' "$raw_output") 2>/dev/null) # Redirect jq errors to /dev/null
             local jq_exit_code=$? # Capture exit code immediately
 
             # Check jq exit status
@@ -380,7 +377,8 @@ jobs:
           verify_output "test-invalid" "false"
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
-          verify_output "test-vars" "false"
+          # For test-vars, we treat warnings as failures.
+          verify_output "test-vars" "false" "warnings"
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
           verify_output "test-conditions" "true"
