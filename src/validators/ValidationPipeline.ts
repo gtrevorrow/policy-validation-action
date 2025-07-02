@@ -1,5 +1,5 @@
 import { Logger } from '../types';
-import { PolicyValidator, ValidationReport } from './PolicyValidator';
+import { PolicyValidator, ValidationReport, ValidationOptions } from './PolicyValidator';
 
 export interface ValidationPipelineResult {
   validatorName: string;
@@ -36,7 +36,7 @@ export class ValidationPipeline {
   /**
    * Run all validators in the pipeline on the given statements
    */
-  async validate(statements: string[]): Promise<ValidationPipelineResult[]> {
+  async validate(statements: string[], options?: ValidationOptions): Promise<ValidationPipelineResult[]> {
     this.logger?.info(`Running validation pipeline with ${this.validators.length} validators`);
     
     // Return early if no statements to validate
@@ -44,18 +44,10 @@ export class ValidationPipeline {
         return [];
     }
     
-    const results: ValidationPipelineResult[] = [];
-    
-    for (const validator of this.validators) {
+    const validationPromises = this.validators.map(async (validator): Promise<ValidationPipelineResult | null> => {
       try {
         this.logger?.debug(`Running validator: ${validator.name()}`);
-        const reports = await validator.validate(statements);
-        
-        results.push({
-          validatorName: validator.name(),
-          validatorDescription: validator.description(),
-          reports
-        });
+        const reports = await validator.validate(statements, options);
         
         // Log summary of findings
         const failedChecks = reports.filter(report => !report.passed).length;
@@ -63,11 +55,20 @@ export class ValidationPipeline {
         const issuesCount = reports.reduce((sum, report) => sum + report.issues.length, 0);
         
         this.logger?.info(`Validator ${validator.name()} completed: ${totalChecks - failedChecks}/${totalChecks} checks passed, ${issuesCount} issues found`);
+
+        return {
+          validatorName: validator.name(),
+          validatorDescription: validator.description(),
+          reports
+        };
       } catch (error) {
         this.logger?.error(`Error running validator ${validator.name()}: ${error instanceof Error ? error.message : error}`);
+        return null;
       }
-    }
+    });
     
-    return results;
+    const results = await Promise.all(validationPromises);
+    
+    return results.filter((result): result is ValidationPipelineResult => result !== null);
   }
 }
