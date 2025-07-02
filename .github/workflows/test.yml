@@ -331,7 +331,7 @@ jobs:
               def unwrap: if type=="string" then fromjson else . end;
               unwrap
               | if type=="array" and length > 0 then
-                  if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) then
+                  if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) or ([ .[] | .results[] | .reports[] | .status ] | map(. != "pass") | any) then
                     "false"
                   else
                     "true"
