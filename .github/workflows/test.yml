@@ -62,7 +62,6 @@ jobs:
               "Allow group Admins to manage volumes in compartment prod where request.networkSource.name = ${var.network_source}",
               "Allow any-user to use instances in compartment public where request.time BETWEEN ${var.start_time} AND ${var.end_time}"
             ]
-          }
           EOL
           
           # Test file with all expression types
@@ -73,6 +72,16 @@ jobs:
               "endorse group Administrators to manage drg-attachment in tenancy VCN",
               "Admit group Administrators of tenancy Requestor to manage remote-peering-to in tenancy",
               "Allow group ${var.admin_group} to manage all-resources in tenancy"
+            ]
+          }
+          EOL
+          
+          # Test file with CIS benchmark violations (syntactically valid)
+          cat > test/policies/cis_violations.tf << 'EOL'
+          resource "oci_identity_policy" "cis_violations" {
+            statements = [
+              "Allow group NonAdmins to manage all-resources in tenancy",
+              "Allow group SecurityAdmins to manage vault-family in tenancy"
             ]
           }
           EOL
@@ -251,6 +260,26 @@ jobs:
             core.info(`Debug output for test-fixtures:\n${output}`);
             fs.writeFileSync('/tmp/test-fixtures-output.json', output);
 
+      - name: Test CIS Benchmark Violations
+        id: test-cis-violations
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './test/policies/cis_violations.tf'
+          validators-global: 'true' # Enable global validators
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Save test-cis-violations output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const output = ${{ toJSON(steps.test-cis-violations.outputs.results) }};
+            core.info(`Debug output for test-cis-violations:\n${output}`);
+            fs.writeFileSync('/tmp/test-cis-violations-output.json', output);
+
       - name: Verify test results
         if: always() # Ensure verification runs even if tests failed
         shell: bash
@@ -367,6 +396,9 @@ jobs:
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
           verify_output "test-fixtures" "false"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          verify_output "test-cis-violations" "false"
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
           # --- Final Check ---
