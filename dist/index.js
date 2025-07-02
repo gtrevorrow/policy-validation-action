@@ -5374,6 +5374,7 @@ class OciCisListener {
         this.restrictNsgPolicies = [];
         this.compartmentAdminPolicies = [];
         this.overlyPermissivePolicies = [];
+        this.policiesWithHclVariablesInGroup = [];
         this.statements = statements;
         this.logger = logger;
     }
@@ -5454,7 +5455,14 @@ class OciCisListener {
     enterServiceSubject(ctx) { }
     exitServiceSubject(ctx) { }
     enterGroupName(ctx) { }
-    exitGroupName(ctx) { }
+    exitGroupName(ctx) {
+        var _a;
+        const groupName = ctx === null || ctx === void 0 ? void 0 : ctx.getText();
+        if (groupName && groupName.includes('${')) {
+            (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Found HCL variable in group name for statement: ${this.currentStatement}`);
+            this.policiesWithHclVariablesInGroup.push(this.currentStatement);
+        }
+    }
     enterResourceSubjectId(ctx) { }
     exitResourceSubjectId(ctx) { }
     enterServiceSubjectId(ctx) { }
@@ -5517,7 +5525,8 @@ class OciCisListener {
             mfaPolicies: this.mfaPolicies,
             restrictNsgPolicies: this.restrictNsgPolicies,
             compartmentAdminPolicies: this.compartmentAdminPolicies,
-            overlyPermissivePolicies: this.overlyPermissivePolicies
+            overlyPermissivePolicies: this.overlyPermissivePolicies,
+            policiesWithHclVariablesInGroup: this.policiesWithHclVariablesInGroup
         };
     }
 }

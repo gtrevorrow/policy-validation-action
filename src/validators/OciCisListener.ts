@@ -8,6 +8,7 @@ export interface CisListenerResults {
   restrictNsgPolicies: string[];
   compartmentAdminPolicies: string[];
   overlyPermissivePolicies: string[];
+  policiesWithHclVariablesInGroup: string[];
 }
 
 /**
@@ -32,6 +33,7 @@ export class OciCisListener implements PolicyListener {
   private restrictNsgPolicies: string[] = [];
   private compartmentAdminPolicies: string[] = [];
   private overlyPermissivePolicies: string[] = [];
+  private policiesWithHclVariablesInGroup: string[] = [];
   
   constructor(statements: string[], logger?: Logger) {
     this.statements = statements;
@@ -123,7 +125,13 @@ export class OciCisListener implements PolicyListener {
   enterServiceSubject(ctx: any): void {}
   exitServiceSubject(ctx: any): void {}
   enterGroupName(ctx: any): void {}
-  exitGroupName(ctx: any): void {}
+  exitGroupName(ctx: any): void {
+    const groupName = ctx?.getText();
+    if (groupName && groupName.includes('${')) {
+      this.logger?.debug(`Found HCL variable in group name for statement: ${this.currentStatement}`);
+      this.policiesWithHclVariablesInGroup.push(this.currentStatement);
+    }
+  }
   enterResourceSubjectId(ctx: any): void {}
   exitResourceSubjectId(ctx: any): void {}
   enterServiceSubjectId(ctx: any): void {}
@@ -189,7 +197,8 @@ export class OciCisListener implements PolicyListener {
       mfaPolicies: this.mfaPolicies,
       restrictNsgPolicies: this.restrictNsgPolicies,
       compartmentAdminPolicies: this.compartmentAdminPolicies,
-      overlyPermissivePolicies: this.overlyPermissivePolicies
+      overlyPermissivePolicies: this.overlyPermissivePolicies,
+      policiesWithHclVariablesInGroup: this.policiesWithHclVariablesInGroup
     };
   }
 }
