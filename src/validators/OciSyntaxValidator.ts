@@ -1,6 +1,14 @@
 import { CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token } from 'antlr4';
 import { Logger } from '../types';
-import { PolicyValidator, ValidationCheck, ValidationReport, ValidationIssue } from './PolicyValidator';
+import { 
+  PolicyValidator, 
+  ValidationCheck, 
+  ValidationReport, 
+  ValidationIssue, 
+  ValidationOptions, 
+  calculateValidationStatus, 
+  shouldPass 
+} from './PolicyValidator';
 import PolicyLexer from '../generated/PolicyLexer';
 import PolicyParser from '../generated/PolicyParser';
 
@@ -45,7 +53,8 @@ export class OciSyntaxValidator implements PolicyValidator {
     return this.syntaxChecks;
   }
   
-  async validate(statements: string[]): Promise<ValidationReport[]> {
+  async validate(statements: string[], options: ValidationOptions = {}): Promise<ValidationReport[]> {
+    const { treatWarningsAsFailures = false } = options;
     this.log.debug(`Validating ${statements.length} policy statements for syntax correctness`);
     
     if (statements.length === 0) {
@@ -114,11 +123,15 @@ export class OciSyntaxValidator implements PolicyValidator {
     }
     
     // Create validation report
+    const status = calculateValidationStatus(issues);
+    const passed = shouldPass(status, treatWarningsAsFailures);
+    
     const report: ValidationReport = {
       checkId: OciSyntaxValidator.CHECK_ID,
       name: 'OCI Policy Syntax',
       description: 'Ensures OCI IAM policy statements follow the correct syntax',
-      passed: issues.length === 0,
+      passed,
+      status,
       issues: issues
     };
     

@@ -5215,6 +5215,7 @@ const antlr4_1 = __nccwpck_require__(9370);
 const PolicyLexer_1 = __importDefault(__nccwpck_require__(5612));
 const PolicyParser_1 = __importDefault(__nccwpck_require__(2597));
 const OciCisListener_1 = __nccwpck_require__(4063);
+const CisValidationFunctions_1 = __nccwpck_require__(2447);
 /**
  * Validates OCI policies against CIS Benchmark v2 controls
  */
@@ -5228,8 +5229,8 @@ class OciCisBenchmarkValidator {
             },
             {
                 id: 'CIS-OCI-1.2',
-                name: 'Least Privilege',
-                description: 'Ensure permissions on all resources are given only to the groups that need them'
+                name: 'Tenancy Administrator Group Restriction',
+                description: 'Ensure permissions on all resources are given only to the tenancy administrator group'
             },
             {
                 id: 'CIS-OCI-1.3',
@@ -5263,7 +5264,7 @@ class OciCisBenchmarkValidator {
     getChecks() {
         return this.cisChecks;
     }
-    async validate(statements) {
+    async validate(statements, options = {}) {
         var _a, _b, _c;
         (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Validating ${statements.length} policy statements against OCI CIS Benchmark`);
         if (statements.length === 0) {
@@ -5274,132 +5275,14 @@ class OciCisBenchmarkValidator {
             // Parse statements and collect findings
             const results = this.analyzePolicy(statements);
             // Generate validation reports for each CIS check
-            const reports = [];
-            // CIS-OCI-1.1: Service-level admins
-            const criticalServices = ['compute', 'database', 'storage', 'network'];
-            const foundServiceAdmins = new Set();
-            // Check if we have admin policies for each critical service
-            results.serviceAdminPolicies.forEach((policy) => {
-                const lowerPolicy = policy.toLowerCase();
-                criticalServices.forEach(service => {
-                    if (lowerPolicy.includes(service) ||
-                        lowerPolicy.includes(`${service}-family`) ||
-                        lowerPolicy.includes(`virtual-${service}`) ||
-                        (service === 'network' && lowerPolicy.includes('virtual-network')) ||
-                        (service === 'compute' && lowerPolicy.includes('instance')) ||
-                        (service === 'storage' && lowerPolicy.includes('object'))) {
-                        foundServiceAdmins.add(service);
-                    }
-                });
-            });
-            const missingServices = criticalServices.filter(service => !foundServiceAdmins.has(service));
-            const serviceAdminsPassed = missingServices.length === 0;
-            reports.push({
-                checkId: 'CIS-OCI-1.1',
-                name: 'Service-Level Admins',
-                description: 'Ensure service level admins are created to manage resources of particular service',
-                passed: serviceAdminsPassed,
-                issues: serviceAdminsPassed ? [] : [{
-                        checkId: 'CIS-OCI-1.1',
-                        statement: '',
-                        message: `Missing service-specific admin policies for: ${missingServices.join(', ')}`,
-                        recommendation: 'Create service-specific admin groups with targeted permissions',
-                        severity: 'warning'
-                    }]
-            });
-            // CIS-OCI-1.2: Least privilege
-            const leastPrivilegePassed = results.overlyPermissivePolicies.length === 0;
-            reports.push({
-                checkId: 'CIS-OCI-1.2',
-                name: 'Least Privilege',
-                description: 'Ensure permissions on all resources are given only to the groups that need them',
-                passed: leastPrivilegePassed,
-                issues: results.overlyPermissivePolicies.map((policy) => ({
-                    checkId: 'CIS-OCI-1.2',
-                    statement: policy,
-                    message: 'Overly permissive policy grants "manage all-resources" without conditions',
-                    recommendation: 'Restrict permissions to specific compartments and add appropriate conditions',
-                    severity: 'error'
-                }))
-            });
-            // CIS-OCI-1.3: Admin group restrictions - applies to IAM policies that manage groups and users
-            const iamAdminPolicies = statements.filter(policy => {
-                const lowerPolicy = policy.toLowerCase();
-                return lowerPolicy.includes('manage') &&
-                    (lowerPolicy.includes('manage groups ') || lowerPolicy.includes('manage users ') ||
-                        lowerPolicy.endsWith('manage groups') || lowerPolicy.endsWith('manage users'));
-            });
-            const unprotectedAdminPolicies = iamAdminPolicies.filter(policy => !results.adminRestrictionPolicies.includes(policy));
-            const adminRestrictionsMissing = unprotectedAdminPolicies.length > 0;
-            reports.push({
-                checkId: 'CIS-OCI-1.3',
-                name: 'Admin Group Restrictions',
-                description: 'Ensure IAM administrators cannot update tenancy Administrators group',
-                passed: !adminRestrictionsMissing,
-                issues: unprotectedAdminPolicies.map(policy => ({
-                    checkId: 'CIS-OCI-1.3',
-                    statement: policy,
-                    message: 'IAM management policies do not restrict access to Administrators group',
-                    recommendation: 'Add "where target.group.name != \'Administrators\'" to group and user management policies',
-                    severity: 'error'
-                }))
-            });
-            // CIS-OCI-1.5: Compartment-level admins
-            const compartmentAdminsPassed = results.compartmentAdminPolicies.length > 0;
-            reports.push({
-                checkId: 'CIS-OCI-1.5',
-                name: 'Compartment-level Admins',
-                description: 'Ensure compartment level admins are used to manage resources in compartments',
-                passed: compartmentAdminsPassed,
-                issues: compartmentAdminsPassed ? [] : [{
-                        checkId: 'CIS-OCI-1.5',
-                        statement: '',
-                        message: 'No compartment-specific admin policies found',
-                        recommendation: 'Create policies with "in compartment" scope specification for delegation',
-                        severity: 'info'
-                    }]
-            });
-            // CIS-OCI-1.13: MFA enforcement
-            const securityPolicies = statements.filter(policy => {
-                const lowerPolicy = policy.toLowerCase();
-                return (lowerPolicy.includes('security-family') ||
-                    lowerPolicy.includes('keys') ||
-                    lowerPolicy.includes('certificates') ||
-                    lowerPolicy.includes('vault')) &&
-                    lowerPolicy.includes('manage');
-            });
-            const unprotectedSecurityPolicies = securityPolicies.filter(policy => !results.mfaPolicies.includes(policy));
-            const mfaMissing = unprotectedSecurityPolicies.length > 0;
-            reports.push({
-                checkId: 'CIS-OCI-1.13',
-                name: 'MFA Enforcement',
-                description: 'Ensure multi-factor authentication is enforced for all users with console access',
-                passed: !mfaMissing,
-                issues: unprotectedSecurityPolicies.map(policy => ({
-                    checkId: 'CIS-OCI-1.13',
-                    statement: policy,
-                    message: 'Security-related policies do not enforce MFA',
-                    recommendation: 'Add "where request.user.mfachallenged == \'true\'" to security policies',
-                    severity: 'warning'
-                }))
-            });
-            // CIS-OCI-5.2: Network Security Groups
-            const nsgPolicies = statements.filter(policy => policy.toLowerCase().includes('network-security-group'));
-            const nsgRestrictionsMissing = nsgPolicies.length > 0 &&
-                !nsgPolicies.some(policy => policy.toLowerCase().includes('where'));
-            reports.push({
-                checkId: 'CIS-OCI-5.2',
-                name: 'Network Security Groups',
-                description: 'Ensure security lists/NSGs are properly configured to restrict access',
-                passed: !nsgRestrictionsMissing,
-                issues: nsgRestrictionsMissing ? [{
-                        checkId: 'CIS-OCI-5.2',
-                        statement: nsgPolicies[0] || '',
-                        message: 'Network security group policies lack proper restrictions',
-                        recommendation: 'Add conditions to limit access to specific network resources',
-                        severity: 'warning'
-                    }] : []
-            });
+            const reports = [
+                (0, CisValidationFunctions_1.validateServiceLevelAdmins)(results, options),
+                (0, CisValidationFunctions_1.validateTenancyAdminRestriction)(statements, results, options),
+                (0, CisValidationFunctions_1.validateAdminGroupRestrictions)(statements, results, options),
+                (0, CisValidationFunctions_1.validateCompartmentLevelAdmins)(results, options),
+                (0, CisValidationFunctions_1.validateMfaEnforcement)(statements, results, options),
+                (0, CisValidationFunctions_1.validateNsgRestrictions)(statements, results, options)
+            ];
             return reports;
         }
         catch (error) {
@@ -5410,6 +5293,7 @@ class OciCisBenchmarkValidator {
                     name: 'Validation Error',
                     description: 'An error occurred during validation',
                     passed: false,
+                    status: 'fail',
                     issues: [{
                             checkId: 'CIS-OCI-ERROR',
                             statement: '',
@@ -5484,12 +5368,12 @@ class OciCisListener {
         this.currentStatement = '';
         this.currentIndex = 0;
         // Results storage
-        this.serviceAdminPolicies = [];
-        this.overlyPermissivePolicies = [];
+        this.foundServiceAdminServices = new Set();
         this.adminRestrictionPolicies = [];
         this.mfaPolicies = [];
         this.restrictNsgPolicies = [];
         this.compartmentAdminPolicies = [];
+        this.overlyPermissivePolicies = [];
         this.statements = statements;
         this.logger = logger;
     }
@@ -5500,11 +5384,7 @@ class OciCisListener {
         }
     }
     exitVerb(ctx) {
-        var _a;
-        const verb = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.getText()) === null || _a === void 0 ? void 0 : _a.toLowerCase();
-        if (verb === 'manage') {
-            this.checkOverlyPermissivePolicies();
-        }
+        // CIS-OCI-1.2 analysis is performed in exitResource() method
     }
     exitResource(ctx) {
         var _a;
@@ -5513,11 +5393,17 @@ class OciCisListener {
         if (resource && resource.includes('network-security-groups')) {
             this.restrictNsgPolicies.push(this.currentStatement);
         }
+        // Check for overly permissive policies (manage all-resources in tenancy)
+        if (resource && resource.includes('all-resources') &&
+            this.currentStatement.toLowerCase().includes('manage') &&
+            this.currentStatement.toLowerCase().includes('in tenancy')) {
+            this.overlyPermissivePolicies.push(this.currentStatement);
+        }
         // Check for specific service-related admin policies (only for manage operations)
         if (resource && this.currentStatement.toLowerCase().includes('manage')) {
-            if (this.isServiceSpecificResource(resource)) {
-                this.serviceAdminPolicies.push(this.currentStatement);
-            }
+            this.getServiceFromResource(resource).forEach(service => {
+                this.foundServiceAdminServices.add(service);
+            });
         }
     }
     exitCondition(ctx) {
@@ -5527,11 +5413,9 @@ class OciCisListener {
         if (condition && condition.includes('request.user.mfachallenged')) {
             this.mfaPolicies.push(this.currentStatement);
         }
-        // Check for admin restriction condition - applies to both group and user management
-        if (condition && condition.includes('target.group.name')) {
-            if (condition.includes('administrators') && condition.includes('!=')) {
-                this.adminRestrictionPolicies.push(this.currentStatement);
-            }
+        // Check for admin restriction conditions (policies that protect admin groups)
+        if (condition && condition.includes('target.group.name') && condition.includes('administrators')) {
+            this.adminRestrictionPolicies.push(this.currentStatement);
         }
     }
     exitScope(ctx) {
@@ -5606,47 +5490,34 @@ class OciCisListener {
     enterPatternMatch(ctx) { }
     exitPatternMatch(ctx) { }
     /**
-     * Checks if the current statement has overly permissive permissions
+     * Extracts key service names from a resource string.
      */
-    checkOverlyPermissivePolicies() {
-        const statement = this.currentStatement.toLowerCase();
-        // Check for overly permissive permissions
-        if (statement.includes('manage all-resources') && !statement.includes('where') && !statement.includes('compartment')) {
-            this.overlyPermissivePolicies.push(this.currentStatement);
+    getServiceFromResource(resource) {
+        const services = [];
+        const criticalServices = {
+            compute: ['compute', 'instance'],
+            database: ['database', 'autonomous-database'],
+            storage: ['storage', 'object', 'volume', 'file-system'],
+            network: ['network', 'virtual-network', 'load-balancer', 'dns']
+        };
+        for (const [service, keywords] of Object.entries(criticalServices)) {
+            if (keywords.some(keyword => resource.includes(keyword))) {
+                services.push(service);
+            }
         }
-    }
-    /**
-     * Check if the resource is specific to a particular OCI service
-     */
-    isServiceSpecificResource(resource) {
-        const serviceFamilies = [
-            'compute', 'database', 'object', 'storage',
-            'network', 'virtual-network', 'instance',
-            'autonomous-database', 'vault', 'keys', 'volumes',
-            'file-system', 'analytics', 'ai', 'functions',
-            'api-gateway', 'load-balancer', 'dns'
-        ];
-        // Check if resource contains any service family name
-        const hasKnownService = serviceFamilies.some(service => {
-            return resource.includes(service) ||
-                resource.includes(`${service}-family`) ||
-                resource.includes(`${service}_family`);
-        });
-        // Also check for custom service families (anything ending with -family)
-        const isCustomServiceFamily = resource.includes('-family') || resource.includes('_family');
-        return hasKnownService || isCustomServiceFamily;
+        return services;
     }
     /**
      * Get all collected results
      */
     getResults() {
         return {
-            serviceAdminPolicies: this.serviceAdminPolicies,
-            overlyPermissivePolicies: this.overlyPermissivePolicies,
+            foundServiceAdminServices: this.foundServiceAdminServices,
             adminRestrictionPolicies: this.adminRestrictionPolicies,
             mfaPolicies: this.mfaPolicies,
             restrictNsgPolicies: this.restrictNsgPolicies,
-            compartmentAdminPolicies: this.compartmentAdminPolicies
+            compartmentAdminPolicies: this.compartmentAdminPolicies,
+            overlyPermissivePolicies: this.overlyPermissivePolicies
         };
     }
 }
@@ -5666,6 +5537,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OciSyntaxValidator = void 0;
 const antlr4_1 = __nccwpck_require__(9370);
+const PolicyValidator_1 = __nccwpck_require__(8382);
 const PolicyLexer_1 = __importDefault(__nccwpck_require__(5612));
 const PolicyParser_1 = __importDefault(__nccwpck_require__(2597));
 /**
@@ -5700,7 +5572,8 @@ class OciSyntaxValidator {
     getChecks() {
         return this.syntaxChecks;
     }
-    async validate(statements) {
+    async validate(statements, options = {}) {
+        const { treatWarningsAsFailures = false } = options;
         this.log.debug(`Validating ${statements.length} policy statements for syntax correctness`);
         if (statements.length === 0) {
             this.log.info(`No policy statements to validate`);
@@ -5755,11 +5628,14 @@ class OciSyntaxValidator {
             }
         }
         // Create validation report
+        const status = (0, PolicyValidator_1.calculateValidationStatus)(issues);
+        const passed = (0, PolicyValidator_1.shouldPass)(status, treatWarningsAsFailures);
         const report = {
             checkId: OciSyntaxValidator.CHECK_ID,
             name: 'OCI Policy Syntax',
             description: 'Ensures OCI IAM policy statements follow the correct syntax',
-            passed: issues.length === 0,
+            passed,
+            status,
             issues: issues
         };
         return [report];
@@ -5767,6 +5643,40 @@ class OciSyntaxValidator {
 }
 exports.OciSyntaxValidator = OciSyntaxValidator;
 OciSyntaxValidator.CHECK_ID = 'OCI-SYNTAX-1';
+
+
+/***/ }),
+
+/***/ 8382:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.calculateValidationStatus = calculateValidationStatus;
+exports.shouldPass = shouldPass;
+/**
+ * Calculates the validation status based on the issues found
+ */
+function calculateValidationStatus(issues) {
+    const hasErrors = issues.some(issue => issue.severity === 'error');
+    const hasWarnings = issues.some(issue => issue.severity === 'warning');
+    if (hasErrors)
+        return 'fail';
+    if (hasWarnings)
+        return 'pass-with-warnings';
+    return 'pass';
+}
+/**
+ * Determines if validation should pass based on status and options
+ */
+function shouldPass(status, treatWarningsAsFailures) {
+    if (status === 'fail')
+        return false;
+    if (status === 'pass-with-warnings' && treatWarningsAsFailures)
+        return false;
+    return true;
+}
 
 
 /***/ }),
@@ -5802,34 +5712,36 @@ class ValidationPipeline {
     /**
      * Run all validators in the pipeline on the given statements
      */
-    async validate(statements) {
-        var _a, _b, _c, _d;
+    async validate(statements, options) {
+        var _a;
         (_a = this.logger) === null || _a === void 0 ? void 0 : _a.info(`Running validation pipeline with ${this.validators.length} validators`);
         // Return early if no statements to validate
         if (statements.length === 0) {
             return [];
         }
-        const results = [];
-        for (const validator of this.validators) {
+        const validationPromises = this.validators.map(async (validator) => {
+            var _a, _b, _c;
             try {
-                (_b = this.logger) === null || _b === void 0 ? void 0 : _b.debug(`Running validator: ${validator.name()}`);
-                const reports = await validator.validate(statements);
-                results.push({
-                    validatorName: validator.name(),
-                    validatorDescription: validator.description(),
-                    reports
-                });
+                (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Running validator: ${validator.name()}`);
+                const reports = await validator.validate(statements, options);
                 // Log summary of findings
                 const failedChecks = reports.filter(report => !report.passed).length;
                 const totalChecks = reports.length;
                 const issuesCount = reports.reduce((sum, report) => sum + report.issues.length, 0);
-                (_c = this.logger) === null || _c === void 0 ? void 0 : _c.info(`Validator ${validator.name()} completed: ${totalChecks - failedChecks}/${totalChecks} checks passed, ${issuesCount} issues found`);
+                (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info(`Validator ${validator.name()} completed: ${totalChecks - failedChecks}/${totalChecks} checks passed, ${issuesCount} issues found`);
+                return {
+                    validatorName: validator.name(),
+                    validatorDescription: validator.description(),
+                    reports
+                };
             }
             catch (error) {
-                (_d = this.logger) === null || _d === void 0 ? void 0 : _d.error(`Error running validator ${validator.name()}: ${error instanceof Error ? error.message : error}`);
+                (_c = this.logger) === null || _c === void 0 ? void 0 : _c.error(`Error running validator ${validator.name()}: ${error instanceof Error ? error.message : error}`);
+                return null;
             }
-        }
-        return results;
+        });
+        const results = await Promise.all(validationPromises);
+        return results.filter((result) => result !== null);
     }
 }
 exports.ValidationPipeline = ValidationPipeline;
@@ -5932,6 +5844,133 @@ class ValidatorFactory {
     }
 }
 exports.ValidatorFactory = ValidatorFactory;
+
+
+/***/ }),
+
+/***/ 2447:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateServiceLevelAdmins = validateServiceLevelAdmins;
+exports.validateTenancyAdminRestriction = validateTenancyAdminRestriction;
+exports.validateAdminGroupRestrictions = validateAdminGroupRestrictions;
+exports.validateCompartmentLevelAdmins = validateCompartmentLevelAdmins;
+exports.validateMfaEnforcement = validateMfaEnforcement;
+exports.validateNsgRestrictions = validateNsgRestrictions;
+const PolicyValidator_1 = __nccwpck_require__(8382);
+/**
+ * Creates a ValidationReport for a given CIS check.
+ */
+function createReport(checkId, name, description, issues, options) {
+    var _a;
+    const status = (0, PolicyValidator_1.calculateValidationStatus)(issues);
+    const passed = (0, PolicyValidator_1.shouldPass)(status, (_a = options.treatWarningsAsFailures) !== null && _a !== void 0 ? _a : false);
+    return { checkId, name, description, passed, status, issues };
+}
+/**
+ * CIS-OCI-1.1: Validates that service-level admin policies exist for critical services.
+ */
+function validateServiceLevelAdmins(results, options) {
+    const criticalServices = ['compute', 'database', 'storage', 'network'];
+    const missingServices = criticalServices.filter(service => !results.foundServiceAdminServices.has(service));
+    const issues = missingServices.length > 0 ? [{
+            checkId: 'CIS-OCI-1.1',
+            statement: '',
+            message: `Missing service-specific admin policies for: ${missingServices.join(', ')}`,
+            recommendation: 'Create service-specific admin groups with targeted permissions for critical services.',
+            severity: 'warning'
+        }] : [];
+    return createReport('CIS-OCI-1.1', 'Service-Level Admins', 'Ensure service level admins are created to manage resources of particular service', issues, options);
+}
+/**
+ * CIS-OCI-1.2: Validates that only the 'Administrators' group has tenancy-wide manage permissions.
+ */
+function validateTenancyAdminRestriction(statements, results, options) {
+    const issues = [];
+    // Definite violations found by the listener
+    results.overlyPermissivePolicies.forEach(policy => {
+        if (!/allow\s+group\s+administrators\s+to\s+manage/i.test(policy)) {
+            issues.push({
+                checkId: 'CIS-OCI-1.2',
+                statement: policy,
+                message: 'Only the "Administrators" group should have tenancy-level "manage all-resources" permissions.',
+                recommendation: 'Change to "Allow group Administrators to manage all-resources in tenancy" or restrict to a non-root compartment.',
+                severity: 'error'
+            });
+        }
+    });
+    return createReport('CIS-OCI-1.2', 'Tenancy Administrator Group Restriction', 'Ensure permissions on all resources are given only to the tenancy administrator group', issues, options);
+}
+/**
+ * CIS-OCI-1.3: Validates that IAM admin policies protect the 'Administrators' group.
+ */
+function validateAdminGroupRestrictions(statements, results, options) {
+    const iamAdminPolicies = statements.filter(p => {
+        const lower = p.toLowerCase();
+        return lower.includes('manage') && (lower.includes('manage groups') || lower.includes('manage users'));
+    });
+    const unprotectedAdminPolicies = iamAdminPolicies.filter(p => !results.adminRestrictionPolicies.includes(p));
+    const issues = unprotectedAdminPolicies.map(policy => ({
+        checkId: 'CIS-OCI-1.3',
+        statement: policy,
+        message: 'IAM management policy does not restrict modification of the "Administrators" group.',
+        recommendation: 'Add a "where target.group.name != \'Administrators\'" clause to the policy.',
+        severity: 'error'
+    }));
+    return createReport('CIS-OCI-1.3', 'Admin Group Restrictions', 'Ensure IAM administrators cannot update tenancy Administrators group', issues, options);
+}
+/**
+ * CIS-OCI-1.5: Validates that compartment-level admin policies exist.
+ */
+function validateCompartmentLevelAdmins(results, options) {
+    const issues = results.compartmentAdminPolicies.length === 0 ? [{
+            checkId: 'CIS-OCI-1.5',
+            statement: '',
+            message: 'No compartment-specific admin policies were found.',
+            recommendation: 'Create admin policies scoped to specific compartments for delegation of duties.',
+            severity: 'info'
+        }] : [];
+    return createReport('CIS-OCI-1.5', 'Compartment-level Admins', 'Ensure compartment level admins are used to manage resources in compartments', issues, options);
+}
+/**
+ * CIS-OCI-1.13: Validates that MFA is enforced on policies managing sensitive resources.
+ */
+function validateMfaEnforcement(statements, results, options) {
+    const securityPolicies = statements.filter(p => {
+        const lower = p.toLowerCase();
+        return lower.includes('manage') && (lower.includes('security-family') ||
+            lower.includes('keys') ||
+            lower.includes('certificates') ||
+            lower.includes('vault'));
+    });
+    const unprotectedSecurityPolicies = securityPolicies.filter(p => !results.mfaPolicies.includes(p));
+    const issues = unprotectedSecurityPolicies.map(policy => ({
+        checkId: 'CIS-OCI-1.13',
+        statement: policy,
+        message: 'A policy managing sensitive security resources does not enforce MFA.',
+        recommendation: 'Add a "where request.user.mfachallenged == \'true\'" clause to the policy.',
+        severity: 'warning'
+    }));
+    return createReport('CIS-OCI-1.13', 'MFA Enforcement', 'Ensure multi-factor authentication is enforced for all users with console access', issues, options);
+}
+/**
+ * CIS-OCI-5.2: Validates that policies managing Network Security Groups have restrictions.
+ */
+function validateNsgRestrictions(statements, results, options) {
+    const nsgPolicies = statements.filter(p => p.toLowerCase().includes('network-security-group'));
+    const unrestrictedNsgPolicies = nsgPolicies.filter(p => !p.toLowerCase().includes('where'));
+    const issues = unrestrictedNsgPolicies.length > 0 ? [{
+            checkId: 'CIS-OCI-5.2',
+            statement: unrestrictedNsgPolicies.join('\n'),
+            message: 'Policies managing Network Security Groups lack restrictive "where" clauses.',
+            recommendation: 'Add conditions to NSG management policies to limit which resources can be managed or by whom.',
+            severity: 'warning'
+        }] : [];
+    return createReport('CIS-OCI-5.2', 'Network Security Groups', 'Ensure security lists/NSGs are properly configured to restrict access', issues, options);
+}
 
 
 /***/ }),

@@ -1,5 +1,5 @@
 import { Logger } from '../types';
-import { PolicyValidator } from './PolicyValidator';
+import { PolicyValidator, GlobalValidatorOptions } from './PolicyValidator';
 import { OciSyntaxValidator } from './OciSyntaxValidator';
 import { OciCisBenchmarkValidator } from './OciCisBenchmarkValidator';
 import { ValidationPipeline } from './ValidationPipeline';
@@ -55,7 +55,7 @@ export class ValidatorFactory {
    * @param options Optional configuration options for global validators
    * @returns Array of validator instances
    */
-  static createGlobalValidators(options: any = {}, logger?: Logger): PolicyValidator[] {
+  static createGlobalValidators(options: GlobalValidatorOptions = {}, logger?: Logger): PolicyValidator[] {
     const validators: PolicyValidator[] = [];
     
     // Include CIS benchmark validator when global validators are enabled
@@ -94,7 +94,7 @@ export class ValidatorFactory {
    */
   static createGlobalPipeline(
     logger?: Logger,
-    options: any = {}
+    options: GlobalValidatorOptions = {}
   ): ValidationPipeline {
     const pipeline = new ValidationPipeline(logger);
     const validators = ValidatorFactory.createGlobalValidators(options, logger);

@@ -1,5 +1,5 @@
 import { ValidationPipeline } from '../validators/ValidationPipeline';
-import { PolicyValidator, ValidationCheck, ValidationReport } from '../validators/PolicyValidator';
+import { PolicyValidator, ValidationCheck, ValidationReport, ValidationOptions, shouldPass } from '../validators/PolicyValidator';
 import { mockLogger } from './fixtures/test-utils';
 
 /**
@@ -13,11 +13,13 @@ class MockValidator implements PolicyValidator {
   private shouldFail: boolean;
   private name_: string;
   private delay: number;
+  private shouldReturnWarnings: boolean;
   
-  constructor(name: string, shouldFail: boolean = false, delay: number = 0) {
+  constructor(name: string, shouldFail: boolean = false, delay: number = 0, shouldReturnWarnings: boolean = false) {
     this.name_ = name;
     this.shouldFail = shouldFail;
     this.delay = delay;
+    this.shouldReturnWarnings = shouldReturnWarnings;
   }
   
   name(): string {
@@ -38,7 +40,7 @@ class MockValidator implements PolicyValidator {
     ];
   }
   
-  async validate(statements: string[]): Promise<ValidationReport[]> {
+  async validate(statements: string[], options?: ValidationOptions): Promise<ValidationReport[]> {
     // Simulate async delay if specified
     if (this.delay > 0) {
       await new Promise(resolve => setTimeout(resolve, this.delay));
@@ -50,6 +52,7 @@ class MockValidator implements PolicyValidator {
         name: `Mock Test for ${this.name_}`,
         description: 'Test check for validation pipeline',
         passed: false,
+        status: 'fail',
         issues: [{
           checkId: `MOCK-${this.name_}-001`,
           statement: statements[0] || '',
@@ -59,11 +62,31 @@ class MockValidator implements PolicyValidator {
       }];
     }
     
+    if (this.shouldReturnWarnings) {
+      const status = 'pass-with-warnings';
+      const passed = shouldPass(status, options?.treatWarningsAsFailures || false);
+      
+      return [{
+        checkId: `MOCK-${this.name_}-001`,
+        name: `Mock Test for ${this.name_}`,
+        description: 'Test check for validation pipeline',
+        passed,
+        status,
+        issues: [{
+          checkId: `MOCK-${this.name_}-001`,
+          statement: statements[0] || '',
+          message: `Mock warning from ${this.name_}`,
+          severity: 'warning'
+        }]
+      }];
+    }
+    
     return [{
       checkId: `MOCK-${this.name_}-001`,
       name: `Mock Test for ${this.name_}`,
       description: 'Test check for validation pipeline',
       passed: true,
+      status: 'pass',
       issues: []
     }];
   }
@@ -227,68 +250,54 @@ describe('ValidationPipeline', () => {
 
     it('should handle validator errors gracefully', async () => {
       const pipeline = new ValidationPipeline(mockLogger);
-      const validator1 = new ErrorValidator('Test error message');
-      const validator2 = new MockValidator('Validator2');
+      const errorValidator = new ErrorValidator('Test error message');
+      const workingValidator = new MockValidator('WorkingValidator');
       
-      pipeline.addValidator(validator1);
-      pipeline.addValidator(validator2);
+      pipeline.addValidator(errorValidator);
+      pipeline.addValidator(workingValidator);
       
       const statements = ['Allow group Admins to manage all-resources in tenancy'];
       const results = await pipeline.validate(statements);
       
-      // Should still get results from the second validator
+      // Should still return result from working validator despite error in first
       expect(results).toHaveLength(1);
-      expect(results[0].validatorName).toBe('Validator2');
+      expect(results[0].validatorName).toBe('WorkingValidator');
+      expect(results[0].reports[0].passed).toBe(true);
       
-      // Should log error for the first validator
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error running validator ErrorValidator: Test error message')
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Error running validator ErrorValidator: Test error message');
     });
 
     it('should handle multiple validator errors', async () => {
       const pipeline = new ValidationPipeline(mockLogger);
-      const validator1 = new ErrorValidator('Error 1');
-      const validator2 = new ErrorValidator('Error 2');
-      const validator3 = new MockValidator('WorkingValidator');
+      const errorValidator1 = new ErrorValidator('Error 1');
+      const errorValidator2 = new ErrorValidator('Error 2');
       
-      pipeline.addValidator(validator1);
-      pipeline.addValidator(validator2);
-      pipeline.addValidator(validator3);
+      pipeline.addValidator(errorValidator1);
+      pipeline.addValidator(errorValidator2);
       
-      const statements = ['test statement'];
+      const statements = ['test'];
       const results = await pipeline.validate(statements);
       
-      // Should only get results from working validator
-      expect(results).toHaveLength(1);
-      expect(results[0].validatorName).toBe('WorkingValidator');
-      
-      // Should log both errors
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error running validator ErrorValidator: Error 1')
-      );
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Error running validator ErrorValidator: Error 2')
-      );
+      expect(results).toHaveLength(0);
+      expect(mockLogger.error).toHaveBeenCalledTimes(2);
     });
 
     it('should continue pipeline execution after individual validator errors', async () => {
       const pipeline = new ValidationPipeline(mockLogger);
-      const validators = [
-        new MockValidator('Success1'),
-        new ErrorValidator('Failed validator'),
-        new MockValidator('Success2'),
-        new ErrorValidator('Another failed validator'),
-        new MockValidator('Success3')
-      ];
+      const errorValidator = new ErrorValidator();
+      const workingValidator1 = new MockValidator('Validator1');
+      const workingValidator2 = new MockValidator('Validator2');
       
-      validators.forEach(v => pipeline.addValidator(v));
+      pipeline.addValidator(workingValidator1);
+      pipeline.addValidator(errorValidator);
+      pipeline.addValidator(workingValidator2);
       
-      const results = await pipeline.validate(['test']);
+      const statements = ['test'];
+      const results = await pipeline.validate(statements);
       
-      // Should get results from successful validators only
-      expect(results).toHaveLength(3);
-      expect(results.map(r => r.validatorName)).toEqual(['Success1', 'Success2', 'Success3']);
+      expect(results).toHaveLength(2);
+      expect(results[0].validatorName).toBe('Validator1');
+      expect(results[1].validatorName).toBe('Validator2');
     });
   });
 
@@ -374,6 +383,156 @@ describe('ValidationPipeline', () => {
       expect(results).toHaveLength(1);
     });
   });
+
+  describe('treatWarningsAsFailures Feature', () => {
+    it('should treat warnings as failures when enabled', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const validator1 = new MockValidator('Validator1', false, 0, true); // This validator will pass with warning
+      const validator2 = new MockValidator('Validator2'); // This should pass normally
+      
+      pipeline.addValidator(validator1);
+      pipeline.addValidator(validator2);
+      
+      const statements = ['Allow group Admins to manage all-resources in tenancy'];
+      const results = await pipeline.validate(statements, { treatWarningsAsFailures: true });
+      
+      expect(results).toHaveLength(2);
+      expect(results[0].reports[0].passed).toBe(false); // Should be failed due to warning
+      expect(results[1].reports[0].passed).toBe(true);
+    });
+
+    it('should not treat warnings as failures when disabled', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const validator1 = new MockValidator('Validator1', false, 0, true); // This validator will pass with warning
+      const validator2 = new MockValidator('Validator2'); // This should pass normally
+      
+      pipeline.addValidator(validator1);
+      pipeline.addValidator(validator2);
+      
+      const statements = ['Allow group Admins to manage all-resources in tenancy'];
+      const results = await pipeline.validate(statements, { treatWarningsAsFailures: false });
+      
+      expect(results).toHaveLength(2);
+      expect(results[0].reports[0].passed).toBe(true); // Should pass as warnings are ignored
+      expect(results[1].reports[0].passed).toBe(true);
+    });
+
+    it('should properly report completion when treatWarningsAsFailures is enabled', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const validator = new MockValidator('ValidatorWithWarning', false, 0, true);
+      
+      pipeline.addValidator(validator);
+      
+      const statements = ['Allow group Admins to manage all-resources in tenancy'];
+      const results = await pipeline.validate(statements, { treatWarningsAsFailures: true });
+      
+      // Verify that the validator failed due to warning being treated as failure
+      expect(results[0].reports[0].passed).toBe(false);
+      expect(results[0].reports[0].status).toBe('pass-with-warnings');
+      
+      // Verify pipeline logs completion summary correctly (0/1 checks passed due to warning as failure)
+      expect(mockLogger.info).toHaveBeenCalledWith('Validator ValidatorWithWarning completed: 0/1 checks passed, 1 issues found');
+    });
+
+    it('should properly report completion when treatWarningsAsFailures is disabled', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const validator = new MockValidator('ValidatorWithWarning', false, 0, true);
+      
+      pipeline.addValidator(validator);
+      
+      const statements = ['Allow group Admins to manage all-resources in tenancy'];
+      const results = await pipeline.validate(statements, { treatWarningsAsFailures: false });
+      
+      // Verify that the validator passed despite having warnings
+      expect(results[0].reports[0].passed).toBe(true);
+      expect(results[0].reports[0].status).toBe('pass-with-warnings');
+      
+      // Verify pipeline logs completion summary correctly (1/1 checks passed despite warning)
+      expect(mockLogger.info).toHaveBeenCalledWith('Validator ValidatorWithWarning completed: 1/1 checks passed, 1 issues found');
+      
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Validation Options Integration', () => {
+    it('should pass validation options to validators', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const warningValidator = new MockValidator('WarningValidator', false, 0, true);
+      
+      pipeline.addValidator(warningValidator);
+      
+      const statements = ['Allow group TestGroup to manage all-resources in tenancy'];
+      const options = { treatWarningsAsFailures: false };
+      const results = await pipeline.validate(statements, options);
+      
+      expect(results).toHaveLength(1);
+      expect(results[0].reports[0].passed).toBe(true);
+      expect(results[0].reports[0].status).toBe('pass-with-warnings');
+      expect(results[0].reports[0].issues).toHaveLength(1);
+      expect(results[0].reports[0].issues[0].severity).toBe('warning');
+    });
+
+    it('should handle treatWarningsAsFailures option correctly', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const warningValidator = new MockValidator('WarningValidator', false, 0, true);
+      
+      pipeline.addValidator(warningValidator);
+      
+      const statements = ['Allow group TestGroup to manage all-resources in tenancy'];
+      
+      // Test with treatWarningsAsFailures = false (default)
+      const resultsWithWarnings = await pipeline.validate(statements, { treatWarningsAsFailures: false });
+      expect(resultsWithWarnings[0].reports[0].passed).toBe(true);
+      expect(resultsWithWarnings[0].reports[0].status).toBe('pass-with-warnings');
+      
+      // Test with treatWarningsAsFailures = true
+      const resultsWithFailures = await pipeline.validate(statements, { treatWarningsAsFailures: true });
+      expect(resultsWithFailures[0].reports[0].passed).toBe(false);
+      expect(resultsWithFailures[0].reports[0].status).toBe('pass-with-warnings');
+    });
+
+    it('should handle multiple validators with different warning behaviors', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const passingValidator = new MockValidator('PassingValidator');
+      const warningValidator = new MockValidator('WarningValidator', false, 0, true);
+      const failingValidator = new MockValidator('FailingValidator', true);
+      
+      pipeline.addValidator(passingValidator);
+      pipeline.addValidator(warningValidator);
+      pipeline.addValidator(failingValidator);
+      
+      const statements = ['test statement'];
+      const results = await pipeline.validate(statements, { treatWarningsAsFailures: true });
+      
+      expect(results).toHaveLength(3);
+      
+      // Passing validator should still pass
+      expect(results[0].reports[0].passed).toBe(true);
+      expect(results[0].reports[0].status).toBe('pass');
+      
+      // Warning validator should fail when treatWarningsAsFailures = true
+      expect(results[1].reports[0].passed).toBe(false);
+      expect(results[1].reports[0].status).toBe('pass-with-warnings');
+      
+      // Failing validator should still fail
+      expect(results[2].reports[0].passed).toBe(false);
+      expect(results[2].reports[0].status).toBe('fail');
+    });
+
+    it('should work without validation options (default behavior)', async () => {
+      const pipeline = new ValidationPipeline(mockLogger);
+      const warningValidator = new MockValidator('WarningValidator', false, 0, true);
+      
+      pipeline.addValidator(warningValidator);
+      
+      const statements = ['test statement'];
+      const results = await pipeline.validate(statements);
+      
+      expect(results).toHaveLength(1);
+      expect(results[0].reports[0].passed).toBe(true); // Should pass by default
+      expect(results[0].reports[0].status).toBe('pass-with-warnings');
+    });
+  });
 });
-    
+
 

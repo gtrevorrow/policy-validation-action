@@ -2,12 +2,12 @@ import PolicyListener from '../generated/PolicyListener';
 import { Logger } from '../types';
 
 export interface CisListenerResults {
-  serviceAdminPolicies: string[];
-  overlyPermissivePolicies: string[];
+  foundServiceAdminServices: Set<string>;
   adminRestrictionPolicies: string[];
   mfaPolicies: string[];
   restrictNsgPolicies: string[];
   compartmentAdminPolicies: string[];
+  overlyPermissivePolicies: string[];
 }
 
 /**
@@ -26,12 +26,12 @@ export class OciCisListener implements PolicyListener {
   exitEveryRule(node: any): void {}
   
   // Results storage
-  private serviceAdminPolicies: string[] = [];
-  private overlyPermissivePolicies: string[] = [];
+  private foundServiceAdminServices = new Set<string>();
   private adminRestrictionPolicies: string[] = [];
   private mfaPolicies: string[] = [];
   private restrictNsgPolicies: string[] = [];
   private compartmentAdminPolicies: string[] = [];
+  private overlyPermissivePolicies: string[] = [];
   
   constructor(statements: string[], logger?: Logger) {
     this.statements = statements;
@@ -46,10 +46,7 @@ export class OciCisListener implements PolicyListener {
   }
   
   exitVerb(ctx: any): void {
-    const verb = ctx?.getText()?.toLowerCase();
-    if (verb === 'manage') {
-      this.checkOverlyPermissivePolicies();
-    }
+    // CIS-OCI-1.2 analysis is performed in exitResource() method
   }
   
   exitResource(ctx: any): void {
@@ -60,11 +57,18 @@ export class OciCisListener implements PolicyListener {
       this.restrictNsgPolicies.push(this.currentStatement);
     }
     
+    // Check for overly permissive policies (manage all-resources in tenancy)
+    if (resource && resource.includes('all-resources') && 
+        this.currentStatement.toLowerCase().includes('manage') &&
+        this.currentStatement.toLowerCase().includes('in tenancy')) {
+      this.overlyPermissivePolicies.push(this.currentStatement);
+    }
+    
     // Check for specific service-related admin policies (only for manage operations)
     if (resource && this.currentStatement.toLowerCase().includes('manage')) {
-      if (this.isServiceSpecificResource(resource)) {
-        this.serviceAdminPolicies.push(this.currentStatement);
-      }
+      this.getServiceFromResource(resource).forEach(service => {
+        this.foundServiceAdminServices.add(service);
+      });
     }
   }
   
@@ -76,11 +80,9 @@ export class OciCisListener implements PolicyListener {
       this.mfaPolicies.push(this.currentStatement);
     }
     
-    // Check for admin restriction condition - applies to both group and user management
-    if (condition && condition.includes('target.group.name')) {
-      if (condition.includes('administrators') && condition.includes('!=')) {
-        this.adminRestrictionPolicies.push(this.currentStatement);
-      }
+    // Check for admin restriction conditions (policies that protect admin groups)
+    if (condition && condition.includes('target.group.name') && condition.includes('administrators')) {
+      this.adminRestrictionPolicies.push(this.currentStatement);
     }
   }
 
@@ -158,53 +160,36 @@ export class OciCisListener implements PolicyListener {
   exitPatternMatch(ctx: any): void {}
   
   /**
-   * Checks if the current statement has overly permissive permissions
+   * Extracts key service names from a resource string.
    */
-  private checkOverlyPermissivePolicies(): void {
-    const statement = this.currentStatement.toLowerCase();
-    
-    // Check for overly permissive permissions
-    if (statement.includes('manage all-resources') && !statement.includes('where') && !statement.includes('compartment')) {
-      this.overlyPermissivePolicies.push(this.currentStatement);
+  private getServiceFromResource(resource: string): string[] {
+    const services: string[] = [];
+    const criticalServices: Record<string, string[]> = {
+      compute: ['compute', 'instance'],
+      database: ['database', 'autonomous-database'],
+      storage: ['storage', 'object', 'volume', 'file-system'],
+      network: ['network', 'virtual-network', 'load-balancer', 'dns']
+    };
+
+    for (const [service, keywords] of Object.entries(criticalServices)) {
+      if (keywords.some(keyword => resource.includes(keyword))) {
+        services.push(service);
+      }
     }
+    return services;
   }
-  
-  /**
-   * Check if the resource is specific to a particular OCI service
-   */
-  private isServiceSpecificResource(resource: string): boolean {
-    const serviceFamilies = [
-      'compute', 'database', 'object', 'storage', 
-      'network', 'virtual-network', 'instance', 
-      'autonomous-database', 'vault', 'keys', 'volumes',
-      'file-system', 'analytics', 'ai', 'functions',
-      'api-gateway', 'load-balancer', 'dns'
-    ];
-    
-    // Check if resource contains any service family name
-    const hasKnownService = serviceFamilies.some(service => {
-      return resource.includes(service) || 
-             resource.includes(`${service}-family`) ||
-             resource.includes(`${service}_family`);
-    });
-    
-    // Also check for custom service families (anything ending with -family)
-    const isCustomServiceFamily = resource.includes('-family') || resource.includes('_family');
-    
-    return hasKnownService || isCustomServiceFamily;
-  }
-  
+
   /**
    * Get all collected results
    */
   getResults(): CisListenerResults {
     return {
-      serviceAdminPolicies: this.serviceAdminPolicies,
-      overlyPermissivePolicies: this.overlyPermissivePolicies,
+      foundServiceAdminServices: this.foundServiceAdminServices,
       adminRestrictionPolicies: this.adminRestrictionPolicies,
       mfaPolicies: this.mfaPolicies,
       restrictNsgPolicies: this.restrictNsgPolicies,
-      compartmentAdminPolicies: this.compartmentAdminPolicies
+      compartmentAdminPolicies: this.compartmentAdminPolicies,
+      overlyPermissivePolicies: this.overlyPermissivePolicies
     };
   }
 }
