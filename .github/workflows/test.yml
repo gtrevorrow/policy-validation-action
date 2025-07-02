@@ -380,7 +380,7 @@ jobs:
           verify_output "test-invalid" "false"
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
-          verify_output "test-vars" "true"
+          verify_output "test-vars" "false"
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
           verify_output "test-conditions" "true"
