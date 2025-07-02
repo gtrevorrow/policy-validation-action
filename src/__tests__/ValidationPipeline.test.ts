@@ -304,9 +304,9 @@ describe('ValidationPipeline', () => {
   describe('Performance and Concurrency', () => {
       it('should handle validators with different execution times', async () => {
         const pipeline = new ValidationPipeline();
-        const slowValidator = new MockValidator('Slow', 100); // 100ms delay
-        const fastValidator = new MockValidator('Fast', 10);  // 10ms delay
-        const mediumValidator = new MockValidator('Medium', 50); // 50ms delay
+        const slowValidator = new MockValidator('Slow', false, 100); // 100ms delay
+        const fastValidator = new MockValidator('Fast', false, 10);  // 10ms delay
+        const mediumValidator = new MockValidator('Medium', false, 50); // 50ms delay
 
         pipeline.addValidator(slowValidator);
         pipeline.addValidator(fastValidator);
