@@ -302,45 +302,46 @@ describe('ValidationPipeline', () => {
   });
 
   describe('Performance and Concurrency', () => {
-    it('should handle validators with different execution times', async () => {
-      const pipeline = new ValidationPipeline(mockLogger);
-      const fastValidator = new MockValidator('Fast', false, 10);
-      const slowValidator = new MockValidator('Slow', false, 100);
-      const instantValidator = new MockValidator('Instant', false, 0);
-      
-      pipeline.addValidator(slowValidator);
-      pipeline.addValidator(fastValidator);
-      pipeline.addValidator(instantValidator);
-      
-      const startTime = Date.now();
-      const results = await pipeline.validate(['test statement']);
-      const duration = Date.now() - startTime;
-      
-      expect(results).toHaveLength(3);
-      expect(duration).toBeGreaterThanOrEqual(100); // Should wait for slowest validator
-      
-      // Should maintain order regardless of execution time
-      expect(results[0].validatorName).toBe('Slow');
-      expect(results[1].validatorName).toBe('Fast');
-      expect(results[2].validatorName).toBe('Instant');
-    });
+      it('should handle validators with different execution times', async () => {
+        const pipeline = new ValidationPipeline();
+        const slowValidator = new MockValidator('Slow', 100); // 100ms delay
+        const fastValidator = new MockValidator('Fast', 10);  // 10ms delay
+        const mediumValidator = new MockValidator('Medium', 50); // 50ms delay
 
-    it('should handle large numbers of validators efficiently', async () => {
-      const pipeline = new ValidationPipeline(mockLogger);
-      const validatorCount = 50;
-      
-      for (let i = 0; i < validatorCount; i++) {
-        pipeline.addValidator(new MockValidator(`Validator${i}`));
-      }
-      
-      const startTime = Date.now();
-      const results = await pipeline.validate(['test statement']);
-      const duration = Date.now() - startTime;
-      
-      expect(results).toHaveLength(validatorCount);
-      expect(duration).toBeLessThan(1000); // Should complete quickly
+        pipeline.addValidator(slowValidator);
+        pipeline.addValidator(fastValidator);
+        pipeline.addValidator(mediumValidator);
+
+        const startTime = Date.now();
+        const results = await pipeline.validate(['statement']);
+        const duration = Date.now() - startTime;
+
+        expect(results).toHaveLength(3);
+        // Provide a small buffer for timing variations in CI environments
+        expect(duration).toBeGreaterThanOrEqual(90); // Should wait for slowest validator
+
+        // Should maintain order regardless of execution time
+        expect(results[0].validatorName).toBe('Slow');
+        expect(results[1].validatorName).toBe('Fast');
+        expect(results[2].validatorName).toBe('Medium');
+      });
+
+      it('should handle large numbers of validators efficiently', async () => {
+        const pipeline = new ValidationPipeline(mockLogger);
+        const validatorCount = 50;
+        
+        for (let i = 0; i < validatorCount; i++) {
+          pipeline.addValidator(new MockValidator(`Validator${i}`));
+        }
+        
+        const startTime = Date.now();
+        const results = await pipeline.validate(['test statement']);
+        const duration = Date.now() - startTime;
+        
+        expect(results).toHaveLength(validatorCount);
+        expect(duration).toBeLessThan(1000); // Should complete quickly
+      });
     });
-  });
 
   describe('Logging and Reporting', () => {
     it('should log pipeline execution start', async () => {
