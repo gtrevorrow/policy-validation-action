@@ -39,10 +39,20 @@ export function validateServiceLevelAdmins(results: CisListenerResults, options:
  */
 export function validateTenancyAdminRestriction(statements: string[], results: CisListenerResults, options: ValidationOptions): ValidationReport {
   const issues: ValidationIssue[] = [];
-  
-  // Definite violations found by the listener
+  const policiesWithVars = new Set(results.policiesWithHclVariablesInGroup);
+
+  // Handle policies with HCL variables in the group name
   results.overlyPermissivePolicies.forEach(policy => {
-    if (!/allow\s+group\s+administrators\s+to\s+manage/i.test(policy)) {
+    if (policiesWithVars.has(policy)) {
+      issues.push({
+        checkId: 'CIS-OCI-1.2',
+        statement: policy,
+        message: 'Policy uses an HCL variable for the group name, which cannot be statically verified.',
+        recommendation: 'Manually verify that the group resolved from the variable is the intended tenancy administrator group.',
+        severity: 'warning'
+      });
+    } else if (!/allow\s+group\s+administrators\s+to\s+manage/i.test(policy)) {
+      // Handle definite violations (not using 'Administrators' group and no variable)
       issues.push({
         checkId: 'CIS-OCI-1.2',
         statement: policy,
