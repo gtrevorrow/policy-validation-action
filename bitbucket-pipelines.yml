@@ -120,16 +120,27 @@ definitions:
                 echo "::error:: Output was empty for $test_name."
                 return 1
               fi
+
+              # Isolate the JSON part of the output, ignoring potential ERROR lines from stderr
+              local json_output
+              json_output=$(echo "$output" | sed -n '/^{/,$p')
+
+              if [ -z "$json_output" ]; then
+                  echo "::error:: No JSON found in the output for $test_name."
+                  return 1
+              fi
               
               local jq_filter
               if [[ "$failure_mode" == "warnings" ]]; then
                 jq_filter='if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) or ([ .[] | .results[] | .reports[] | .status ] | map(. != "pass") | any) then "false" else "true" end'
               else
-                jq_filter='if [ .[] | .results[] | .reports[] | .passed ] | index(false) then "false" else "true" end'
+                jq_filter='if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) then "false" else "true" end'
               fi
               
               local actual_validity
-              actual_validity=$(echo "$output" | jq -r "if type==\"array\" and length > 0 then $jq_filter else \"null\" end" 2>/dev/null)
+              # The output is double-encoded JSON: {"results": "[...]"}.
+              # We need to parse the outer object, get the .results string, and parse it again with fromjson.
+              actual_validity=$(echo "$json_output" | jq -r ".results | fromjson | if type==\"array\" and length > 0 then $jq_filter else \"null\" end" 2>/dev/null)
               
               echo "Extracted validity: $actual_validity"
               
