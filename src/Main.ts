@@ -255,6 +255,10 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       throw new Error(`Path ${scanPath} is not accessible: ${e.message}`);
     }
    
+    // Check for an environment variable override to enable global validators.
+    // This is useful for CI environments where the action is run as a CLI tool.
+    const envGlobalValidatorOverride = process.env.VALIDATE_GLOBAL === 'true';
+
     // Build options from inputs with appropriate defaults
     const options: ValidationOptions = {
       extractorType: platform.getInput('extractor') || 'regex',
@@ -264,7 +268,7 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       exitOnError: parseBooleanInput('exit-on-error', false, platform),
       validatorConfig: {
         runLocalValidators: parseBooleanInput('validators-local', true, platform),
-        runGlobalValidators: parseBooleanInput('validators-global', false, platform)
+        runGlobalValidators: parseBooleanInput('validators-global', false, platform) || envGlobalValidatorOverride
       }
     };
 
