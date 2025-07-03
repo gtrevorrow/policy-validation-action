@@ -78,7 +78,7 @@ describe('Policy Validation Integration', () => {
             expect(result).toContain("Allow group Users to read all-resources in tenancy");
         });
 
-        it('should handle complex nested Terraform structures', () => {
+        it('should handle multi-line and indented statement arrays', () => {
             const input = `
                 resource "oci_identity_policy" "policy1" {
                     statements = [
