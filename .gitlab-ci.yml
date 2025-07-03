@@ -163,4 +163,4 @@ test:
   artifacts:
     when: always
     reports:
-      junit: junit.xml
+      junit: test-results/junit.xml
