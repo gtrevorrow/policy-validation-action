@@ -1,95 +1,166 @@
-image: node:latest
-
-variables:
-  GIT_DEPTH: 0  # Fetch all history for proper access
+# This file is aligned with the testing strategy from test.yml and bitbucket-pipelines.yml
+image: node:18
 
 stages:
   - test
 
 test:
   stage: test
-  allow_failure: true  # Allow test failures without failing the pipeline
   script:
+    # Install dependencies
     - apt-get update && apt-get install -y jq
-    
-    # Instead of trying to use GitHub Packages, let's clone and build locally
-    # This is more reliable for CI environments
-    - git clone https://github.com/gtrevorrow/policy-validation-action.git
-    - cd policy-validation-action
     - npm ci
     - npm run build
-    - npm link
-    - cd ..
     
-    # Create test policies
+    # Run Jest unit tests first and generate a JUnit report
     - |
+      echo "Running Jest Unit Tests..."
+      npm test -- --reporters=default --reporters=jest-junit --testPathIgnorePatterns=cli.test.ts
+      echo "Jest tests completed."
+
+    # Create a comprehensive set of test policies, mirroring the other CI workflows
+    - |
+      echo "Creating test policy files..."
       mkdir -p test/policies
+      # Valid policy file
       cat > test/policies/valid.tf << 'EOL'
-      resource "oci_identity_policy" "test_policy" {
+      resource "oci_identity_policy" "valid_policy" {
         statements = [
           "Allow group Administrators to manage all-resources in tenancy",
-          "Allow group Developers to use instances in compartment dev",
-          "Define tenancy Acceptor as ocid1.tenancy.oc1..aaaaaa",
-          "Endorse group NetworkAdmins to manage virtual-network-family in tenancy foo",
-          "Admit group ServiceAdmins of tenancy accountFoo to manage instances in tenancy",
-          "Allow group SecurityAdmins to manage all-resources in tenancy where request.user.groups in ('SecurityAdmins','NetworkAdmins')"
+          "Allow group Developers to use instances in compartment dev"
         ]
       }
       EOL
-
+      
+      # Invalid policy file
       cat > test/policies/invalid.tf << 'EOL'
       resource "oci_identity_policy" "invalid_policy" {
         statements = [
-          "Allow BadSyntax manage",
-          "Allow groupDevelopers to use instances in compartment dev",
-          "Admit group {ServiceAdmins} of tenancy 123 to manage instances in tenancy"
+          "Invalid policy statement that should fail",
+          "Allow BadSyntax manage"
         ]
       }
       EOL
-
-      cat > test/policies/variable_interpolation.tf << 'EOL'
-      resource "oci_identity_policy" "test_policy_vars" {
+      
+      # Valid policy file with HCL variables
+      cat > test/policies/valid_vars.tf << 'EOL'
+      resource "oci_identity_policy" "valid_policy_vars" {
         statements = [
           "Allow group ${var.admin_group} to manage all-resources in tenancy",
-          "Define tenancy ${var.tenant_name} as ${var.tenant_ocid}",
-          "Endorse group ${var.network_admins} to manage virtual-network-family in tenancy foo",
-          "Admit group ${var.dev_group} of tenancy accountFoo to use instances in compartment ${var.env}",
-          "Allow any-user to use instances in compartment ${var.public_compartment} where request.time BETWEEN ${var.start_time} AND ${var.end_time}"
+          "Allow group Developers to use ${var.resource_type} in compartment ${var.dev_compartment}"
         ]
       }
       EOL
-    # Run tests with failure allowed
+      
+      # Valid policy file with HCL variables in conditions
+      cat > test/policies/valid_conditions.tf << 'EOL'
+      resource "oci_identity_policy" "valid_policy_conditions" {
+        statements = [
+          "Allow group Developers to use instances in compartment dev where request.user.id = '${var.user_id}'"
+        ]
+      }
+      EOL
+      
+      # Test file with all expression types
+      cat > test/policies/all_expressions.tf << 'EOL'
+      resource "oci_identity_policy" "all_expressions" {
+        statements = [
+          "define tenancy Acceptor as ocid1.tenancy.oc1..aaaaaaaanneylhk3ibv2dmorxqgklcloydwnror5b3fs4ag7dlrbsiwkjdea",
+          "endorse group Administrators to manage drg-attachment in tenancy VCN",
+          "Admit group Administrators of tenancy Requestor to manage remote-peering-to in tenancy",
+          "Allow group ${var.admin_group} to manage all-resources in tenancy"
+        ]
+      }
+      EOL
+      
+      # Test file with CIS benchmark violations (syntactically valid)
+      cat > test/policies/cis_violations.tf << 'EOL'
+      resource "oci_identity_policy" "cis_violations" {
+        statements = [
+          "Allow group NonAdmins to manage all-resources in tenancy",
+          "Allow group SecurityAdmins to manage vault-family in tenancy"
+        ]
+      }
+      EOL
+      echo "Test policy files created."
+
+    # Run integration tests by executing the compiled action script
     - |
-      verify_json() {
-        local output="$1"
-        echo "$output" | grep -E '^\{.*\}$|^\[.*\]$' | tail -n1 | jq -e '
-          if type=="array" then
-            all(.[]; (type=="object" and (.isValid | type=="boolean") and (.errors | type=="array")))
-          elif type=="object" then
-            (.error != null or (.isValid != null))
-          else
-            false
-          end
-        ' >/dev/null
+      echo "Running Integration Tests..."
+      
+      # Verification function adapted from the Bitbucket pipeline
+      verify_output() {
+        local test_name="$1"
+        local expected_validity="$2"
+        local failure_mode="${3:-strict}"
+        local command_to_run="$4"
+        
+        echo "--- Verifying: $test_name (Expected: $expected_validity, Mode: $failure_mode) ---"
+        
+        local output
+        local exit_code=0
+        output=$(eval "$command_to_run" 2>&1) || exit_code=$?
+        
+        echo "Command exit code: $exit_code"
+        echo "Raw output:"
+        echo "$output"
+        
+        if [ -z "$output" ]; then
+          echo "ERROR: Output was empty for $test_name."
+          return 1
+        fi
+
+        # Isolate the JSON part of the output
+        local json_output
+        json_output=$(echo "$output" | sed -n '/^{/,$p')
+
+        if [ -z "$json_output" ]; then
+            echo "ERROR: No JSON found in the output for $test_name."
+            return 1
+        fi
+        
+        local jq_filter
+        if [[ "$failure_mode" == "warnings" ]]; then
+          jq_filter='if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) or ([ .[] | .results[] | .reports[] | .status ] | map(. != "pass") | any) then "false" else "true" end'
+        else
+          jq_filter='if ([ .[] | .results[] | .reports[] | .passed ] | index(false)) then "false" else "true" end'
+        fi
+        
+        local actual_validity
+        # The output is double-encoded JSON: {"results": "[...]"}.
+        # We need to parse the outer object, get the .results string, and parse it again with fromjson.
+        actual_validity=$(echo "$json_output" | jq -r ".results | fromjson | if type==\"array\" and length > 0 then $jq_filter else \"null\" end" 2>/dev/null)
+        
+        echo "Extracted validity: $actual_validity"
+        
+        if [[ "$actual_validity" != "$expected_validity" ]]; then
+          echo "ERROR: For '$test_name', expected validity '$expected_validity' but got '$actual_validity'."
+          return 1
+        fi
+        
+        echo "✓ OK: $test_name"
+        return 0
       }
       
-      for file in valid.tf invalid.tf variable_interpolation.tf; do
-        echo "Testing $file..."
-        if OUTPUT=$(policy-validation-action validate test/policies/$file 2>&1); then
-          if ! verify_json "$OUTPUT"; then
-            echo "Invalid JSON output for $file"
-            echo "$OUTPUT"
-            exit 1
-          fi
-          if [[ "$file" == "invalid.tf" ]]; then
-            echo "Invalid policy should have failed validation"
-            exit 1
-          fi
-        else
-          if ! verify_json "$OUTPUT"; then
-            echo "Invalid JSON output for failed case $file"
-            echo "$OUTPUT"
-            exit 1
-          fi
-        fi
-      done
+      errors=0
+      
+      # Define test cases, setting VALIDATE_GLOBAL=true to ensure comprehensive validation
+      verify_output "test-valid" "true" "strict" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/valid.tf" || errors=$((errors + 1))
+      verify_output "test-invalid" "false" "strict" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/invalid.tf" || errors=$((errors + 1))
+      verify_output "test-vars" "false" "warnings" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/valid_vars.tf" || errors=$((errors + 1))
+      verify_output "test-conditions" "true" "strict" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/valid_conditions.tf" || errors=$((errors + 1))
+      verify_output "test-expressions" "true" "strict" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/all_expressions.tf" || errors=$((errors + 1))
+      verify_output "test-cis-violations" "false" "strict" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/cis_violations.tf" || errors=$((errors + 1))
+      verify_output "test-custom-pattern" "true" "strict" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/valid.tf --extractor regex --pattern 'statements\s*=\s*\[(.*?)\]'" || errors=$((errors + 1))
+      verify_output "test-custom-pattern-env-var" "true" "strict" "POLICY_STATEMENTS_PATTERN=\"statements\\\\s*=\\\\s*\\\\[(.*?)\\\\]\" VALIDATE_GLOBAL=true node dist/index.js validate test/policies/valid.tf --extractor regex" || errors=$((errors + 1))
+      
+      if [ $errors -gt 0 ]; then
+        echo "ERROR: $errors integration verification(s) failed."
+        exit 1
+      else
+        echo "All integration tests verified successfully."
+      fi
+  artifacts:
+    when: always
+    reports:
+      junit: test-results/junit.xml
