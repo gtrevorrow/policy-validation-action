@@ -155,15 +155,15 @@ definitions:
             
             errors=0
             
-            # Define test cases
-            verify_output "test-valid" "true" "strict" "node dist/index.js validate test/policies/valid.tf" || errors=$((errors + 1))
-            verify_output "test-invalid" "false" "strict" "node dist/index.js validate test/policies/invalid.tf" || errors=$((errors + 1))
-            verify_output "test-vars" "false" "warnings" "node dist/index.js validate test/policies/valid_vars.tf" || errors=$((errors + 1))
-            verify_output "test-conditions" "true" "strict" "node dist/index.js validate test/policies/valid_conditions.tf" || errors=$((errors + 1))
-            verify_output "test-expressions" "true" "strict" "node dist/index.js validate test/policies/all_expressions.tf" || errors=$((errors + 1))
-            verify_output "test-cis-violations" "false" "strict" "node dist/index.js validate test/policies/cis_violations.tf" || errors=$((errors + 1))
-            verify_output "test-custom-pattern" "true" "strict" "node dist/index.js validate test/policies/valid.tf --extractor regex --pattern 'statements\s*=\s*\[(.*?)\]'" || errors=$((errors + 1))
-            verify_output "test-custom-pattern-env-var" "true" "strict" "POLICY_STATEMENTS_PATTERN=\"statements\\\\s*=\\\\s*\\\\[(.*?)\\\\]\" node dist/index.js validate test/policies/valid.tf --extractor regex" || errors=$((errors + 1))
+            # Define test cases, ensuring the global pipeline runs for comprehensive validation
+            verify_output "test-valid" "true" "strict" "node dist/index.js validate test/policies/valid.tf --is-local-validation-only false" || errors=$((errors + 1))
+            verify_output "test-invalid" "false" "strict" "node dist/index.js validate test/policies/invalid.tf --is-local-validation-only false" || errors=$((errors + 1))
+            verify_output "test-vars" "false" "warnings" "node dist/index.js validate test/policies/valid_vars.tf --is-local-validation-only false" || errors=$((errors + 1))
+            verify_output "test-conditions" "true" "strict" "node dist/index.js validate test/policies/valid_conditions.tf --is-local-validation-only false" || errors=$((errors + 1))
+            verify_output "test-expressions" "true" "strict" "node dist/index.js validate test/policies/all_expressions.tf --is-local-validation-only false" || errors=$((errors + 1))
+            verify_output "test-cis-violations" "false" "strict" "node dist/index.js validate test/policies/cis_violations.tf --is-local-validation-only false" || errors=$((errors + 1))
+            verify_output "test-custom-pattern" "true" "strict" "node dist/index.js validate test/policies/valid.tf --extractor regex --pattern 'statements\s*=\s*\[(.*?)\]' --is-local-validation-only false" || errors=$((errors + 1))
+            verify_output "test-custom-pattern-env-var" "true" "strict" "POLICY_STATEMENTS_PATTERN=\"statements\\\\s*=\\\\s*\\\\[(.*?)\\\\]\" node dist/index.js validate test/policies/valid.tf --extractor regex --is-local-validation-only false" || errors=$((errors + 1))
             
             if [ $errors -gt 0 ]; then
               echo "::error::$errors integration verification(s) failed."
