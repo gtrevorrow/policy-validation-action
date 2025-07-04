@@ -50,6 +50,7 @@ This tool validates OCI IAM policy statements ensuring that the policies adhere 
 - Configurable policy extractors for extracting IAM policies from various file types.
 - Configurable validation pipeline with customizable validators.
 - CIS Benchmark validation for OCI IAM policies.
+- Hybrid validation pipeline combining rule-based and AI-powered agentic validation for comprehensive analysis.
 - Although Terraform is the primary target, the tool works with any text-based file.
 
 ## Prerequisites
@@ -123,6 +124,9 @@ This approach allows you to use the CLI directly from the source code without pu
 | `--files`             |       | Comma-separated list of specific files to process                  | `none`  |
 | `--exit-on-error`     |       | Exit with non-zero status if validation fails                       | `true`  |
 | `--file-extension`  | `--ext` | Filter files by extension (e.g., .tf)                                     | `none`  |
+| `--agentic-validation-enabled` | | Enable the agentic (AI-powered) validator.                      | `false` |
+| `--agentic-validation-provider`| | Specify the LLM provider (e.g., 'openai').                        | `none`  |
+| `--agentic-validation-api-key` | | API key for the LLM provider.                                       | `none`  |
 
 
 ### Environment Variables
@@ -138,6 +142,9 @@ CLI options can also be set via environment variables. These are useful in CI/CD
 | `POLICY_FILES`                 | `--files`                | Comma-separated list of specific files       |
 | `POLICY_EXIT_ON_ERROR`         | `--exit-on-error`        | Exit with non-zero status if validation fails|
 | `POLICY_FILE_EXTENSION`      | `--file-extension`     | Filter files by extension (e.g., .tf)              |
+| `POLICY_AGENTIC_VALIDATION_ENABLED` | `--agentic-validation-enabled` | Enable the agentic validator. |
+| `POLICY_AGENTIC_VALIDATION_PROVIDER`| `--agentic-validation-provider`| Specify the LLM provider. |
+| `POLICY_AGENTIC_VALIDATION_API_KEY` | `--agentic-validation-api-key` | API key for the LLM provider. |
 
 ### Example with Environment Variables
 
@@ -219,6 +226,9 @@ jobs:
           file-extension: '.tf' # Optional
           validators-local: 'true'  # Enable syntax validation (default: true)
           validators-global: 'true' # Enable global validators (default: true)
+          agentic-validation-enabled: 'true' # Optional: Enable the agentic validator
+          agentic-validation-provider: 'openai' # Optional: Specify LLM provider
+          agentic-validation-api-key: ${{ secrets.OPENAI_API_KEY }} # Optional: Pass API key
 ```
 
 #### Github Action Inputs
@@ -233,6 +243,9 @@ jobs:
 | `file-extension`    | Filter files by specified extension (e.g., .tf)                      | No       | `none`  |
 | `validators-local`  | Enable local validators (syntax validation)                          | No       | `true`  |
 | `validators-global` | Enable global validators (includes CIS benchmark)                   | No       | `true`  |
+| `agentic-validation-enabled` | Enable the agentic (AI-powered) validator.                 | No       | `false` |
+| `agentic-validation-provider`| Specify the LLM provider (e.g., 'openai').                 | No       | `none`  |
+| `agentic-validation-api-key` | API key for the LLM provider.                                | No       | `none`  |
 
 #### Github Action Outputs
 
@@ -514,6 +527,7 @@ The validators subsystem includes the following validators:
 
 - **OciSyntaxValidator**: Validates the syntax of OCI policy statements according to the grammar rules
 - **OciCisBenchmarkValidator**: Validates policies against the CIS Benchmark for Oracle Cloud Infrastructure
+- **AgenticOciCisBenchmarkValidator**: An AI-powered validator that assesses policies with HCL variables for CIS compliance.
 - **ValidationPipeline**: A pipeline that can run multiple validators in sequence
 
 ### Validator Configuration
@@ -527,6 +541,8 @@ The policy validation tool allows you to configure which validators are run duri
   with:
     validators-local: 'true'   # Enable/disable local validators (syntax validation)
     validators-global: 'true'  # Enable/disable global validators (includes CIS benchmark)
+    agentic-validation-enabled: 'true' # Enable the agentic validator
+    agentic-validation-api-key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 #### Environment Variables for CLI
@@ -537,6 +553,9 @@ export POLICY_VALIDATORS_LOCAL=true
 
 # Enable or disable global validators (true/false)
 export POLICY_VALIDATORS_GLOBAL=true
+# Enable agentic validation
+export POLICY_AGENTIC_VALIDATION_ENABLED=true
+export POLICY_AGENTIC_VALIDATION_API_KEY="sk-..."
 ```
 
 #### Validator Types
@@ -546,11 +565,10 @@ export POLICY_VALIDATORS_GLOBAL=true
    - Can be enabled/disabled with `validators-local`
 
 2. **Global Validators**: Run on all statements from all files together
-   - Currently includes the OciCisBenchmarkValidator
+   - Currently includes the OciCisBenchmarkValidator and the optional AgenticOciCisBenchmarkValidator.
    - Can be enabled/disabled with `validators-global`
-   - The CIS benchmark validator can be specifically enabled/disabled with `cis-benchmark`
 
-**Pipeline Behavior**: The system automatically determines whether to run each pipeline based on whether it has validators configured (`hasValidators()` check). When `validators-global` is enabled, it always includes the CIS Benchmark validator. This eliminates the need for separate flags for individual validators and ensures optimal performance by only running pipelines that have actual validators configured.
+**Pipeline Behavior**: The system automatically determines whether to run each pipeline based on whether it has validators configured. When `validators-global` is enabled, it always includes the `OciCisBenchmarkValidator`. If `agentic-validation-enabled` is also true, the pipeline runs in a hybrid mode where the agentic validator handles policies with variables, and the standard validator handles the rest.
 
 For more detailed information, see the [validator configuration guide](docs/validator-configuration.md).
 
@@ -605,36 +623,20 @@ The OciSyntaxValidator follows these steps for validation:
 
 ### OciCisBenchmarkValidator
 
-The `OciCisBenchmarkValidator` is specialized for validating OCI IAM policies against the CIS (Center for Internet Security) Benchmark version 2.0 controls.
+The `OciCisBenchmarkValidator` is specialized for validating OCI IAM policies against the CIS (Center for Internet Security) Benchmark version 2.0 controls. It focuses on policies that are fully defined and do not contain HCL variables. When the agentic validator is enabled, this validator will automatically skip policies with variables, deferring them to the agentic validator.
 
 #### CIS Benchmark Checks
 
-The validator implements six key CIS benchmark checks:
+The validator implements the following key CIS benchmark checks:
 
-1. **CIS-OCI-1.1: Service-Level Admins**
-   - *Description*: Ensures service level admins are created to manage resources of particular services
-   - *Critical Services*: Compute, Database, Storage, Network
-   - *Validation Logic*: Checks for service-specific admin policies for each critical service
-
-2. **CIS-OCI-1.2: Least Privilege**
-   - *Description*: Ensures permissions on all resources are given only to groups that need them
-   - *Validation Logic*: Flags "manage all-resources" policies without appropriate conditions as overly permissive
-
-3. **CIS-OCI-1.3: Admin Group Restrictions**
-   - *Description*: Ensures IAM administrators cannot update the tenancy Administrators group
-   - *Validation Logic*: Checks for "where target.group.name != 'Administrators'" conditions in group management policies
-
-4. **CIS-OCI-1.5: Compartment-level Admins**
-   - *Description*: Ensures compartment level admins are used to manage resources in compartments
-   - *Validation Logic*: Verifies the existence of compartment-scoped admin policies
-
-5. **CIS-OCI-1.13: MFA Enforcement**
-   - *Description*: Ensures multi-factor authentication is enforced for users with console access
-   - *Validation Logic*: Checks for "where request.user.mfachallenged == 'true'" conditions in security policies
-
-6. **CIS-OCI-5.2: Network Security Groups**
-   - *Description*: Ensures security lists/NSGs are properly configured to restrict access
-   - *Validation Logic*: Verifies that network security group policies include appropriate "where" conditions
+1.  **CIS-OCI-1.1: Service-Level Admins**
+    -   *Description*: Ensures service level admins are created to manage resources of particular services.
+2.  **CIS-OCI-1.2: Least Privilege**
+    -   *Description*: Ensures permissions on all resources are given only to groups that need them.
+3.  **CIS-OCI-1.3: Admin Group Restrictions**
+    -   *Description*: Ensures IAM administrators cannot update the tenancy Administrators group.
+4.  **CIS-OCI-1.5: Compartment-level Admins**
+    -   *Description*: Ensures compartment level admins are used to manage resources in compartments.
 
 #### Validation Process for CIS
 
@@ -659,6 +661,12 @@ The validation process in OciCisBenchmarkValidator follows these steps:
    - Gracefully handles parsing errors
    - Logs issues for debugging
    - Provides clear error messages for syntax problems
+
+### AgenticOciCisBenchmarkValidator
+
+The `AgenticOciCisBenchmarkValidator` is an AI-powered validator that uses a Large Language Model (LLM) to assess policies that contain HCL variables (e.g., `${var.admin_group}`). Traditional parsers cannot definitively validate such policies, as the final value of the variable is unknown. The agentic validator infers the intent and potential risk based on the variable's name, the policy structure, and its knowledge of CIS benchmarks.
+
+This validator is enabled via the `agentic-validation-enabled` flag and requires an LLM provider and API key.
 
 ### Using Validators in Code
 
@@ -690,42 +698,3 @@ reports.forEach(report => {
   }
 });
 ```
-
-### Extending with Custom Validators
-
-You can create custom validators by implementing the `PolicyValidator` interface. This allows you to define your own validation rules and checks:
-
-```typescript
-import { PolicyValidator, ValidationCheck, ValidationReport } from '@gtrevorrow/policy-validation-action';
-
-export class CustomValidator implements PolicyValidator {
-  name(): string {
-    return 'Custom Validator';
-  }
-  
-  description(): string {
-    return 'Custom validation for organization-specific requirements';
-  }
-  
-  getChecks(): ValidationCheck[] {
-    return [
-      {
-        id: 'CUSTOM-1',
-        name: 'Custom Check',
-        description: 'Organization-specific policy check'
-      }
-    ];
-  }
-  
-  async validate(statements: string[]): Promise<ValidationReport[]> {
-    // Implement your custom validation logic here
-    // ...
-    
-    return reports;
-  }
-}
-```
-
-## License
-
-This project is licensed under the Universal Permissive License (UPL) v1.0 - see the [LICENSE](LICENSE) file for details.

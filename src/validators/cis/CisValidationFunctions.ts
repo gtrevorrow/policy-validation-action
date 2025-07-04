@@ -1,5 +1,6 @@
-import { ValidationReport, ValidationIssue, ValidationOptions, calculateValidationStatus, shouldPass } from '../PolicyValidator';
+import { ValidationOptions, ValidationReport, ValidationIssue } from '../../types';
 import { CisListenerResults } from '../OciCisListener';
+import { calculateValidationStatus, shouldPass } from '../PolicyValidator';
 
 /**
  * Creates a ValidationReport for a given CIS check.
@@ -16,7 +17,7 @@ function createReport(checkId: string, name: string, description: string, issues
 export function validateServiceLevelAdmins(results: CisListenerResults, options: ValidationOptions): ValidationReport {
   const criticalServices = ['compute', 'database', 'storage', 'network'];
   const missingServices = criticalServices.filter(service => !results.foundServiceAdminServices.has(service));
-  
+
   const issues: ValidationIssue[] = missingServices.length > 0 ? [{
     checkId: 'CIS-OCI-1.1',
     statement: '',
@@ -116,63 +117,6 @@ export function validateCompartmentLevelAdmins(results: CisListenerResults, opti
     'CIS-OCI-1.5',
     'Compartment-level Admins',
     'Ensure compartment level admins are used to manage resources in compartments',
-    issues,
-    options
-  );
-}
-
-/**
- * CIS-OCI-1.13: Validates that MFA is enforced on policies managing sensitive resources.
- */
-export function validateMfaEnforcement(statements: string[], results: CisListenerResults, options: ValidationOptions): ValidationReport {
-  const securityPolicies = statements.filter(p => {
-    const lower = p.toLowerCase();
-    return lower.includes('manage') && (
-      lower.includes('security-family') ||
-      lower.includes('keys') ||
-      lower.includes('certificates') ||
-      lower.includes('vault')
-    );
-  });
-
-  const unprotectedSecurityPolicies = securityPolicies.filter(p => !results.mfaPolicies.includes(p));
-
-  const issues: ValidationIssue[] = unprotectedSecurityPolicies.map(policy => ({
-    checkId: 'CIS-OCI-1.13',
-    statement: policy,
-    message: 'A policy managing sensitive security resources does not enforce MFA.',
-    recommendation: 'Add a "where request.user.mfachallenged == \'true\'" clause to the policy.',
-    severity: 'warning'
-  }));
-
-  return createReport(
-    'CIS-OCI-1.13',
-    'MFA Enforcement',
-    'Ensure multi-factor authentication is enforced for all users with console access',
-    issues,
-    options
-  );
-}
-
-/**
- * CIS-OCI-5.2: Validates that policies managing Network Security Groups have restrictions.
- */
-export function validateNsgRestrictions(statements: string[], results: CisListenerResults, options: ValidationOptions): ValidationReport {
-  const nsgPolicies = statements.filter(p => p.toLowerCase().includes('network-security-group'));
-  const unrestrictedNsgPolicies = nsgPolicies.filter(p => !p.toLowerCase().includes('where'));
-
-  const issues: ValidationIssue[] = unrestrictedNsgPolicies.length > 0 ? [{
-    checkId: 'CIS-OCI-5.2',
-    statement: unrestrictedNsgPolicies.join('\n'),
-    message: 'Policies managing Network Security Groups lack restrictive "where" clauses.',
-    recommendation: 'Add conditions to NSG management policies to limit which resources can be managed or by whom.',
-    severity: 'warning'
-  }] : [];
-
-  return createReport(
-    'CIS-OCI-5.2',
-    'Network Security Groups',
-    'Ensure security lists/NSGs are properly configured to restrict access',
     issues,
     options
   );

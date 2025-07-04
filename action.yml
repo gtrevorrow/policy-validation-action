@@ -30,6 +30,16 @@ inputs:
     description: 'Enable global validators like CIS benchmark'
     required: false
     default: 'true'
+  agentic-validation-enabled:
+    description: 'Enable the agentic (AI-powered) validator.'
+    required: false
+    default: 'false'
+  agentic-validation-provider:
+    description: "Specify the LLM provider (e.g., 'openai')."
+    required: false
+  agentic-validation-api-key:
+    description: 'API key for the LLM provider.'
+    required: false
 outputs:
   results:
     description: 'Validation results in JSON format'

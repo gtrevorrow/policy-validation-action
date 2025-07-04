@@ -1,11 +1,10 @@
 import { CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token } from 'antlr4';
-import { Logger } from '../types';
+import { Logger, ValidationOptions } from '../types';
 import { 
   PolicyValidator, 
   ValidationCheck, 
   ValidationReport, 
-  ValidationIssue, 
-  ValidationOptions, 
+  ValidationIssue,    
   calculateValidationStatus, 
   shouldPass 
 } from './PolicyValidator';

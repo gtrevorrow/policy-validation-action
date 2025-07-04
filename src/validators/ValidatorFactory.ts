@@ -1,7 +1,7 @@
-import { Logger } from '../types';
-import { PolicyValidator, GlobalValidatorOptions } from './PolicyValidator';
+import { Logger, ValidationOptions } from '../types';
 import { OciSyntaxValidator } from './OciSyntaxValidator';
 import { OciCisBenchmarkValidator } from './OciCisBenchmarkValidator';
+import { AgenticOciCisBenchmarkValidator } from './AgenticOciCisBenchmarkValidator';
 import { ValidationPipeline } from './ValidationPipeline';
 
 /**
@@ -18,7 +18,7 @@ export class ValidatorFactory {
    * @param logger Optional logger for recording diagnostic info
    * @returns An instance of OciSyntaxValidator
    */
-  static createSyntaxValidator(logger?: Logger): PolicyValidator {
+  static createSyntaxValidator(logger?: Logger): OciSyntaxValidator {
     return new OciSyntaxValidator(logger);
   }
 
@@ -27,7 +27,7 @@ export class ValidatorFactory {
    * @param logger Optional logger for recording diagnostic info
    * @returns An instance of OciCisBenchmarkValidator
    */
-  static createCisBenchmarkValidator(logger?: Logger): PolicyValidator {
+  static createCisBenchmarkValidator(logger?: Logger): OciCisBenchmarkValidator {
     return new OciCisBenchmarkValidator(logger);
   }
 
@@ -39,7 +39,7 @@ export class ValidatorFactory {
    * @param options Optional configuration options for local validators
    * @returns Array of validator instances
    */
-  static createLocalValidators(logger?: Logger, options?: Record<string, any>): PolicyValidator[] {
+  static createLocalValidators(logger?: Logger, options?: Record<string, any>): (OciSyntaxValidator)[] {
     // Currently only includes syntax validator
     // In future, additional local validators can be added here
     return [
@@ -55,8 +55,8 @@ export class ValidatorFactory {
    * @param options Optional configuration options for global validators
    * @returns Array of validator instances
    */
-  static createGlobalValidators(options: GlobalValidatorOptions = {}, logger?: Logger): PolicyValidator[] {
-    const validators: PolicyValidator[] = [];
+  static createGlobalValidators(options: ValidationOptions = {}, logger?: Logger): (OciCisBenchmarkValidator)[] {
+    const validators: OciCisBenchmarkValidator[] = [];
     
     // Include CIS benchmark validator when global validators are enabled
     validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
@@ -92,13 +92,23 @@ export class ValidatorFactory {
    * @param options Optional configuration options for global validators
    * @returns A configured ValidationPipeline instance with global validators
    */
-  static createGlobalPipeline(
-    logger?: Logger,
-    options: GlobalValidatorOptions = {}
+  public static createGlobalPipeline(
+    logger: Logger,
+    options: ValidationOptions,
   ): ValidationPipeline {
     const pipeline = new ValidationPipeline(logger);
-    const validators = ValidatorFactory.createGlobalValidators(options, logger);
-    validators.forEach(validator => pipeline.addValidator(validator));
+
+    // The standard, rule-based validator always runs first.
+    pipeline.addValidator(new OciCisBenchmarkValidator());
+
+    // Conditionally add the agentic validator if enabled.
+    if (options.agenticValidation?.enabled) {
+      logger.info(
+        'Agentic validation is enabled. Adding agentic validator to the pipeline.',
+      );
+      pipeline.addValidator(new AgenticOciCisBenchmarkValidator(logger));
+    }
+
     return pipeline;
   }
 }

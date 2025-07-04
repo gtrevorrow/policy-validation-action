@@ -35,15 +35,20 @@ export interface ValidationReport {
     name: string;
     description: string;
     passed: boolean;
+    status: 'pass' | 'fail' | 'pass-with-warnings';
     issues: ValidationIssue[];
 }
 
+/**
+ * Defines the structure for a single validation issue.
+ * This is the single source of truth for issue reporting.
+ */
 export interface ValidationIssue {
     checkId: string;
     statement: string;
     message: string;
-    recommendation?: string;
     severity: 'info' | 'warning' | 'error';
+    recommendation?: string; // Correctly marked as optional
 }
 
 /**
@@ -60,13 +65,30 @@ export interface ValidatorConfig {
  * Options for policy validation
  */
 export interface ValidationOptions {
-  extractorType: string;
+  failOn?: 'error' | 'warning' | 'info';
+  treatWarningsAsFailures?: boolean; // Default: false
+  customPattern?: string;
+  extractorType?: string;
   pattern?: string;
   fileExtension?: string;
   fileNames?: string[];
-  exitOnError: boolean;
-  /** Configuration for which validator pipelines to run */
+  exitOnError?: boolean;
   validatorConfig?: ValidatorConfig;
+  agenticValidation?: {
+    enabled: boolean;
+    provider: 'openai' | 'anthropic' | string; // Allow other providers
+    apiKey?: string;
+  };
+}
+
+/**
+ * Defines the expected JSON response structure from the LLM for a single policy.
+ */
+export interface LlmValidationResponse {
+  policyIndex: number;
+  passed: boolean;
+  severity: 'error' | 'warning' | 'info';
+  reason: string;
 }
 
 /**

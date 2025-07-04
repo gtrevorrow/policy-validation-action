@@ -7,7 +7,7 @@ This document explains how to configure and use the validators in the policy val
 The policy validation action uses a pipeline-based approach to validation, where each policy file is processed through a series of validators. There are two types of validators:
 
 1. **Local Validators**: These run on each file individually and validate syntax and other per-file constraints.
-2. **Global Validators**: These run on all statements from all files together and perform cross-file validations, such as CIS benchmark compliance checks.
+2. **Global Validators**: These run on all statements from all files together and perform cross-file validations. This pipeline can operate in a hybrid mode, using both rule-based validators (like CIS benchmark checks) and an AI-powered agentic validator for more complex scenarios.
 
 ## Configuration Options
 
@@ -37,7 +37,33 @@ export POLICY_VALIDATORS_GLOBAL=true
 policy-validation-action validate ./policies
 ```
 
-All boolean options use string values of 'true' or 'false' and default to 'true' for validators-local and 'false' for validators-global.
+### Agentic Validation Configuration
+
+To enable the AI-powered agentic validator, you need to provide additional configuration. This is supported in both the GitHub Action and the CLI.
+
+**GitHub Action:**
+
+```yaml
+- uses: gtrevorrow/policy-validation-action@v0.2
+  with:
+    # ... other options
+    agentic-validation-enabled: 'true'
+    agentic-validation-provider: 'openai' # or 'anthropic', etc.
+    agentic-validation-api-key: ${{ secrets.OPENAI_API_KEY }}
+```
+
+**CLI / Environment Variables:**
+
+```bash
+# Using command-line arguments
+policy-validation-action validate ./policies --agentic-validation-enabled=true --agentic-validation-provider=openai --agentic-validation-api-key="sk-..."
+
+# Using environment variables
+export POLICY_AGENTIC_VALIDATION_ENABLED=true
+export POLICY_AGENTIC_VALIDATION_PROVIDER=openai
+export POLICY_AGENTIC_VALIDATION_API_KEY="sk-..."
+policy-validation-action validate ./policies
+```
 
 ## Available Validators
 
@@ -47,7 +73,8 @@ All boolean options use string values of 'true' or 'false' and default to 'true'
 
 ### Global Validators
 
-1. **OCI CIS Benchmark Validator**: Validates that policies conform to the CIS Benchmark recommendations for Oracle Cloud Infrastructure.
+1. **OCI CIS Benchmark Validator**: Validates that policies conform to the CIS Benchmark recommendations for Oracle Cloud Infrastructure. This validator processes policies with fully-defined, static statements.
+2. **Agentic OCI CIS Benchmark Validator**: Uses a Large Language Model (LLM) to perform a holistic compliance check. It specifically targets policies containing HCL variables (e.g., `${var.admin_group}`), which are difficult for traditional parsers to analyze definitively.
 
 ## Using the ValidatorFactory
 
@@ -59,8 +86,11 @@ import { ValidatorFactory } from './validators/ValidatorFactory';
 // Create a local validation pipeline (includes syntax validator)
 const localPipeline = ValidatorFactory.createLocalPipeline(logger, {});
 
-// Create a global validation pipeline (includes CIS benchmark validator)
-const globalPipeline = ValidatorFactory.createGlobalPipeline(logger, {});
+// Create a global validation pipeline
+// The factory will automatically include the agentic validator if configured
+const globalPipeline = ValidatorFactory.createGlobalPipeline(logger, {
+  agenticValidation: { enabled: true, provider: 'openai', apiKey: '...' }
+});
 ```
 
 ## Adding New Validators
@@ -298,5 +328,9 @@ program
 ## Pipeline Behavior
 
 - **Local Pipeline**: Runs when `validators-local` is `true` (default). Always includes the OCI Syntax Validator.
-- **Global Pipeline**: Runs when `validators-global` is `true` (default `false` for CLI, `true` for GitHub Actions).
+- **Global Pipeline**: Runs when `validators-global` is `true`.
+- **Hybrid Global Pipeline**: When `agentic-validation-enabled` is `true`, the global pipeline operates in a hybrid mode:
+    - The `OciCisBenchmarkValidator` runs on all policies *without* variables.
+    - The `AgenticOciCisBenchmarkValidator` runs on all policies *with* variables.
+    - This division of labor ensures that both static and dynamic policies are validated by the most appropriate engine.
 - **Empty Pipelines**: If a pipeline has no validators configured, it won't run, ensuring optimal performance.

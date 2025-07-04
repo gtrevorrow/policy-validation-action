@@ -5204,6 +5204,119 @@ exports.POLICY_STATEMENTS_REGEX = new RegExp(process.env.POLICY_STATEMENTS_PATTE
 
 /***/ }),
 
+/***/ 6541:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgenticOciCisBenchmarkValidator = void 0;
+const fs = __importStar(__nccwpck_require__(7147));
+const path = __importStar(__nccwpck_require__(1017));
+/**
+ * A validator that uses an LLM agent to check for CIS compliance.
+ * It focuses on policies containing HCL variables, which are difficult for
+ * traditional parsers to analyze definitively. It sends all policies in a
+ * single batch to allow for holistic analysis.
+ */
+class AgenticOciCisBenchmarkValidator {
+    constructor(logger) {
+        this.logger = logger;
+        // Load the knowledge base once during initialization for efficiency.
+        this.knowledgeContent = fs.readFileSync(path.join(__dirname, '../../knowledge/oci_iam_knowledge_base.md'), 'utf-8');
+        this.logger.info('Agentic validator initialized with knowledge base.');
+    }
+    name() {
+        return 'Agentic CIS Benchmark Validator';
+    }
+    description() {
+        return 'Performs a holistic compliance check on policies with variables using an AI agent.';
+    }
+    getChecks() {
+        // The agentic validator performs a single, holistic check.
+        return [
+            {
+                id: 'CIS-AGENTIC-1',
+                name: 'Agentic CIS Compliance Check',
+                description: 'Holistic compliance check for policies with variables, performed by an AI agent.',
+            },
+        ];
+    }
+    async validate(statements, options = {}) {
+        const policiesWithVariables = statements.filter(s => s && s.includes('${var.'));
+        if (policiesWithVariables.length === 0) {
+            this.logger.info('No policies with variables found for agentic validation.');
+            return [];
+        }
+        this.logger.info(`Sending ${policiesWithVariables.length} policies for agentic validation.`);
+        // In a real implementation, this would make an API call to an LLM.
+        // For now, we will return a mock response to demonstrate the flow.
+        const mockLlmResponses = policiesWithVariables.map((policy, index) => ({
+            policyIndex: index,
+            passed: false,
+            severity: 'warning',
+            reason: `Policy "${policy}" contains variables and requires manual review. The agent has flagged this for caution based on CIS benchmarks.`,
+        }));
+        return [this.parseResponse(mockLlmResponses, policiesWithVariables)];
+    }
+    parseResponse(responses, originalPolicies) {
+        const allPassed = responses.every(r => r.passed);
+        return {
+            checkId: 'CIS-AGENTIC-1',
+            name: 'Agentic CIS Compliance Check',
+            description: 'Holistic compliance check performed by an AI agent.',
+            passed: allPassed,
+            status: allPassed ? 'pass' : 'fail',
+            issues: responses
+                .filter(r => !r.passed)
+                .map(r => ({
+                checkId: 'CIS-AGENTIC-1',
+                statement: originalPolicies[r.policyIndex],
+                message: r.reason,
+                severity: r.severity,
+                recommendation: "Review the policy based on the agent's reasoning and verify variable contents.",
+            })),
+        };
+    }
+}
+exports.AgenticOciCisBenchmarkValidator = AgenticOciCisBenchmarkValidator;
+
+
+/***/ }),
+
 /***/ 1122:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -5244,16 +5357,6 @@ class OciCisBenchmarkValidator {
                 id: 'CIS-OCI-1.5',
                 name: 'Compartment-level Admins',
                 description: 'Ensure compartment level admins are used to manage resources in compartments'
-            },
-            {
-                id: 'CIS-OCI-1.13',
-                name: 'MFA Enforcement',
-                description: 'Ensure multi-factor authentication is enforced for all users with console access'
-            },
-            {
-                id: 'CIS-OCI-5.2',
-                name: 'Network Security Groups',
-                description: 'Ensure security lists/NSGs are properly configured to restrict access'
             }
         ];
         this.logger = logger;
@@ -5268,28 +5371,27 @@ class OciCisBenchmarkValidator {
         return this.cisChecks;
     }
     async validate(statements, options = {}) {
-        var _a, _b, _c;
-        (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Validating ${statements.length} policy statements against OCI CIS Benchmark`);
-        if (statements.length === 0) {
-            (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info('No policy statements to validate');
-            return [];
+        var _a, _b;
+        // Filter out policies with variables, as they will be handled by the agentic validator.
+        const applicableStatements = statements.filter(s => s && !s.includes('${var.'));
+        if (applicableStatements.length === 0) {
+            return []; // Nothing for this validator to do.
         }
+        (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Validating ${applicableStatements.length} policy statements against OCI CIS Benchmark`);
         try {
-            // Parse statements and collect findings
-            const results = this.analyzePolicy(statements);
-            // Generate validation reports for each CIS check
+            // Use the ANTLR listener to analyze all applicable statements and gather findings.
+            const results = this.analyzePolicy(applicableStatements);
+            // Call each specific CIS validation function with the listener's results.
             const reports = [
                 (0, CisValidationFunctions_1.validateServiceLevelAdmins)(results, options),
-                (0, CisValidationFunctions_1.validateTenancyAdminRestriction)(statements, results, options),
-                (0, CisValidationFunctions_1.validateAdminGroupRestrictions)(statements, results, options),
+                (0, CisValidationFunctions_1.validateTenancyAdminRestriction)(applicableStatements, results, options),
+                (0, CisValidationFunctions_1.validateAdminGroupRestrictions)(applicableStatements, results, options),
                 (0, CisValidationFunctions_1.validateCompartmentLevelAdmins)(results, options),
-                (0, CisValidationFunctions_1.validateMfaEnforcement)(statements, results, options),
-                (0, CisValidationFunctions_1.validateNsgRestrictions)(statements, results, options)
             ];
             return reports;
         }
         catch (error) {
-            (_c = this.logger) === null || _c === void 0 ? void 0 : _c.error(`Error validating policies: ${error}`);
+            (_b = this.logger) === null || _b === void 0 ? void 0 : _b.error(`Error validating policies: ${error}`);
             // Return an error report
             return [{
                     checkId: 'CIS-OCI-ERROR',
@@ -5733,26 +5835,31 @@ class ValidationPipeline {
         }
         const validationPromises = this.validators.map(async (validator) => {
             var _a, _b, _c;
+            (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Running validator: ${validator.name()}`);
             try {
-                (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Running validator: ${validator.name()}`);
                 const reports = await validator.validate(statements, options);
-                // Log summary of findings
-                const failedChecks = reports.filter(report => !report.passed).length;
-                const totalChecks = reports.length;
-                const issuesCount = reports.reduce((sum, report) => sum + report.issues.length, 0);
-                (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info(`Validator ${validator.name()} completed: ${totalChecks - failedChecks}/${totalChecks} checks passed, ${issuesCount} issues found`);
-                return {
-                    validatorName: validator.name(),
-                    validatorDescription: validator.description(),
-                    reports
-                };
+                const issuesFound = reports.reduce((acc, report) => acc + report.issues.length, 0);
+                const checksPassed = reports.filter(r => r.passed).length;
+                (_b = this.logger) === null || _b === void 0 ? void 0 : _b.info(`Validator ${validator.name()} completed: ${checksPassed}/${reports.length} checks passed, ${issuesFound} issues found`);
+                // Only return a result if the validator produced one or more reports.
+                if (reports.length > 0) {
+                    return {
+                        validatorName: validator.name(),
+                        validatorDescription: validator.description(),
+                        reports: reports,
+                    };
+                }
+                return null; // Return null if there are no reports to filter out later.
             }
             catch (error) {
-                (_c = this.logger) === null || _c === void 0 ? void 0 : _c.error(`Error running validator ${validator.name()}: ${error instanceof Error ? error.message : error}`);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                (_c = this.logger) === null || _c === void 0 ? void 0 : _c.error(`Error running validator ${validator.name()}: ${errorMessage}`);
+                // In case of an error, we log it and return null so it doesn't appear in the final results.
                 return null;
             }
         });
         const results = await Promise.all(validationPromises);
+        // Filter out the null results (from erroring or empty-report validators).
         return results.filter((result) => result !== null);
     }
 }
@@ -5770,6 +5877,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ValidatorFactory = void 0;
 const OciSyntaxValidator_1 = __nccwpck_require__(6850);
 const OciCisBenchmarkValidator_1 = __nccwpck_require__(1122);
+const AgenticOciCisBenchmarkValidator_1 = __nccwpck_require__(6541);
 const ValidationPipeline_1 = __nccwpck_require__(3220);
 /**
  * Factory for creating validator instances based on validation type
@@ -5848,10 +5956,16 @@ class ValidatorFactory {
      * @param options Optional configuration options for global validators
      * @returns A configured ValidationPipeline instance with global validators
      */
-    static createGlobalPipeline(logger, options = {}) {
+    static createGlobalPipeline(logger, options) {
+        var _a;
         const pipeline = new ValidationPipeline_1.ValidationPipeline(logger);
-        const validators = ValidatorFactory.createGlobalValidators(options, logger);
-        validators.forEach(validator => pipeline.addValidator(validator));
+        // The standard, rule-based validator always runs first.
+        pipeline.addValidator(new OciCisBenchmarkValidator_1.OciCisBenchmarkValidator());
+        // Conditionally add the agentic validator if enabled.
+        if ((_a = options.agenticValidation) === null || _a === void 0 ? void 0 : _a.enabled) {
+            logger.info('Agentic validation is enabled. Adding agentic validator to the pipeline.');
+            pipeline.addValidator(new AgenticOciCisBenchmarkValidator_1.AgenticOciCisBenchmarkValidator(logger));
+        }
         return pipeline;
     }
 }
@@ -5870,8 +5984,6 @@ exports.validateServiceLevelAdmins = validateServiceLevelAdmins;
 exports.validateTenancyAdminRestriction = validateTenancyAdminRestriction;
 exports.validateAdminGroupRestrictions = validateAdminGroupRestrictions;
 exports.validateCompartmentLevelAdmins = validateCompartmentLevelAdmins;
-exports.validateMfaEnforcement = validateMfaEnforcement;
-exports.validateNsgRestrictions = validateNsgRestrictions;
 const PolicyValidator_1 = __nccwpck_require__(8382);
 /**
  * Creates a ValidationReport for a given CIS check.
@@ -5957,42 +6069,6 @@ function validateCompartmentLevelAdmins(results, options) {
             severity: 'info'
         }] : [];
     return createReport('CIS-OCI-1.5', 'Compartment-level Admins', 'Ensure compartment level admins are used to manage resources in compartments', issues, options);
-}
-/**
- * CIS-OCI-1.13: Validates that MFA is enforced on policies managing sensitive resources.
- */
-function validateMfaEnforcement(statements, results, options) {
-    const securityPolicies = statements.filter(p => {
-        const lower = p.toLowerCase();
-        return lower.includes('manage') && (lower.includes('security-family') ||
-            lower.includes('keys') ||
-            lower.includes('certificates') ||
-            lower.includes('vault'));
-    });
-    const unprotectedSecurityPolicies = securityPolicies.filter(p => !results.mfaPolicies.includes(p));
-    const issues = unprotectedSecurityPolicies.map(policy => ({
-        checkId: 'CIS-OCI-1.13',
-        statement: policy,
-        message: 'A policy managing sensitive security resources does not enforce MFA.',
-        recommendation: 'Add a "where request.user.mfachallenged == \'true\'" clause to the policy.',
-        severity: 'warning'
-    }));
-    return createReport('CIS-OCI-1.13', 'MFA Enforcement', 'Ensure multi-factor authentication is enforced for all users with console access', issues, options);
-}
-/**
- * CIS-OCI-5.2: Validates that policies managing Network Security Groups have restrictions.
- */
-function validateNsgRestrictions(statements, results, options) {
-    const nsgPolicies = statements.filter(p => p.toLowerCase().includes('network-security-group'));
-    const unrestrictedNsgPolicies = nsgPolicies.filter(p => !p.toLowerCase().includes('where'));
-    const issues = unrestrictedNsgPolicies.length > 0 ? [{
-            checkId: 'CIS-OCI-5.2',
-            statement: unrestrictedNsgPolicies.join('\n'),
-            message: 'Policies managing Network Security Groups lack restrictive "where" clauses.',
-            recommendation: 'Add conditions to NSG management policies to limit which resources can be managed or by whom.',
-            severity: 'warning'
-        }] : [];
-    return createReport('CIS-OCI-5.2', 'Network Security Groups', 'Ensure security lists/NSGs are properly configured to restrict access', issues, options);
 }
 
 

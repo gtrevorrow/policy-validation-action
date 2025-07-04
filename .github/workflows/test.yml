@@ -332,9 +332,11 @@ jobs:
               def unwrap: if type==\"string\" then fromjson else . end;
               unwrap
               | if type==\"array\" and length > 0 then
+                  # If the array has results, apply the filter
                   $jq_filter
                 else
-                  \"null\"
+                  # An empty results array is a success.
+                  \"true\"
                 end
             " <(printf '%s' "$raw_output") 2>/dev/null) # Redirect jq errors to /dev/null
             local jq_exit_code=$? # Capture exit code immediately

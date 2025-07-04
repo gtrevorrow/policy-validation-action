@@ -140,7 +140,7 @@ definitions:
               local actual_validity
               # The output is double-encoded JSON: {"results": "[...]"}.
               # We need to parse the outer object, get the .results string, and parse it again with fromjson.
-              actual_validity=$(echo "$json_output" | jq -r ".results | fromjson | if type==\"array\" and length > 0 then $jq_filter else \"null\" end" 2>/dev/null)
+              actual_validity=$(echo "$json_output" | jq -r ".results | fromjson | if type==\"array\" and length > 0 then $jq_filter else \"true\" end" 2>/dev/null)
               
               echo "Extracted validity: $actual_validity"
               

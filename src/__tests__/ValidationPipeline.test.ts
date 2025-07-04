@@ -1,5 +1,6 @@
 import { ValidationPipeline } from '../validators/ValidationPipeline';
-import { PolicyValidator, ValidationCheck, ValidationReport, ValidationOptions, shouldPass } from '../validators/PolicyValidator';
+import { PolicyValidator, ValidationCheck, ValidationReport, shouldPass } from '../validators/PolicyValidator';
+import { ValidationOptions } from '../types';
 import { mockLogger } from './fixtures/test-utils';
 
 /**

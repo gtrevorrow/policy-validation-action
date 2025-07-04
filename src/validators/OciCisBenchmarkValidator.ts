@@ -1,10 +1,9 @@
 import { CharStreams, CommonTokenStream, ParseTreeWalker } from 'antlr4';
-import { Logger } from '../types';
+import { Logger,ValidationOptions } from '../types';
 import { 
   PolicyValidator, 
   ValidationCheck, 
   ValidationReport, 
-  ValidationOptions
 } from './PolicyValidator';
 import PolicyLexer from '../generated/PolicyLexer';
 import PolicyParser from '../generated/PolicyParser';
@@ -14,8 +13,6 @@ import {
   validateTenancyAdminRestriction,
   validateAdminGroupRestrictions,
   validateCompartmentLevelAdmins,
-  validateMfaEnforcement,
-  validateNsgRestrictions
 } from './cis/CisValidationFunctions';
 
 /**
@@ -44,16 +41,6 @@ export class OciCisBenchmarkValidator implements PolicyValidator {
       id: 'CIS-OCI-1.5',
       name: 'Compartment-level Admins',
       description: 'Ensure compartment level admins are used to manage resources in compartments'
-    },
-    {
-      id: 'CIS-OCI-1.13',
-      name: 'MFA Enforcement',
-      description: 'Ensure multi-factor authentication is enforced for all users with console access'
-    },
-    {
-      id: 'CIS-OCI-5.2',
-      name: 'Network Security Groups',
-      description: 'Ensure security lists/NSGs are properly configured to restrict access'
     }
   ];
   
@@ -73,26 +60,31 @@ export class OciCisBenchmarkValidator implements PolicyValidator {
     return this.cisChecks;
   }
   
-  async validate(statements: string[], options: ValidationOptions = {}): Promise<ValidationReport[]> {
-    this.logger?.debug(`Validating ${statements.length} policy statements against OCI CIS Benchmark`);
-    
-    if (statements.length === 0) {
-      this.logger?.info('No policy statements to validate');
-      return [];
+  public async validate(
+    statements: string[],
+    options: ValidationOptions = {},
+  ): Promise<ValidationReport[]> {
+    // Filter out policies with variables, as they will be handled by the agentic validator.
+    const applicableStatements = statements.filter(
+      s => s && !s.includes('${var.'),
+    );
+
+    if (applicableStatements.length === 0) {
+      return []; // Nothing for this validator to do.
     }
     
+    this.logger?.debug(`Validating ${applicableStatements.length} policy statements against OCI CIS Benchmark`);
+    
     try {
-      // Parse statements and collect findings
-      const results = this.analyzePolicy(statements);
+      // Use the ANTLR listener to analyze all applicable statements and gather findings.
+      const results = this.analyzePolicy(applicableStatements);
       
-      // Generate validation reports for each CIS check
+      // Call each specific CIS validation function with the listener's results.
       const reports: ValidationReport[] = [
         validateServiceLevelAdmins(results, options),
-        validateTenancyAdminRestriction(statements, results, options),
-        validateAdminGroupRestrictions(statements, results, options),
+        validateTenancyAdminRestriction(applicableStatements, results, options),
+        validateAdminGroupRestrictions(applicableStatements, results, options),
         validateCompartmentLevelAdmins(results, options),
-        validateMfaEnforcement(statements, results, options),
-        validateNsgRestrictions(statements, results, options)
       ];
       
       return reports;

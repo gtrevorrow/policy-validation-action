@@ -1,5 +1,5 @@
-import { Logger } from '../types';
-import { PolicyValidator, ValidationReport, ValidationOptions } from './PolicyValidator';
+import { Logger, ValidationOptions } from '../types';
+import { PolicyValidator, ValidationReport } from './PolicyValidator';
 
 export interface ValidationPipelineResult {
   validatorName: string;
@@ -36,39 +36,55 @@ export class ValidationPipeline {
   /**
    * Run all validators in the pipeline on the given statements
    */
-  async validate(statements: string[], options?: ValidationOptions): Promise<ValidationPipelineResult[]> {
-    this.logger?.info(`Running validation pipeline with ${this.validators.length} validators`);
-    
+  async validate(
+    statements: string[],
+    options?: ValidationOptions,
+  ): Promise<ValidationPipelineResult[]> {
+    this.logger?.info(
+      `Running validation pipeline with ${this.validators.length} validators`,
+    );
+
     // Return early if no statements to validate
     if (statements.length === 0) {
-        return [];
+      return [];
     }
-    
-    const validationPromises = this.validators.map(async (validator): Promise<ValidationPipelineResult | null> => {
-      try {
-        this.logger?.debug(`Running validator: ${validator.name()}`);
-        const reports = await validator.validate(statements, options);
-        
-        // Log summary of findings
-        const failedChecks = reports.filter(report => !report.passed).length;
-        const totalChecks = reports.length;
-        const issuesCount = reports.reduce((sum, report) => sum + report.issues.length, 0);
-        
-        this.logger?.info(`Validator ${validator.name()} completed: ${totalChecks - failedChecks}/${totalChecks} checks passed, ${issuesCount} issues found`);
 
-        return {
-          validatorName: validator.name(),
-          validatorDescription: validator.description(),
-          reports
-        };
+    const validationPromises = this.validators.map(async validator => {
+      this.logger?.debug(`Running validator: ${validator.name()}`);
+      try {
+        const reports = await validator.validate(statements, options);
+        const issuesFound = reports.reduce(
+          (acc, report) => acc + report.issues.length,
+          0,
+        );
+        const checksPassed = reports.filter(r => r.passed).length;
+        this.logger?.info(
+          `Validator ${validator.name()} completed: ${checksPassed}/${
+            reports.length
+          } checks passed, ${issuesFound} issues found`,
+        );
+
+        // Only return a result if the validator produced one or more reports.
+        if (reports.length > 0) {
+          return {
+            validatorName: validator.name(),
+            validatorDescription: validator.description(),
+            reports: reports,
+          };
+        }
+        return null; // Return null if there are no reports to filter out later.
       } catch (error) {
-        this.logger?.error(`Error running validator ${validator.name()}: ${error instanceof Error ? error.message : error}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger?.error(`Error running validator ${validator.name()}: ${errorMessage}`);
+        // In case of an error, we log it and return null so it doesn't appear in the final results.
         return null;
       }
     });
-    
+
     const results = await Promise.all(validationPromises);
-    
-    return results.filter((result): result is ValidationPipelineResult => result !== null);
+    // Filter out the null results (from erroring or empty-report validators).
+    return results.filter(
+      (result): result is ValidationPipelineResult => result !== null,
+    );
   }
 }

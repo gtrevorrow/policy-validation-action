@@ -1,6 +1,9 @@
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
 import { ValidatorFactory } from '../validators/ValidatorFactory';
 import { mockLogger } from './fixtures/test-utils';
+import { OciCisBenchmarkValidator } from '../validators/OciCisBenchmarkValidator';
+import { ValidationPipeline } from '../validators/ValidationPipeline';
+import { ValidationOptions } from '../types';
 
 /**
  * Integration tests for the complete policy validation workflow.
@@ -217,6 +220,33 @@ describe('Policy Validation Integration', () => {
             const globalResults = await globalPipeline.validate(policies);
             expect(globalResults).toHaveLength(1);
             expect(globalResults[0].validatorName).toBe('OCI CIS Benchmark Validator');
+        });
+
+        it('should use the agentic validator for policies with variables in a hybrid pipeline', async () => {
+            // Arrange: A policy with a variable that the standard validator should skip.
+            const policiesWithVars = ['Allow group ${var.admin_group} to manage all-resources in tenancy'];
+            const options: ValidationOptions = {
+                agenticValidation: { enabled: true, provider: 'openai', apiKey: 'test-key' }
+            };
+
+            // Act: Create a global pipeline with agentic validation enabled.
+            const hybridPipeline = ValidatorFactory.createGlobalPipeline(mockLogger, options);
+            const results = await hybridPipeline.validate(policiesWithVars);
+
+            // Assert: The results should come from the Agentic Validator.
+            // The standard validator will run but return no reports.
+            // The agentic validator will run and return one report.
+            expect(results).toHaveLength(1);
+            const agenticResult = results[0];
+            expect(agenticResult.validatorName).toBe('Agentic CIS Benchmark Validator');
+            
+            // The agentic validator produces one report.
+            expect(agenticResult.reports).toHaveLength(1);
+            const agenticReport = agenticResult.reports[0];
+            expect(agenticReport.passed).toBe(false);
+            expect(agenticReport.issues).toHaveLength(1);
+            expect(agenticReport.issues[0].message).toContain('requires manual review');
+            expect(agenticReport.issues[0].severity).toBe('warning');
         });
     });
 });

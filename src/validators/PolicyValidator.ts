@@ -1,4 +1,4 @@
-import { Logger } from '../types';
+import { Logger, ValidationOptions } from '../types';
 
 export interface ValidationCheck {
   id: string;
@@ -12,10 +12,6 @@ export interface ValidationIssue {
   message: string;
   recommendation?: string;
   severity: 'info' | 'warning' | 'error';
-}
-
-export interface ValidationOptions {
-  treatWarningsAsFailures?: boolean; // Default: false
 }
 
 export interface GlobalValidatorOptions {

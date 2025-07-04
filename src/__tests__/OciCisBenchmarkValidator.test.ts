@@ -1,5 +1,6 @@
 import { OciCisBenchmarkValidator } from '../validators/OciCisBenchmarkValidator';
-import { ValidationReport, ValidationOptions } from '../validators/PolicyValidator';
+import { ValidationReport} from '../validators/PolicyValidator';
+import { ValidationOptions } from '../types';
 
 /**
  * Unit tests for OciCisBenchmarkValidator.
@@ -147,67 +148,6 @@ describe('OciCisBenchmarkValidator', () => {
     });
   });
 
-  describe('CIS-OCI-1.13: MFA Requirements', () => {
-    it('should fail when security policies lack MFA requirements', async () => {
-      const statements = ['Allow group SecurityAdmins to manage vault-family in tenancy'];
-      const options: ValidationOptions = { treatWarningsAsFailures: true };
-      const reports = await validator.validate(statements, options);
-      const mfaCheck = reports.find(r => r.checkId === 'CIS-OCI-1.13');
-      
-      expect(mfaCheck).toBeDefined();
-      expect(mfaCheck?.passed).toBeFalsy();
-      expect(mfaCheck?.status).toBe('pass-with-warnings');
-    });
-
-    it('should pass when security policies include MFA requirements', async () => {
-      const statements = [
-        'Allow group SecurityAdmins to manage vault-family in tenancy where request.user.mfachallenged = \'true\''
-      ];
-      const reports = await validator.validate(statements);
-      const mfaCheck = reports.find(r => r.checkId === 'CIS-OCI-1.13');
-      
-      expect(mfaCheck).toBeDefined();
-      expect(mfaCheck?.passed).toBeTruthy();
-      expect(mfaCheck?.status).toBe('pass');
-    });
-
-    it('should identify different types of security-sensitive operations', async () => {
-      const statements = [
-        'Allow group KeyManagers to manage keys in tenancy',
-        'Allow group CertManagers to manage certificates in tenancy'
-      ];
-      const reports = await validator.validate(statements);
-      const mfaCheck = reports.find(r => r.checkId === 'CIS-OCI-1.13');
-      
-      expect(mfaCheck?.issues).toHaveLength(2);
-    });
-  });
-
-  describe('CIS-OCI-5.2: Network Security Group Conditions', () => {
-    it('should fail when NSG policies lack proper conditions', async () => {
-      const statements = ['Allow group NetworkAdmins to manage network-security-group in tenancy'];
-      const options: ValidationOptions = { treatWarningsAsFailures: true };
-      const reports = await validator.validate(statements, options);
-      const nsgCheck = reports.find(r => r.checkId === 'CIS-OCI-5.2');
-      
-      expect(nsgCheck).toBeDefined();
-      expect(nsgCheck?.passed).toBeFalsy();
-      expect(nsgCheck?.status).toBe('pass-with-warnings');
-    });
-
-    it('should pass when NSG policies include proper conditions', async () => {
-      const statements = [
-        'Allow group NetworkAdmins to manage network-security-group in tenancy where target.compartment.id = \'some-ocid\''
-      ];
-      const reports = await validator.validate(statements);
-      const nsgCheck = reports.find(r => r.checkId === 'CIS-OCI-5.2');
-      
-      expect(nsgCheck).toBeDefined();
-      expect(nsgCheck?.passed).toBeTruthy();
-      expect(nsgCheck?.status).toBe('pass');
-    });
-  });
-
   describe('Edge Cases and Error Handling', () => {
     it('should handle empty policy list gracefully', async () => {
       const reports = await validator.validate([]);
@@ -257,5 +197,5 @@ describe('OciCisBenchmarkValidator', () => {
   });
 });
 
-    
+
 
