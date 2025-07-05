@@ -48,7 +48,8 @@ To enable the AI-powered agentic validator, you need to provide additional confi
   with:
     # ... other options
     agentic-validation-enabled: 'true'
-    agentic-validation-provider: 'google' # or 'openai', 'anthropic', etc.
+    agentic-validation-provider: 'google' # or 'openai', 'anthropic', 'grok', etc.
+    agentic-validation-model: 'Gemini 2.5 pro' # Specify the model to use
     agentic-validation-api-key: ${{ secrets.GOOGLE_API_KEY }}
 ```
 
@@ -56,11 +57,16 @@ To enable the AI-powered agentic validator, you need to provide additional confi
 
 ```bash
 # Using command-line arguments
-policy-validation-action validate ./policies --agentic-validation-enabled=true --agentic-validation-provider=openai --agentic-validation-api-key="sk-..."
+policy-validation-action validate ./policies \
+  --agentic-validation-enabled=true \
+  --agentic-validation-provider=google \
+  --agentic-validation-model="Gemini 2.5 pro" \
+  --agentic-validation-api-key="sk-..."
 
 # Using environment variables
 export POLICY_AGENTIC_VALIDATION_ENABLED=true
-export POLICY_AGENTIC_VALIDATION_PROVIDER=openai
+export POLICY_AGENTIC_VALIDATION_PROVIDER=google
+export POLICY_AGENTIC_VALIDATION_MODEL="Gemini 2.5 pro"
 export POLICY_AGENTIC_VALIDATION_API_KEY="sk-..."
 policy-validation-action validate ./policies
 ```

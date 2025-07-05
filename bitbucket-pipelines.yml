@@ -93,6 +93,15 @@ definitions:
               ]
             }
             EOL
+
+            # Test file for agentic validator with variable-based violations
+            cat > test/policies/agentic_test.tf << 'EOL'
+            resource "oci_identity_policy" "agentic_test" {
+              statements = [
+                "Allow group ${var.dangerous_group} to manage all-resources in tenancy"
+              ]
+            }
+            EOL
             echo "Test policy files created."
 
           # Run integration tests by executing the compiled action script
@@ -165,6 +174,10 @@ definitions:
             verify_output "test-custom-pattern" "true" "strict" "VALIDATE_GLOBAL=true node dist/index.js validate test/policies/valid.tf --extractor regex --pattern 'statements\s*=\s*\[(.*?)\]'" || errors=$((errors + 1))
             verify_output "test-custom-pattern-env-var" "true" "strict" "POLICY_STATEMENTS_PATTERN=\"statements\\\\s*=\\\\s*\\\\[(.*?)\\\\]\" VALIDATE_GLOBAL=true node dist/index.js validate test/policies/valid.tf --extractor regex" || errors=$((errors + 1))
             
+            # Agentic and Real-World tests (API key should be a repository variable)
+            verify_output "test-agentic" "false" "warnings" "node dist/index.js validate test/policies/agentic_test.tf --agentic-validation-enabled=true --agentic-validation-provider=google --agentic-validation-model='Gemini 2.5 pro' --agentic-validation-api-key='$GOOGLE_API_KEY'" || errors=$((errors + 1))
+            verify_output "test-real-world" "false" "strict" "node dist/index.js validate test/policies --validators-global=true --agentic-validation-enabled=true --agentic-validation-provider=google --agentic-validation-model='Gemini 2.5 pro' --agentic-validation-api-key='$GOOGLE_API_KEY' --extractor=regex --pattern=\"statements\\\\s*=\\\\s*\\\\[\\\\s*((?:[^[\\]]*?(?:\\\"(?:[^\\\"\\\\]|\\\\\\\\.)*\\\"|'(?:[^'\\\\]|\\\\\\\\.)*'|\\\\\\\\$\\\\{(?:[^{}]|\\\\{[^{}]*\\\\})*\\\\})?)*)\\\\s*\\\\]\"" || errors=$((errors + 1))
+
             if [ $errors -gt 0 ]; then
               echo "::error::$errors integration verification(s) failed."
               exit 1

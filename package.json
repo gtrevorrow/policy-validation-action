@@ -114,6 +114,10 @@
         "section": "Maintenance"
       },
       {
+        "type": "ci",
+        "section": "Continuous Integration"
+      },
+      {
         "type": "docs",
         "section": "Documentation"
       },
