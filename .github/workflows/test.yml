@@ -296,8 +296,9 @@ jobs:
         with:
           path: './test/policies/agentic_test.tf'
           agentic-validation-enabled: 'true'
-          agentic-validation-provider: 'openai' # This will be mocked by tests
-          agentic-validation-api-key: 'dummy-key'
+          agentic-validation-provider: 'google' # This will be mocked by tests
+          agentic-validation-model: 'Gemini 2.5 pro'
+          agentic-validation-api-key: ${{ secrets.GOOGLE_API_KEY }}
         env:
           GITHUB_ACTIONS: true
 
@@ -310,6 +311,32 @@ jobs:
             const output = ${{ toJSON(steps.test-agentic.outputs.results) }};
             core.info(`Debug output for test-agentic:\n${output}`);
             fs.writeFileSync('/tmp/test-agentic-output.json', output);
+
+      - name: Test Real World Scenario (All Validators)
+        id: test-real-world
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './src/__tests__/fixtures'
+          extractor: 'regex'
+          pattern: "statements\\s*=\\s*\\[\\s*((?:[^[\\]]*?(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\.)*'|\\$\\{(?:[^{}]|\\{[^{}]*\\})*\\})?)*)\\s*\\]"
+          validators-global: 'true'
+          agentic-validation-enabled: 'true'
+          agentic-validation-provider: 'google' # This will be mocked by tests
+          agentic-validation-model: 'Gemini 2.5 pro'
+          agentic-validation-api-key: ${{ secrets.GOOGLE_API_KEY }}
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Save test-real-world output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const output = ${{ toJSON(steps.test-real-world.outputs.results) }};
+            core.info(`Debug output for test-real-world:\n${output}`);
+            fs.writeFileSync('/tmp/test-real-world-output.json', output);
 
       - name: Verify test results
         if: always() # Ensure verification runs even if tests failed
@@ -435,6 +462,10 @@ jobs:
           # The agentic validator should fail this due to the dangerous variable.
           # We expect a warning, which we treat as a failure in this test.
           verify_output "test-agentic" "false" "warnings"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
+          # The real-world test should fail because fixtures contain invalid policies.
+          verify_output "test-real-world" "false"
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
           # --- Final Check ---

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger, PolicyError, PlatformOperations, ValidationOptions } from './types';
+import { Logger, PlatformOperations, ValidationOptions } from './types';
 import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
 import { ValidationPipeline } from './validators/ValidationPipeline';
 import { FileValidationResult } from './types';

@@ -48,8 +48,8 @@ To enable the AI-powered agentic validator, you need to provide additional confi
   with:
     # ... other options
     agentic-validation-enabled: 'true'
-    agentic-validation-provider: 'openai' # or 'anthropic', etc.
-    agentic-validation-api-key: ${{ secrets.OPENAI_API_KEY }}
+    agentic-validation-provider: 'google' # or 'openai', 'anthropic', etc.
+    agentic-validation-api-key: ${{ secrets.GOOGLE_API_KEY }}
 ```
 
 **CLI / Environment Variables:**
@@ -334,3 +334,14 @@ program
     - The `AgenticOciCisBenchmarkValidator` runs on all policies *with* variables.
     - This division of labor ensures that both static and dynamic policies are validated by the most appropriate engine.
 - **Empty Pipelines**: If a pipeline has no validators configured, it won't run, ensuring optimal performance.
+
+## Note on Regex Patterns
+
+For users implementing custom regex patterns for policy validation, it's important to understand the difference between the default and advanced regex patterns:
+
+- **Default Regex Patterns**: These are predefined patterns included with the `RegexPolicyValidator`. They cover common policy issues and are ready to use out of the box.
+- **Advanced Regex Patterns**: These allow users to define custom patterns tailored to their specific policy requirements. This is useful for complex HCL files or unique organizational policies.
+
+### Recommendation
+
+For most users, the default regex patterns will be sufficient. However, for organizations with specific compliance requirements or complex policy structures, utilizing advanced regex patterns provides greater flexibility and control over policy validation.
