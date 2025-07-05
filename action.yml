@@ -40,6 +40,9 @@ inputs:
   agentic-validation-api-key:
     description: 'API key for the LLM provider.'
     required: false
+  agentic-validation-model:
+    description: 'Specify the model to use for the selected provider (e.g., gpt-4o).'
+    required: false
 outputs:
   results:
     description: 'Validation results in JSON format'

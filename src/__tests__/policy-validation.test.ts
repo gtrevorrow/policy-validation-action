@@ -1,9 +1,7 @@
 import { ExtractorFactory } from '../extractors/ExtractorFactory';
 import { ValidatorFactory } from '../validators/ValidatorFactory';
 import { mockLogger } from './fixtures/test-utils';
-import { OciCisBenchmarkValidator } from '../validators/OciCisBenchmarkValidator';
-import { ValidationPipeline } from '../validators/ValidationPipeline';
-import { ValidationOptions } from '../types';
+import { LlmService } from '../llm/LlmService';
 
 /**
  * Integration tests for the complete policy validation workflow.
@@ -222,31 +220,160 @@ describe('Policy Validation Integration', () => {
             expect(globalResults[0].validatorName).toBe('OCI CIS Benchmark Validator');
         });
 
-        it('should use the agentic validator for policies with variables in a hybrid pipeline', async () => {
-            // Arrange: A policy with a variable that the standard validator should skip.
+        it('should use agentic validator via factory for policies with variables', async () => {
+            jest.resetModules();
+            const mockValidate = jest.fn().mockResolvedValue([
+              { policyIndex: 0, passed: false, severity: 'warning', reason: 'Mocked' },
+            ]);
+            jest.doMock('../llm/LlmService', () => ({
+              LlmService: jest.fn().mockImplementation(() => ({ validate: mockValidate })),
+            }));
+    
+            const { ValidatorFactory } = require('../validators/ValidatorFactory');
+            const { mockLogger } = require('./fixtures/test-utils');
+            const { ValidationOptions } = require('../types');
+
             const policiesWithVars = ['Allow group ${var.admin_group} to manage all-resources in tenancy'];
-            const options: ValidationOptions = {
+            const options: typeof ValidationOptions = {
                 agenticValidation: { enabled: true, provider: 'openai', apiKey: 'test-key' }
             };
 
-            // Act: Create a global pipeline with agentic validation enabled.
             const hybridPipeline = ValidatorFactory.createGlobalPipeline(mockLogger, options);
-            const results = await hybridPipeline.validate(policiesWithVars);
+            const results = await hybridPipeline.validate(policiesWithVars, options);
 
-            // Assert: The results should come from the Agentic Validator.
-            // The standard validator will run but return no reports.
-            // The agentic validator will run and return one report.
             expect(results).toHaveLength(1);
             const agenticResult = results[0];
             expect(agenticResult.validatorName).toBe('Agentic CIS Benchmark Validator');
-            
-            // The agentic validator produces one report.
-            expect(agenticResult.reports).toHaveLength(1);
-            const agenticReport = agenticResult.reports[0];
-            expect(agenticReport.passed).toBe(false);
-            expect(agenticReport.issues).toHaveLength(1);
-            expect(agenticReport.issues[0].message).toContain('requires manual review');
-            expect(agenticReport.issues[0].severity).toBe('warning');
+            expect(agenticResult.reports[0].passed).toBe(false);
+            expect(agenticResult.reports[0].issues[0].severity).toBe('warning');
+            expect(mockValidate).toHaveBeenCalledTimes(1);
         });
-    });
+
+        it('should run a hybrid pipeline with both standard and agentic validators', async () => {
+            jest.resetModules();
+            const mockValidate = jest.fn().mockResolvedValue([
+              {
+                policyIndex: 0,
+                passed: false,
+                severity: 'warning',
+                reason: 'Mocked agentic response: Variable requires review.',
+              },
+            ]);
+            jest.doMock('../llm/LlmService', () => ({
+              LlmService: jest.fn().mockImplementation(() => ({ validate: mockValidate })),
+            }));
+
+            const { ValidationPipeline } = require('../validators/ValidationPipeline');
+            const { OciCisBenchmarkValidator } = require('../validators/OciCisBenchmarkValidator');
+            const { AgenticOciCisBenchmarkValidator } = require('../validators/AgenticOciCisBenchmarkValidator');
+            const { mockLogger } = require('./fixtures/test-utils');
+            const { ValidationOptions } = require('../types');
+
+            const statements = [
+              // This WILL violate CIS-OCI-1.2 (non-admin group with broad permissions)
+              'Allow group Developers to manage all-resources in tenancy', 
+              'Allow group ${var.db_group} to manage database-family in compartment Prod',
+            ];
+
+            const options: typeof ValidationOptions = {
+              agenticValidation: {
+                enabled: true,
+                provider: 'openai',
+                apiKey: 'test-key',
+              },
+            };
+
+            const pipeline = new ValidationPipeline(mockLogger);
+            pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
+            pipeline.addValidator(
+              new AgenticOciCisBenchmarkValidator(mockLogger),
+            );
+
+            const results = await pipeline.validate(statements, options);
+
+            expect(results).toHaveLength(2);
+
+            const cisResult = results.find(
+              (r: { validatorName: string; }) => r.validatorName === 'OCI CIS Benchmark Validator',
+            );
+            const agenticResult = results.find(
+              (r: { validatorName: string; }) => r.validatorName === 'Agentic CIS Benchmark Validator',
+            );
+
+            expect(cisResult).toBeDefined();
+            
+            // Find the specific CIS-OCI-1.2 report 
+            const cisOci12Report = cisResult!.reports.find((report: { checkId: string }) => report.checkId === 'CIS-OCI-1.2');
+            expect(cisOci12Report).toBeDefined();
+            expect(cisOci12Report!.passed).toBe(false);
+            expect(cisOci12Report!.issues[0].checkId).toBe('CIS-OCI-1.2');
+
+            expect(agenticResult).toBeDefined();
+            expect(agenticResult!.reports[0].passed).toBe(false);
+            expect(agenticResult!.reports[0].issues[0].severity).toBe('warning');
+            expect(mockValidate).toHaveBeenCalledTimes(1);
+        });
+
+        it('should handle hybrid policies (static and variable-based) with the agentic validator', async () => {
+            // Spy on LlmService.validate to mock the LLM call without resetting all modules.
+            // This is a more stable approach than jest.doMock().
+            const mockLlmValidate = jest
+              .spyOn(LlmService.prototype, 'validate')
+              .mockResolvedValue([
+                {
+                  policyIndex: 0, // The LLM only sees the policy with the variable.
+                  passed: false,
+                  severity: 'warning',
+                  reason: 'Mocked agentic response: Variable requires review.',
+                },
+              ]);
+      
+            const {
+              AgenticOciCisBenchmarkValidator,
+            } = require('../validators/AgenticOciCisBenchmarkValidator');
+            const { ValidationPipeline } = require('../validators/ValidationPipeline');
+            const { ValidationOptions } = require('../types');
+      
+            const statements = [
+              'Allow group Developers to manage all-resources in tenancy', // This WILL violate CIS-OCI-1.2
+              'Allow group ${var.db_group} to manage database-family in compartment Prod', // Variable policy for the LLM
+            ];
+      
+            const options: typeof ValidationOptions = {
+              agenticValidation: {
+                enabled: true,
+                provider: 'openai',
+                apiKey: 'test-key',
+              },
+            };
+      
+            // A correct hybrid pipeline contains ONLY the agentic validator.
+            const pipeline = new ValidationPipeline(mockLogger);
+            pipeline.addValidator(new AgenticOciCisBenchmarkValidator(mockLogger));
+      
+            const results = await pipeline.validate(statements, options);
+      
+            // The pipeline ran one validator, so it should produce one result object.
+            expect(results).toHaveLength(1);
+            const agenticResult = results[0];
+            expect(agenticResult.validatorName).toBe(
+              'Agentic CIS Benchmark Validator',
+            );
+      
+            // The overall result for this validator should be 'false' because issues were found.
+            expect(agenticResult.reports[0].passed).toBe(false);
+            // The agentic validator should find at least one issue (from the LLM analysis)
+            expect(agenticResult.reports[0].issues.length).toBeGreaterThanOrEqual(1);
+      
+            // Find and verify the issue from the mocked LLM response.
+            const llmIssue = agenticResult.reports[0].issues.find(
+              (i: { severity: string }) => i.severity === 'warning',
+            );
+            expect(llmIssue).toBeDefined();
+            expect(llmIssue?.message).toContain('Mocked agentic response');
+      
+            // Clean up the spy to avoid affecting other tests.
+            mockLlmValidate.mockRestore();
+          });
+  });
 });

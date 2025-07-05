@@ -59,3 +59,11 @@ junit.xml
 # Package manager lockfiles (optional - some prefer to commit these)
 # package-lock.json
 # yarn.lock
+test-results/junit.xml
+docs/LMMinput.txt
+.github/instructions/general.instructions.md
+.gitignore
+.github/instructions/typescript.instructions.md
+test-results/junit.xml
+docs/fine-tuning-open-source-models.md
+docs/fine-tuning-open-source-models.md

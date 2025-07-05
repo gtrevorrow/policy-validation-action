@@ -62,6 +62,16 @@ export interface ValidatorConfig {
 }
 
 /**
+ * Defines the complete set of options for agentic validation.
+ */
+export interface AgenticValidationOptions {
+  enabled: boolean;
+  provider: string;
+  apiKey: string;
+  model?: string;
+}
+
+/**
  * Options for policy validation
  */
 export interface ValidationOptions {
@@ -74,11 +84,7 @@ export interface ValidationOptions {
   fileNames?: string[];
   exitOnError?: boolean;
   validatorConfig?: ValidatorConfig;
-  agenticValidation?: {
-    enabled: boolean;
-    provider: 'openai' | 'anthropic' | string; // Allow other providers
-    apiKey?: string;
-  };
+  agenticValidation?: AgenticValidationOptions;
 }
 
 /**

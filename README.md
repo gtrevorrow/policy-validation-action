@@ -57,6 +57,8 @@ This tool validates OCI IAM policy statements ensuring that the policies adhere 
 
 - Node.js 18 or higher.
 
+> **Important Note on Dependencies**: This action follows modern GitHub Actions best practices by **NOT** committing `node_modules` to the repository. Instead, dependencies are installed at runtime using `npm ci` for faster, more secure, and more maintainable deployments. All CI/CD platforms (GitHub Actions, GitLab CI, BitBucket Pipelines) are configured to automatically install dependencies during the build process.
+
 ## CLI 
 
 The CLI tool provides validation for OCI policy statements:
@@ -127,6 +129,7 @@ This approach allows you to use the CLI directly from the source code without pu
 | `--agentic-validation-enabled` | | Enable the agentic (AI-powered) validator.                      | `false` |
 | `--agentic-validation-provider`| | Specify the LLM provider (e.g., 'openai').                        | `none`  |
 | `--agentic-validation-api-key` | | API key for the LLM provider.                                       | `none`  |
+| `--agentic-validation-model` | | Specify the model for the provider (e.g., 'gpt-4o').            | `none`  |
 
 
 ### Environment Variables
@@ -145,6 +148,7 @@ CLI options can also be set via environment variables. These are useful in CI/CD
 | `POLICY_AGENTIC_VALIDATION_ENABLED` | `--agentic-validation-enabled` | Enable the agentic validator. |
 | `POLICY_AGENTIC_VALIDATION_PROVIDER`| `--agentic-validation-provider`| Specify the LLM provider. |
 | `POLICY_AGENTIC_VALIDATION_API_KEY` | `--agentic-validation-api-key` | API key for the LLM provider. |
+| `POLICY_AGENTIC_VALIDATION_MODEL` | `--agentic-validation-model` | Specify the model for the provider. |
 
 ### Example with Environment Variables
 
@@ -206,6 +210,8 @@ Consumers can inspect each validator’s reports per file. Syntax failures will 
 
 ### GitHub Actions
 
+The action automatically installs dependencies at runtime, so no `node_modules` setup is required.
+
 ```yaml
 name: Validate OCI Policies
 on: [push, pull_request]
@@ -215,6 +221,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      # The action installs its own dependencies - no manual setup needed
       - name: Validate policies
         uses: gtrevorrow/policy-validation-action@v1
         with:
@@ -229,6 +237,37 @@ jobs:
           agentic-validation-enabled: 'true' # Optional: Enable the agentic validator
           agentic-validation-provider: 'openai' # Optional: Specify LLM provider
           agentic-validation-api-key: ${{ secrets.OPENAI_API_KEY }} # Optional: Pass API key
+          agentic-validation-model: 'gpt-4o' # Optional: Specify the model to use
+```
+
+#### Running Directly with Node.js Setup
+
+If you prefer to run the CLI directly in GitHub Actions:
+
+```yaml
+name: Validate OCI Policies (Direct CLI)
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build
+        run: npm run build
+        
+      - name: Validate policies
+        run: node dist/cli.js validate ./terraform --verbose
 ```
 
 #### Github Action Inputs
@@ -246,6 +285,7 @@ jobs:
 | `agentic-validation-enabled` | Enable the agentic (AI-powered) validator.                 | No       | `false` |
 | `agentic-validation-provider`| Specify the LLM provider (e.g., 'openai').                 | No       | `none`  |
 | `agentic-validation-api-key` | API key for the LLM provider.                                | No       | `none`  |
+| `agentic-validation-model` | Specify the model for the provider (e.g., 'gpt-4o').         | No       | `none`  |
 
 #### Github Action Outputs
 
@@ -255,40 +295,133 @@ jobs:
 
 ### GitLab CI example
 
+Dependencies are automatically installed at runtime for optimal performance:
+
 ```yaml
+# .gitlab-ci.yml
+image: node:18-alpine
+
+stages:
+  - validate
+
 validate_policies:
-  image: node:latest
+  stage: validate
   script:
-    - npm install -g @gtrevorrow/policy-validation-action # Install the tool globally
-    # Set environment variables
+    # Install system dependencies and the CLI tool
+    - apk add --no-cache git jq
+    - npm install -g @gtrevorrow/policy-validation-action
+    
+    # Set environment variables for configuration
     - export POLICY_PATH=./terraform
     - export POLICY_VERBOSE=true
     - export POLICY_EXTRACTOR=regex
     - export POLICY_EXIT_ON_ERROR=true
     - export POLICY_FILE_EXTENSION=.tf
+    
     # Run policy validation
     - policy-validation-action validate
+  cache:
+    paths:
+      - ~/.npm
+```
+
+#### Alternative: Using Source Code Directly
+
+```yaml
+# .gitlab-ci.yml
+image: node:18-alpine
+
+cache:
+  paths:
+    - node_modules/
+    - ~/.npm
+
+stages:
+  - install
+  - validate
+
+install_dependencies:
+  stage: install
+  script:
+    - apk add --no-cache git jq
+    - npm ci
+  artifacts:
+    paths:
+      - node_modules/
+
+validate_policies:
+  stage: validate
+  dependencies:
+    - install_dependencies
+  script:
+    - npm run build
+    - node dist/cli.js validate ./terraform --verbose
 ```
 
 ### BitBucket Pipelines example
 
+Dependencies are installed automatically for each pipeline run:
+
 ```yaml
-image: node:18
+# bitbucket-pipelines.yml
+image: node:18-alpine
 
 pipelines:
   default:
     - step:
         name: Validate Policies
+        caches:
+          - npm
         script:
-          - npm install -g @gtrevorrow/policy-validation-action # Install the tool globally
-          # Set environment variables
+          # Install system dependencies and the CLI tool
+          - apk add --no-cache git jq
+          - npm install -g @gtrevorrow/policy-validation-action
+          
+          # Set environment variables for configuration
           - export POLICY_PATH=./terraform
           - export POLICY_VERBOSE=true
           - export POLICY_EXTRACTOR=regex
           - export POLICY_EXIT_ON_ERROR=true
           - export POLICY_FILE_EXTENSION=.tf
+          
           # Run policy validation
           - policy-validation-action validate
+
+definitions:
+  caches:
+    npm: ~/.npm
+```
+
+#### Alternative: Using Source Code Directly
+
+```yaml
+# bitbucket-pipelines.yml
+image: node:18-alpine
+
+definitions:
+  caches:
+    npm: ~/.npm
+
+pipelines:
+  default:
+    - step:
+        name: Install Dependencies
+        caches:
+          - npm
+          - node
+        script:
+          - apk add --no-cache git jq
+          - npm ci
+        artifacts:
+          - node_modules/**
+          
+    - step:
+        name: Validate Policies
+        script:
+          - npm run build
+          - node dist/cli.js validate ./terraform --verbose
+        artifacts:
+          - dist/**
 ```
 
 ### Error Messages
@@ -543,6 +676,7 @@ The policy validation tool allows you to configure which validators are run duri
     validators-global: 'true'  # Enable/disable global validators (includes CIS benchmark)
     agentic-validation-enabled: 'true' # Enable the agentic validator
     agentic-validation-api-key: ${{ secrets.OPENAI_API_KEY }}
+    agentic-validation-model: 'gpt-4o'
 ```
 
 #### Environment Variables for CLI
@@ -555,7 +689,9 @@ export POLICY_VALIDATORS_LOCAL=true
 export POLICY_VALIDATORS_GLOBAL=true
 # Enable agentic validation
 export POLICY_AGENTIC_VALIDATION_ENABLED=true
+export POLICY_AGENTIC_VALIDATION_PROVIDER=openai
 export POLICY_AGENTIC_VALIDATION_API_KEY="sk-..."
+export POLICY_AGENTIC_VALIDATION_MODEL="gpt-4o"
 ```
 
 #### Validator Types

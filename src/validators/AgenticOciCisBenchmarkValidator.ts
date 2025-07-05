@@ -7,6 +7,7 @@ import {
   ValidationReport,
 } from '../types';
 import { PolicyValidator, ValidationCheck } from './PolicyValidator';
+import { LlmService } from '../llm/LlmService';
 
 /**
  * A validator that uses an LLM agent to check for CIS compliance.
@@ -63,22 +64,35 @@ export class AgenticOciCisBenchmarkValidator implements PolicyValidator {
       return [];
     }
 
+    // The agentic validator is disabled if not explicitly configured.
+    if (!options.agenticValidation?.enabled) {
+      this.logger.warn(
+        'Policies with variables found, but agentic validation is disabled. Skipping.',
+      );
+      return [];
+    }
+
     this.logger.info(
-      `Sending ${policiesWithVariables.length} policies for agentic validation.`,
+      `Sending ${policiesWithVariables.length} policies for agentic validation via ${options.agenticValidation.provider}.`,
     );
 
-    // In a real implementation, this would make an API call to an LLM.
-    // For now, we will return a mock response to demonstrate the flow.
-    const mockLlmResponses: LlmValidationResponse[] = policiesWithVariables.map(
-      (policy, index) => ({
-        policyIndex: index,
-        passed: false,
-        severity: 'warning',
-        reason: `Policy "${policy}" contains variables and requires manual review. The agent has flagged this for caution based on CIS benchmarks.`,
-      }),
-    );
-
-    return [this.parseResponse(mockLlmResponses, policiesWithVariables)];
+    try {
+      const llmService = new LlmService(options);
+      const llmResponses = await llmService.validate(
+        policiesWithVariables,
+        this.knowledgeContent,
+      );
+      return [this.parseResponse(llmResponses, policiesWithVariables)];
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Agentic validation failed: ${message}`);
+      // Return a failure report so the error is visible in the output.
+      return [
+        this.createErrorResponse(
+          `Agentic validation failed with error: ${message}`,
+        ),
+      ];
+    }
   }
 
   private parseResponse(
@@ -102,6 +116,24 @@ export class AgenticOciCisBenchmarkValidator implements PolicyValidator {
           recommendation:
             "Review the policy based on the agent's reasoning and verify variable contents.",
         })),
+    };
+  }
+
+  private createErrorResponse(errorMessage: string): ValidationReport {
+    return {
+      checkId: 'CIS-AGENTIC-1',
+      name: 'Agentic CIS Compliance Check',
+      description: 'Holistic compliance check performed by an AI agent.',
+      passed: false,
+      status: 'fail',
+      issues: [
+        {
+          checkId: 'CIS-AGENTIC-1',
+          statement: 'Pipeline Error',
+          message: errorMessage,
+          severity: 'error',
+        },
+      ],
     };
   }
 }

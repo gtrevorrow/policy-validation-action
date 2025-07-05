@@ -85,6 +85,15 @@ jobs:
             ]
           }
           EOL
+
+          # Test file for agentic validator with variable-based violations
+          cat > test/policies/agentic_test.tf << 'EOL'
+          resource "oci_identity_policy" "agentic_test" {
+            statements = [
+              "Allow group ${var.dangerous_group} to manage all-resources in tenancy"
+            ]
+          }
+          EOL
           
           # Verify files were created
           ls -la test/policies/
@@ -280,6 +289,28 @@ jobs:
             core.info(`Debug output for test-cis-violations:\n${output}`);
             fs.writeFileSync('/tmp/test-cis-violations-output.json', output);
 
+      - name: Test Agentic Validator
+        id: test-agentic
+        continue-on-error: true
+        uses: ./
+        with:
+          path: './test/policies/agentic_test.tf'
+          agentic-validation-enabled: 'true'
+          agentic-validation-provider: 'openai' # This will be mocked by tests
+          agentic-validation-api-key: 'dummy-key'
+        env:
+          GITHUB_ACTIONS: true
+
+      - name: Save test-agentic output
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const output = ${{ toJSON(steps.test-agentic.outputs.results) }};
+            core.info(`Debug output for test-agentic:\n${output}`);
+            fs.writeFileSync('/tmp/test-agentic-output.json', output);
+
       - name: Verify test results
         if: always() # Ensure verification runs even if tests failed
         shell: bash
@@ -401,6 +432,11 @@ jobs:
           verify_output "test-cis-violations" "false"
           if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
 
+          # The agentic validator should fail this due to the dangerous variable.
+          # We expect a warning, which we treat as a failure in this test.
+          verify_output "test-agentic" "false" "warnings"
+          if [ $? -ne 0 ]; then errors=$((errors + 1)); fi
+
           # --- Final Check ---
           if [ $errors -gt 0 ]; then
             echo "::error::$errors verification(s) failed."
@@ -410,7 +446,7 @@ jobs:
           fi
 
       - name: Run Jest tests # Keep Jest tests as a separate check
-        run: npm test -- --testPathIgnorePatterns=cli.test.ts
+        run: npm test
 
       - name: Verify Jest test results # Keep Jest verification
         run: |
