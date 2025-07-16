@@ -1,4 +1,6 @@
-import { Logger, ValidationOptions } from '../types';
+import { ValidationOptions } from '../types';
+
+export { ValidationOptions };
 
 export interface ValidationCheck {
   id: string;
@@ -59,6 +61,40 @@ export interface PolicyValidator {
 }
 
 /**
+ * Interface for validators that can filter statements based on their characteristics
+ * This is useful for specialized validators that only handle certain types of statements
+ */
+export interface StatementFilteringValidator extends PolicyValidator {
+  /**
+   * Determines if this validator can handle the given statement
+   * @param statement The policy statement to check
+   * @returns true if this validator should process the statement
+   */
+  canHandle(statement: string): boolean;
+}
+
+/**
+ * Detects if a statement contains HCL variables (${...})
+ */
+export function hasHclVariables(statement: string): boolean {
+  return /\$\{[^}]+\}/.test(statement);
+}
+
+/**
+ * Filters statements that contain HCL variables
+ */
+export function getStatementsWithVariables(statements: string[]): string[] {
+  return statements.filter(hasHclVariables);
+}
+
+/**
+ * Filters statements that do NOT contain HCL variables
+ */
+export function getStatementsWithoutVariables(statements: string[]): string[] {
+  return statements.filter(statement => !hasHclVariables(statement));
+}
+
+/**
  * Calculates the validation status based on the issues found
  */
 export function calculateValidationStatus(issues: ValidationIssue[]): ValidationStatus {
@@ -77,4 +113,45 @@ export function shouldPass(status: ValidationStatus, treatWarningsAsFailures: bo
   if (status === 'fail') return false;
   if (status === 'pass-with-warnings' && treatWarningsAsFailures) return false;
   return true;
+}
+
+/**
+ * Determines if validation should pass based on status, global options, and validator-specific config
+ */
+export function shouldPassWithValidatorConfig(
+  issues: ValidationIssue[], 
+  validatorName: string,
+  options: ValidationOptions = {}
+): { passed: boolean; status: ValidationStatus; issues: ValidationIssue[] } {
+  // Apply validator-specific warning level overrides first
+  const updatedIssues = applyValidatorWarningConfig(issues, validatorName, options);
+  
+  // Calculate status based on potentially updated issues
+  const status = calculateValidationStatus(updatedIssues);
+  
+  // Determine if it should pass based on treatWarningsAsFailures config
+  const validatorConfig = options.validatorWarningConfig?.[validatorName];
+  const treatWarningsAsFailures = validatorConfig?.treatWarningsAsFailures ?? options.treatWarningsAsFailures ?? false;
+  const passed = shouldPass(status, treatWarningsAsFailures);
+
+  return { passed, status, issues: updatedIssues };
+}
+
+/**
+ * Applies validator-specific warning level overrides to issues
+ */
+export function applyValidatorWarningConfig(
+  issues: ValidationIssue[],
+  validatorName: string,
+  options: ValidationOptions = {}
+): ValidationIssue[] {
+  const validatorConfig = options.validatorWarningConfig?.[validatorName];
+  if (!validatorConfig?.warningLevel) {
+    return issues;
+  }
+  
+  return issues.map(issue => ({
+    ...issue,
+    severity: issue.severity === 'warning' ? validatorConfig.warningLevel! : issue.severity
+  }));
 }

@@ -50,8 +50,8 @@ export class RegexPolicyExtractor implements PolicyExtractor {
             // Reset the regex to ensure clean state
             this.pattern.lastIndex = 0;
             
-            // Use the original simple approach for compatibility, but with a safety wrapper
-            const matches = Array.from(text.matchAll(this.pattern));
+            // Use the timeout-protected regex matching to prevent ReDoS
+            const matches = this.performRegexWithTimeout(text);
             
             if (!matches || matches.length === 0) {
                 return [];

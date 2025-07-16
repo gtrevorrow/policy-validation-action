@@ -1,9 +1,13 @@
 import { CharStreams, CommonTokenStream, ParseTreeWalker } from 'antlr4';
 import { Logger,ValidationOptions } from '../types';
 import { 
-  PolicyValidator, 
+  StatementFilteringValidator, 
   ValidationCheck, 
-  ValidationReport, 
+  ValidationReport,
+  hasHclVariables,
+  calculateValidationStatus,
+  shouldPassWithValidatorConfig,
+  applyValidatorWarningConfig
 } from './PolicyValidator';
 import PolicyLexer from '../generated/PolicyLexer';
 import PolicyParser from '../generated/PolicyParser';
@@ -17,8 +21,9 @@ import {
 
 /**
  * Validates OCI policies against CIS Benchmark v2 controls
+ * Only processes statements without HCL variables for accurate parsing
  */
-export class OciCisBenchmarkValidator implements PolicyValidator {
+export class OciCisBenchmarkValidator implements StatementFilteringValidator {
   private logger?: Logger;
   
   private cisChecks: ValidationCheck[] = [
@@ -60,32 +65,52 @@ export class OciCisBenchmarkValidator implements PolicyValidator {
     return this.cisChecks;
   }
   
+  /**
+   * Determines if this validator can handle the given statement
+   * Only processes statements without HCL variables for accurate parsing
+   */
+  canHandle(statement: string): boolean {
+    return !hasHclVariables(statement);
+  }
+  
   public async validate(
     statements: string[],
     options: ValidationOptions = {},
   ): Promise<ValidationReport[]> {
-    // Filter out policies with variables, as they will be handled by the agentic validator.
-    const applicableStatements = statements.filter(
-      s => s && !s.includes('${var.'),
-    );
+    // Filter to only statements this validator can handle
+    const applicableStatements = statements.filter(s => s && this.canHandle(s));
 
     if (applicableStatements.length === 0) {
+      this.logger?.debug('OciCisBenchmarkValidator: No static statements to validate');
       return []; // Nothing for this validator to do.
     }
     
-    this.logger?.debug(`Validating ${applicableStatements.length} policy statements against OCI CIS Benchmark`);
+    this.logger?.debug(`Validating ${applicableStatements.length} static policy statements against OCI CIS Benchmark`);
     
     try {
       // Use the ANTLR listener to analyze all applicable statements and gather findings.
       const results = this.analyzePolicy(applicableStatements);
       
-      // Call each specific CIS validation function with the listener's results.
-      const reports: ValidationReport[] = [
+      let reports: ValidationReport[] = [
         validateServiceLevelAdmins(results, options),
         validateTenancyAdminRestriction(applicableStatements, results, options),
         validateAdminGroupRestrictions(applicableStatements, results, options),
         validateCompartmentLevelAdmins(results, options),
       ];
+      
+      // Apply validator-specific warning configuration
+      reports = reports.map(report => {
+        const adjustedIssues = applyValidatorWarningConfig(report.issues, this.name(), options);
+        const adjustedStatus = calculateValidationStatus(adjustedIssues);
+        const { passed } = shouldPassWithValidatorConfig(adjustedIssues, this.name(), options);
+        
+        return {
+          ...report,
+          issues: adjustedIssues,
+          status: adjustedStatus,
+          passed: passed
+        };
+      });
       
       return reports;
       
@@ -150,4 +175,5 @@ export class OciCisBenchmarkValidator implements PolicyValidator {
     return listener.getResults();
   }
 }
+
 

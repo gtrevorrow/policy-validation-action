@@ -37,6 +37,7 @@ export interface ValidationReport {
     passed: boolean;
     status: 'pass' | 'fail' | 'pass-with-warnings';
     issues: ValidationIssue[];
+    processedStatements?: string[]; // Track which statements were actually processed
 }
 
 /**
@@ -77,6 +78,15 @@ export interface AgenticValidationOptions {
 export interface ValidationOptions {
   failOn?: 'error' | 'warning' | 'info';
   treatWarningsAsFailures?: boolean; // Default: false
+
+  // New: Validator-specific warning behavior
+  validatorWarningConfig?: {
+    [validatorName: string]: {
+      treatWarningsAsFailures?: boolean;
+      warningLevel?: 'info' | 'warning' | 'error';
+    };
+  };
+
   customPattern?: string;
   extractorType?: string;
   pattern?: string;

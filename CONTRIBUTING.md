@@ -137,7 +137,6 @@ npm run test:cli
    npm run test:cli
    ```
 3. Open a pull request from `development` into `main`:
-   - The workflow will detect the `-devel` tag (e.g., `v1.0.0-devel`) and handle retagging and publishing automatically.
    - The pull request should be reviewed and approved by at least one other team member.
    - CI pipelines (e.g., GitHub Actions) should pass successfully.
 

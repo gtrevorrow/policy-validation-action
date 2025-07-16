@@ -1,12 +1,12 @@
 import { CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token } from 'antlr4';
 import { Logger, ValidationOptions } from '../types';
-import { 
-  PolicyValidator, 
-  ValidationCheck, 
-  ValidationReport, 
-  ValidationIssue,    
-  calculateValidationStatus, 
-  shouldPass 
+import {
+  PolicyValidator,
+  ValidationCheck,
+  ValidationIssue,
+  ValidationReport,
+  getStatementsWithoutVariables,
+  shouldPassWithValidatorConfig
 } from './PolicyValidator';
 import PolicyLexer from '../generated/PolicyLexer';
 import PolicyParser from '../generated/PolicyParser';
@@ -52,16 +52,15 @@ export class OciSyntaxValidator implements PolicyValidator {
     return this.syntaxChecks;
   }
   
-  async validate(statements: string[], options: ValidationOptions = {}): Promise<ValidationReport[]> {
-    const { treatWarningsAsFailures = false } = options;
+  public async validate(statements: string[], options: ValidationOptions = {}): Promise<ValidationReport[]> {
+    const issues: ValidationIssue[] = [];
+    
     this.log.debug(`Validating ${statements.length} policy statements for syntax correctness`);
     
     if (statements.length === 0) {
       this.log.info(`No policy statements to validate`);
       return [];
     }
-    
-    const issues: ValidationIssue[] = [];
     
     for (const statement of statements) {
       if (!statement || typeof statement !== 'string') continue;
@@ -121,17 +120,20 @@ export class OciSyntaxValidator implements PolicyValidator {
       }
     }
     
+    const { passed, status, issues: updatedIssues } = shouldPassWithValidatorConfig(
+      issues,
+      this.name(),
+      options
+    );
+
     // Create validation report
-    const status = calculateValidationStatus(issues);
-    const passed = shouldPass(status, treatWarningsAsFailures);
-    
     const report: ValidationReport = {
       checkId: OciSyntaxValidator.CHECK_ID,
       name: 'OCI Policy Syntax',
       description: 'Ensures OCI IAM policy statements follow the correct syntax',
       passed,
       status,
-      issues: issues
+      issues: updatedIssues
     };
     
     return [report];

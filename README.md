@@ -124,7 +124,7 @@ This approach allows you to use the CLI directly from the source code without pu
 | `--pattern`           | `-p`  | Custom regex pattern for policy extraction                          | `none`  |
 | `--extractor`         | `-e`  | Policy extractor type (`regex` or `hcl`)                            | `regex` |
 | `--files`             |       | Comma-separated list of specific files to process                  | `none`  |
-| `--exit-on-error`     |       | Exit with non-zero status if validation fails                       | `true`  |
+| `--exit-on-error`     |       | Exit with non-zero status if validation fails                       | `false` |
 | `--file-extension`  | `--ext` | Filter files by extension (e.g., .tf)                                     | `none`  |
 | `--agentic-validation-enabled` | | Enable the agentic (AI-powered) validator.                      | `false` |
 | `--agentic-validation-provider`| | Specify the LLM provider (e.g., 'openai').                        | `none`  |
@@ -169,7 +169,7 @@ policy-validation-action validate
 The default regex pattern for the `regex` extractor is:
 
 ```regex
-statements\s*=\s*\[(.*?)\]
+statements\s*=\s*\[\s*((?:[^\\\[\]]*?(?:"(?:[^"\\]|\\.)*?"|'(?:[^'\\]|\\.)*?'|\$\{(?:[^{}]|\{[^{}]*?\})*?\})?)*?)\s*\]
 ```
 This pattern captures everything between the square brackets, including policy statements, newlines, comments, and variable interpolations.
 
@@ -501,10 +501,10 @@ resource "oci_identity_policy" "test" {
 As discussed above regex pattern should captures everything between the square brackets ( in the example), including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to the DefaultExtractionStrategy.ts for processing.
 
 **Processing Steps:**
-1. **Split into lines:**  
-   Splits the captured group into individual lines.
-2. **Remove comments:**  
+1. **Remove comments:**
    Removes any lines starting with `#`.
+2. **Split into lines:**
+   Splits the captured group into individual lines.
 3. **Trim whitespace:**  
    Removes leading and trailing spaces.
 4. **Split by commas:**  

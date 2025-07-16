@@ -96,6 +96,7 @@ describe('Integration Tests - Complete Policy Validation Workflow', () => {
     describe('Complete Validation Pipeline', () => {
         
         it('should execute complete validation workflow with multiple validators', async () => {
+            // Use statements without variables to ensure CIS validator processes them
             const testPolicies = [
                 'Allow group Administrators to manage all-resources in tenancy',
                 'Allow group Developers to use instances in compartment dev',

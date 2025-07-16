@@ -21,6 +21,23 @@ describe('OciCisBenchmarkValidator', () => {
     validator = new OciCisBenchmarkValidator(mockLogger);
   });
 
+  describe('Statement Filtering', () => {
+    it('should only handle statements without HCL variables', () => {
+      expect(validator.canHandle('Allow group Admins to manage all-resources in tenancy')).toBe(true);
+      expect(validator.canHandle('Allow group ${var.admin_group} to manage all-resources in tenancy')).toBe(false);
+      expect(validator.canHandle('Allow group Admins to manage instances in compartment ${var.compartment}')).toBe(false);
+    });
+
+    it('should return empty array when no applicable statements', async () => {
+      const statements = [
+        'Allow group ${var.admin_group} to manage all-resources in tenancy',
+        'Allow group Developers to use instances in compartment ${var.dev_compartment}'
+      ];
+      const reports = await validator.validate(statements);
+      expect(reports).toEqual([]);
+    });
+  });
+
   describe('Validator Metadata', () => {
     it('should return correct validator metadata', () => {
       expect(validator.name()).toBe('OCI CIS Benchmark Validator');
@@ -154,11 +171,11 @@ describe('OciCisBenchmarkValidator', () => {
       expect(reports).toEqual([]);
     });
 
-    it('should handle invalid policy syntax gracefully', async () => {
-      const statements = ['This is not a valid policy'];
+    it('should handle statements with variables gracefully', async () => {
+      const statements = ['Allow group ${var.admin_group} to manage all-resources in tenancy'];
       const reports = await validator.validate(statements);
-      // Should not throw an error, and individual checks should run on the empty set of parsed policies
-      expect(reports.length).toBeGreaterThan(0);
+      // Should return empty array since this validator can't handle statements with variables
+      expect(reports).toEqual([]);
     });
 
     it('should handle mixed valid and invalid policies', async () => {

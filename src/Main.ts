@@ -153,26 +153,13 @@ export {
  * The validation process includes:
  *   - A local validation pipeline that runs on each file individually (includes OciSyntaxValidator)
  *   - A global validation pipeline that runs on all statements from all files together 
- *     (includes OciCisBenchmarkValidator when enabled)
+ *     (includes validators that self-filter based on statement characteristics)
  *
  * @param scanPath Path (file or directory) to scan for policy files.
- * @param options ValidationOptions:
- *   - extractorType: 'regex' or a custom extractor type
- *   - pattern?: Regex string for statement extraction
- *   - fileExtension?: Only include files with this extension
- *   - fileNames?: Explicit list of filenames to process
- *   - exitOnError: Stop processing on first error (Note: behavior might be validator-specific)
- *   - validatorConfig?: Configuration for which validator pipelines to run
+ * @param options ValidationOptions for configuring validation behavior
  * @param logger Logger instance for diagnostic output.
- * @returns Promise<FileValidationResult[]>:
- *   - An array of `FileValidationResult`. Each entry corresponds to a processed file
- *     and contains the `file` path and an array of `ValidationPipelineResult` objects.
- *   - Each `ValidationPipelineResult` includes the `validatorName`, `validatorDescription`,
- *     and an array of `ValidationReport` objects from that validator.
- *   - If global validators are enabled, an additional `FileValidationResult` with `file: 'Global Validation'`
- *     will be included, containing reports from the global validation pipeline.
- *   - Returns an empty array if no files match the criteria or no statements are extracted.
-  */
+ * @returns Promise<FileValidationResult[]> containing validation results
+ */
 export async function validatePolicies(
   scanPath: string,
   options: ValidationOptions,
@@ -211,18 +198,17 @@ export async function validatePolicies(
     ValidatorFactory.createGlobalPipeline(logger, options) :
     new ValidationPipeline(logger);
   
-  // Per-file local pipeline
+  // Per-file local pipeline (syntax validation)
   for (const file of filesToProcess) {
     logger.info(`Processing file ${file}`);
     const expressions = await processFile(file, options.pattern, options.extractorType as ExtractorType, logger);
     allExpressions.push(...expressions);
 
     const syntaxResults = await localPipeline.validate(expressions);
-
     results.push({ file, results: syntaxResults });
   }
 
-  // Global pipeline - only run if it has validators
+  // Global pipeline - validators will self-filter to appropriate statements
   if (globalPipeline.hasValidators() && allExpressions.length > 0) {
     logger.info('Running global validation pipeline on all statements...');
     const globalResults = await globalPipeline.validate(allExpressions);

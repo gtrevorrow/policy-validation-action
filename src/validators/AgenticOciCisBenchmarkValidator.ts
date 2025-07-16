@@ -6,7 +6,7 @@ import {
   ValidationOptions,
   ValidationReport,
 } from '../types';
-import { PolicyValidator, ValidationCheck } from './PolicyValidator';
+import { StatementFilteringValidator, ValidationCheck, hasHclVariables } from './PolicyValidator';
 import { LlmService } from '../llm/LlmService';
 
 /**
@@ -15,7 +15,7 @@ import { LlmService } from '../llm/LlmService';
  * traditional parsers to analyze definitively. It sends all policies in a
  * single batch to allow for holistic analysis.
  */
-export class AgenticOciCisBenchmarkValidator implements PolicyValidator {
+export class AgenticOciCisBenchmarkValidator implements StatementFilteringValidator {
   private readonly logger: Logger;
   private readonly knowledgeContent: string;
 
@@ -49,18 +49,23 @@ export class AgenticOciCisBenchmarkValidator implements PolicyValidator {
     ];
   }
 
+  /**
+   * Determines if this validator can handle the given statement
+   * Only processes statements with HCL variables
+   */
+  canHandle(statement: string): boolean {
+    return hasHclVariables(statement);
+  }
+
   async validate(
     statements: string[],
     options: ValidationOptions = {},
   ): Promise<ValidationReport[]> {
-    const policiesWithVariables = statements.filter(
-      s => s && s.includes('${var.'),
-    );
+    // Filter to only statements this validator can handle
+    const policiesWithVariables = statements.filter(s => s && this.canHandle(s));
 
     if (policiesWithVariables.length === 0) {
-      this.logger.info(
-        'No policies with variables found for agentic validation.',
-      );
+      this.logger.debug('AgenticOciCisBenchmarkValidator: No policies with variables to validate');
       return [];
     }
 
@@ -73,7 +78,7 @@ export class AgenticOciCisBenchmarkValidator implements PolicyValidator {
     }
 
     this.logger.info(
-      `Sending ${policiesWithVariables.length} policies for agentic validation via ${options.agenticValidation.provider}.`,
+      `Sending ${policiesWithVariables.length} policies with variables for agentic validation via ${options.agenticValidation.provider}.`,
     );
 
     try {
@@ -82,7 +87,8 @@ export class AgenticOciCisBenchmarkValidator implements PolicyValidator {
         policiesWithVariables,
         this.knowledgeContent,
       );
-      return [this.parseResponse(llmResponses, policiesWithVariables)];
+      const report = this.parseResponse(llmResponses, policiesWithVariables);
+      return [report];
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Agentic validation failed: ${message}`);

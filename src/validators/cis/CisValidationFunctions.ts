@@ -1,14 +1,30 @@
-import { ValidationOptions, ValidationReport, ValidationIssue } from '../../types';
+import { ValidationCheck, ValidationIssue, ValidationReport, shouldPassWithValidatorConfig } from '../PolicyValidator';
 import { CisListenerResults } from '../OciCisListener';
-import { calculateValidationStatus, shouldPass } from '../PolicyValidator';
+import { ValidationOptions } from '../../types';
 
 /**
  * Creates a ValidationReport for a given CIS check.
  */
-function createReport(checkId: string, name: string, description: string, issues: ValidationIssue[], options: ValidationOptions): ValidationReport {
-  const status = calculateValidationStatus(issues);
-  const passed = shouldPass(status, options.treatWarningsAsFailures ?? false);
-  return { checkId, name, description, passed, status, issues };
+export function createReport(
+  check: ValidationCheck,
+  issues: ValidationIssue[],
+  validatorName: string,
+  options: ValidationOptions = {}
+): ValidationReport {
+  const { passed, status, issues: updatedIssues } = shouldPassWithValidatorConfig(
+    issues,
+    validatorName,
+    options
+  );
+
+  return {
+    checkId: check.id,
+    name: check.name,
+    description: check.description,
+    passed,
+    status,
+    issues: updatedIssues,
+  };
 }
 
 /**
@@ -27,10 +43,13 @@ export function validateServiceLevelAdmins(results: CisListenerResults, options:
   }] : [];
 
   return createReport(
-    'CIS-OCI-1.1',
-    'Service-Level Admins',
-    'Ensure service level admins are created to manage resources of particular service',
+    {
+      id: 'CIS-OCI-1.1',
+      name: 'Service-Level Admins',
+      description: 'Ensure service level admins are created to manage resources of particular service'
+    },
     issues,
+    'validateServiceLevelAdmins',
     options
   );
 }
@@ -65,10 +84,13 @@ export function validateTenancyAdminRestriction(statements: string[], results: C
   });
 
   return createReport(
-    'CIS-OCI-1.2',
-    'Tenancy Administrator Group Restriction',
-    'Ensure permissions on all resources are given only to the tenancy administrator group',
+    {
+      id: 'CIS-OCI-1.2',
+      name: 'Tenancy Administrator Group Restriction',
+      description: 'Ensure permissions on all resources are given only to the tenancy administrator group'
+    },
     issues,
+    'validateTenancyAdminRestriction',
     options
   );
 }
@@ -93,10 +115,13 @@ export function validateAdminGroupRestrictions(statements: string[], results: Ci
   }));
 
   return createReport(
-    'CIS-OCI-1.3',
-    'Admin Group Restrictions',
-    'Ensure IAM administrators cannot update tenancy Administrators group',
+    {
+      id: 'CIS-OCI-1.3',
+      name: 'Admin Group Restrictions',
+      description: 'Ensure IAM administrators cannot update tenancy Administrators group'
+    },
     issues,
+    'validateAdminGroupRestrictions',
     options
   );
 }
@@ -114,10 +139,14 @@ export function validateCompartmentLevelAdmins(results: CisListenerResults, opti
   }] : [];
 
   return createReport(
-    'CIS-OCI-1.5',
-    'Compartment-level Admins',
-    'Ensure compartment level admins are used to manage resources in compartments',
+    {
+      id: 'CIS-OCI-1.5',
+      name: 'Compartment-level Admins',
+      description: 'Ensure compartment level admins are used to manage resources in compartments'
+    },
     issues,
+    'validateCompartmentLevelAdmins',
     options
   );
-}
+} 
+

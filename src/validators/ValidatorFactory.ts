@@ -36,10 +36,9 @@ export class ValidatorFactory {
    * These validators are applied to each file individually
    * 
    * @param logger Optional logger for recording diagnostic info
-   * @param options Optional configuration options for local validators
    * @returns Array of validator instances
    */
-  static createLocalValidators(logger?: Logger, options?: Record<string, any>): (OciSyntaxValidator)[] {
+  static createLocalValidators(logger?: Logger): (OciSyntaxValidator)[] {
     // Currently only includes syntax validator
     // In future, additional local validators can be added here
     return [
@@ -79,7 +78,7 @@ export class ValidatorFactory {
     options?: Record<string, any>
   ): ValidationPipeline {
     const pipeline = new ValidationPipeline(logger);
-    const validators = ValidatorFactory.createLocalValidators(logger, options);
+    const validators = ValidatorFactory.createLocalValidators(logger);
     validators.forEach(validator => pipeline.addValidator(validator));
     return pipeline;
   }
@@ -98,10 +97,10 @@ export class ValidatorFactory {
   ): ValidationPipeline {
     const pipeline = new ValidationPipeline(logger);
 
-    // The standard, rule-based validator always runs first.
-    pipeline.addValidator(new OciCisBenchmarkValidator());
+    // Always add the standard CIS validator (it will self-filter to statements without variables)
+    pipeline.addValidator(new OciCisBenchmarkValidator(logger));
 
-    // Conditionally add the agentic validator if enabled.
+    // Add the agentic validator if enabled (it will self-filter to statements with variables)
     if (options.agenticValidation?.enabled) {
       logger.info(
         'Agentic validation is enabled. Adding agentic validator to the pipeline.',
