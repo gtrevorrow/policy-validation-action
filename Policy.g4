@@ -3,17 +3,20 @@ grammar Policy;
  /*
   * Parser Rules
   */
- policy              : ( allowExpression | endorseExpression | defineExpression | admitExpression )+  EOF ;
+policy              : ( allowExpression | denyExpression | endorseExpression | defineExpression | admitExpression )+  EOF ;
 
  allowExpression     : ALLOW subject (TO? verb resource | TO? permissionList) IN scope (WHERE condition)? NEWLINE?;
- endorseExpression   : ENDORSE subject (TO endorseVerb resource | TO? permissionList) IN (endorseScope | scope) (WITH resource IN endorseScope)? (WHERE condition)? NEWLINE?;
+ endorseExpression   : ENDORSE subject (TO endorseVerb resource | TO? permissionList) IN (endorseScope | (scope WITH resource IN endorseScope)) (WHERE condition)? NEWLINE?;
  defineExpression    : DEFINE definedSubject AS defined NEWLINE?;
  admitExpression     : ADMIT subject (OF endorseScope)?  (TO endorseVerb resource | TO? permissionList) IN scope (WITH resource IN endorseScope)? (WHERE condition)? NEWLINE?;
+ denyExpression      : DENY ( admitExpression | endorseExpression | subject (TO? verb resource | TO? permissionList) IN scope (WHERE condition)? NEWLINE?);
 
  endorseVerb         : (verb | ASSOCIATE);
  verb                : (INSPECT | READ | USE | MANAGE) ;
- permissionList      : '{'  (WORD | HCL_VAR)  (',' (WORD | HCL_VAR))* '}'  ; // e.g {USER_UPDATE, USER_UIPASS_SET, ${var.permission}}
- scope               : ((COMPARTMENT ID?)  (WORD | HCL_VAR) (':' (WORD | HCL_VAR))* | TENANCY) ;
+ permissionList      : '{'  WORD  (',' WORD)* '}'  ; // e.g {USER_UPDATE, USER_UIPASS_SET, USER_UIPASS_SET}
+// Grammar supports optional ID token after COMPARTMENT for flexibility; 
+// dataset builder semantics require 'id' before any direct OCID references.
+scope               : ((COMPARTMENT ID?)  (WORD | HCL_VAR) (':' (WORD | HCL_VAR))* | TENANCY) ;
  endorseScope        : (ANYTENANCY| TENANCY (WORD | HCL_VAR));
  subject             : (groupSubject | serviceSubject | dynamicGroupSubject | resourceSubject | ANYUSER) ;
  groupSubject        : GROUP (groupName| groupID) (','(groupName|groupID))* ;
@@ -28,10 +31,13 @@ grammar Policy;
  definedSubject      : (groupSubject | dynamicGroupSubject | serviceSubject | tenancySubject);
  defined             : (WORD | HCL_VAR);
  resource            : (WORD | HCL_VAR);
- condition           : (comparisonList | comparison | HCL_VAR) ; // Added HCL_VAR to allow conditions to be HCL variables
+ condition           : (comparisonList | comparison | functionCall | HCL_VAR) ; // Added functionCall support
+ functionCall        : WORD '(' argumentList? ')' ;
+ argumentList        : argument (',' argument)* ;
+ argument            : variable | value | valueList | functionCall ;
  comparison          : variable operator (value|valueList|timeWindow| patternMatch) ;
  variable            : (WORD | HCL_VAR) (('.' (WORD | HCL_VAR) )+)? ;
- operator            : ('=' | '!=' | BEFORE | IN | NOT IN | BETWEEN) ;
+ operator            : ('=' | '!''=' | BEFORE | IN | BETWEEN) ;
  value               : (WORD 
                      | QUOTED_STRING 
                      | QUOTED_STRING '/' WORD 
@@ -44,14 +50,13 @@ grammar Policy;
 
  comparisonList      : logicalCombine '{' condition  (',' condition)* '}' ;
  logicalCombine      : ( ALL | ANY ) ;
- patternMatch        : ('/' (WORD | HCL_VAR) '*/'|'/*' (WORD | HCL_VAR) '/'| '/' (WORD | HCL_VAR) '/'|'/*' (WORD | HCL_VAR) '*/') ;
+ patternMatch        : ('/' WORD '*/'|'/*' WORD '/'| '/' WORD '/'|'/*' WORD '*/') ;
 
  /*
   * Lexer Rules
   */
  BEFORE              : B E F O R E ;
  BETWEEN             : B E T W E E N;
- NOT                 : N O T ;
  NEWLINE             : ('\r'? '\n' | '\r')+ -> skip;
  QUOTED_STRING       : '\'' (LETTER | DIGIT | ' ' | '-' | '.' | ':' | '@' | '_' | '/')+ '\'' ;
  WS                  : ' '+  -> skip;
@@ -59,6 +64,7 @@ grammar Policy;
  ANYTENANCY          : A N Y '-' T E N A N C Y ;
  ENDORSE             : E N D O R S E ;
  ALLOW               : A L L O W;
+DENY                : D E N Y ;
  DEFINE              : D E F I N E ;
  RESOURCE            : R E S O U R C E ;
  TO                  : T O;
@@ -79,7 +85,7 @@ grammar Policy;
  USE                 : U S E  ;
  ANY                 : A N Y  ;
  AND                 : A N D;
- ALL                 : A L L;
+ ALL                 : A L L  ;
  AS                  : A S;
  ID                  : I D;
 
@@ -91,7 +97,7 @@ grammar Policy;
  HCL_VAR             : '${' (~[}])+ '}' ;
 
  // Word is last to prevent ambiguity with other tokens
- WORD                : (LETTER | DIGIT | '_' | '-' | '.' | ':'| '@')+ ;
+WORD                : (LETTER | DIGIT | '_' | '-' | '.' | '@')+ ;
 
  fragment LETTER     : [a-zA-Z] ;
  fragment DIGIT      : [0-9] ;
@@ -116,5 +122,3 @@ grammar Policy;
  fragment Y          : ('y'|'Y') ;
  fragment F          : ('f'|'F') ;
  fragment B          : ('b'|'B') ;
-
-
