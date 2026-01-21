@@ -43,6 +43,12 @@ inputs:
   agentic-validation-model:
     description: 'Specify the model to use for the selected provider (e.g., gpt-4o).'
     required: false
+  hierarchy:
+    description: 'Path to JSON file containing compartment hierarchy'
+    required: false
+  attachment-point:
+    description: 'OCID of the compartment where policies are attached (required for semantic checks)'
+    required: false
 outputs:
   results:
     description: 'Validation results in JSON format'

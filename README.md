@@ -575,6 +575,57 @@ For example, if you have a directory structure like this:
 ```
 You would set the `path` to `./terraform` in your CI configuration.
 
+### SemanticValidator (New)
+
+The `SemanticValidator` performs validation by checking policy semantics against your organization's hierarchy. This goes beyond syntax and CIS checks to ensure that policies refer to real resources and follow organizational constraints.
+
+**Rules Enforced:**
+-   **Invalid Scope**: Ensures compartments mentioned in policies actually exist in the hierarchy.
+-   **Hierarchy Mismatch**: Verifies that the scope of a policy is valid relative to where the policy is attached (e.g., a policy in a child compartment cannot grant permissions on a parent compartment unless properly scoped).
+-   **Deny Depth**: Enforces best practices for `DENY` policies to be attached high in the hierarchy (depth <= 3).
+-   **Over-Permissioned**: Warns about broad permissions (e.g., `manage all-resources`) that lack conditions.
+
+#### Semantic Validation Configuration
+
+To enable semantic validation, you must provide a snapshot of your organizational hierarchy in JSON format and specify the attachment point for the policies.
+
+**Inputs:**
+-   `hierarchy`: Path to a JSON file containing the compartment hierarchy (output of OCI CLI or similar tool).
+-   `attachment-point`: The OCID of the compartment or tenancy where the policies are being applied.
+
+### Multi-Context Validation (Matrix Strategy)
+
+If your repository contains policies for multiple different tenancies or organizational units, use a matrix strategy in your CI/CD pipeline to validate them essentially as separate "runs". This prevents cross-contamination of contexts.
+
+**GitHub Actions Example:**
+
+```yaml
+jobs:
+  validate-policies:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: 'Finance Tenant'
+            path: './tenants/finance'
+            hierarchy: './data/finance-hierarchy.json'
+            attachment: 'ocid1.tenancy.oc1..finance'
+          - name: 'HR Tenant'
+            path: './tenants/hr'
+            hierarchy: './data/hr-hierarchy.json'
+            attachment: 'ocid1.tenancy.oc1..hr'
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate ${{ matrix.name }}
+        uses: gtrevorrow/policy-validation-action@v1
+        with:
+          path: ${{ matrix.path }}
+          hierarchy: ${{ matrix.hierarchy }}
+          attachment-point: ${{ matrix.attachment-point }}
+```
+
 ## Testing
 
 The project includes a comprehensive test suite using Jest and CLI installation testing.

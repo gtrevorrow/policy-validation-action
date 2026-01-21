@@ -81,6 +81,32 @@ policy-validation-action validate ./policies
 
 1. **OCI CIS Benchmark Validator**: Validates that policies conform to the CIS Benchmark recommendations for Oracle Cloud Infrastructure. This validator processes policies with fully-defined, static statements.
 2. **Agentic OCI CIS Benchmark Validator**: Uses a Large Language Model (LLM) to perform a holistic compliance check. It specifically targets policies containing HCL variables (e.g., `${var.admin_group}`), which are difficult for traditional parsers to analyze definitively.
+3. **Semantic Validator**: Validates policy semantics against a provided organizational hierarchy, checking for invalid scopes, hierarchy mismatches, and other logical constraints.
+
+### Semantic Validation Configuration
+
+To enable semantic validation, you must provide context about the organizational structure.
+
+**GitHub Action:**
+
+```yaml
+- uses: gtrevorrow/policy-validation-action@v1
+  with:
+    # ... other options
+    hierarchy: './data/hierarchy.json' # Path to hierarchy JSON
+    attachment-point: 'ocid1.tenancy.oc1..example' # OCID of attachment
+```
+
+**CLI / Environment Variables:**
+
+```bash
+# Using command-line arguments
+policy-validation-action validate ./policies --hierarchy="./data/hierarchy.json" --attachment-point="ocid1.tenancy.oc1..example"
+
+# Using environment variables
+export POLICY_HIERARCHY="./data/hierarchy.json"
+export POLICY_ATTACHMENT_POINT="ocid1.tenancy.oc1..example"
+```
 
 ## Using the ValidatorFactory
 

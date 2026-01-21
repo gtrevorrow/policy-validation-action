@@ -163,7 +163,8 @@ export {
 export async function validatePolicies(
   scanPath: string,
   options: ValidationOptions,
-  logger: Logger
+  logger: Logger,
+  context?: import('./validators/context/ValidationContext').ValidationContext
 ): Promise<FileValidationResult[]> {
   // Find all policy files - findPolicyFiles already handles inaccessible paths
   const filesToProcess = await findPolicyFiles(scanPath, {
@@ -182,22 +183,22 @@ export async function validatePolicies(
   // Track all validation outputs and collect expressions for global pipeline
   const results: FileValidationResult[] = [];
   const allExpressions: string[] = [];
-  
+
   // Use validator configuration if provided, otherwise use defaults
   const validatorConfig = options.validatorConfig || {
     runLocalValidators: true,
     runGlobalValidators: false
   };
-  
+
   // Create pipelines using the ValidatorFactory
-  const localPipeline = validatorConfig.runLocalValidators ? 
-    ValidatorFactory.createLocalPipeline(logger, options) : 
+  const localPipeline = validatorConfig.runLocalValidators ?
+    ValidatorFactory.createLocalPipeline(logger, options) :
     new ValidationPipeline(logger);
-    
+
   const globalPipeline = validatorConfig.runGlobalValidators ?
-    ValidatorFactory.createGlobalPipeline(logger, options) :
+    ValidatorFactory.createGlobalPipeline(logger, options, context) :
     new ValidationPipeline(logger);
-  
+
   // Per-file local pipeline (syntax validation)
   for (const file of filesToProcess) {
     logger.info(`Processing file ${file}`);
@@ -233,14 +234,14 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
 
     const scanPath = resolvePath(platform.getInput('path') || '.');
     logger.info(`Resolved path: ${scanPath}`);
-    
+
     // fail fast if the top‐level path is inaccessible
     try {
       await fs.promises.access(scanPath, fs.constants.R_OK);
     } catch (e: any) {
       throw new Error(`Path ${scanPath} is not accessible: ${e.message}`);
     }
-   
+
     // Check for an environment variable override to enable global validators.
     // This is useful for CI environments where the action is run as a CLI tool.
     const envGlobalValidatorOverride = process.env.VALIDATE_GLOBAL === 'true';
@@ -255,8 +256,27 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       validatorConfig: {
         runLocalValidators: parseBooleanInput('validators-local', true, platform),
         runGlobalValidators: parseBooleanInput('validators-global', false, platform) || envGlobalValidatorOverride
-      }
+      },
+      // Pass attachment point through options
+      attachmentPoint: platform.getInput('attachment-point')
     };
+
+    // Load validation context if hierarchy provided
+    const hierarchyPath = platform.getInput('hierarchy');
+    let context: import('./validators/context/ValidationContext').ValidationContext | undefined;
+
+    if (hierarchyPath) {
+      const fullPath = resolvePath(hierarchyPath);
+      try {
+        const content = await fs.promises.readFile(fullPath, 'utf8');
+        const json = JSON.parse(content);
+        const { ContextAdapter } = require('./validators/context/ContextAdapter');
+        context = new ContextAdapter(json);
+        logger.info(`Loaded validation context from ${fullPath}`);
+      } catch (e: any) {
+        logger.error(`Failed to load hierarchy context from ${hierarchyPath}: ${e.message}`);
+      }
+    }
 
     // Log options
     logger.info(`Using extractor: ${options.extractorType}`);
@@ -272,16 +292,19 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       logger.info(`Using default pattern`);
     }
     logger.info(`Exit on error: ${options.exitOnError}`);
-    
+
     // Log validator configuration
     if (options.validatorConfig) {
       logger.info(`Local validators enabled: ${options.validatorConfig.runLocalValidators}`);
       logger.info(`Global validators enabled: ${options.validatorConfig.runGlobalValidators}`);
     }
+    if (context) {
+      logger.info(`Semantic validation enabled with context.`);
+    }
 
     // Run policy validation - error handling including path access errors happens here
-    const outputs = await validatePolicies(scanPath, options, logger);
-    
+    const outputs = await validatePolicies(scanPath, options, logger, context);
+
     // platform.info( JSON.stringify(outputs) );
     platform.setOutput('results', JSON.stringify(outputs));
 

@@ -1,16 +1,17 @@
-import { CharStreams, CommonTokenStream, ParseTreeWalker } from 'antlr4';
-import { Logger,ValidationOptions } from '../types';
-import { 
-  StatementFilteringValidator, 
-  ValidationCheck, 
+import { CharStreams, CommonTokenStream } from 'antlr4ts';
+import { ParseTreeWalker } from 'antlr4ts/tree/ParseTreeWalker';
+import { Logger, ValidationOptions } from '../types';
+import {
+  StatementFilteringValidator,
+  ValidationCheck,
   ValidationReport,
   hasHclVariables,
   calculateValidationStatus,
   shouldPassWithValidatorConfig,
   applyValidatorWarningConfig
 } from './PolicyValidator';
-import PolicyLexer from '../generated/PolicyLexer';
-import PolicyParser from '../generated/PolicyParser';
+import { PolicyLexer } from '../generated/PolicyLexer';
+import { PolicyParser } from '../generated/PolicyParser';
 import { OciCisListener, CisListenerResults } from './OciCisListener';
 import {
   validateServiceLevelAdmins,
@@ -25,7 +26,7 @@ import {
  */
 export class OciCisBenchmarkValidator implements StatementFilteringValidator {
   private logger?: Logger;
-  
+
   private cisChecks: ValidationCheck[] = [
     {
       id: 'CIS-OCI-1.1',
@@ -48,23 +49,23 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
       description: 'Ensure compartment level admins are used to manage resources in compartments'
     }
   ];
-  
+
   constructor(logger?: Logger) {
     this.logger = logger;
   }
-  
+
   name(): string {
     return 'OCI CIS Benchmark Validator';
   }
-  
+
   description(): string {
     return 'Validates OCI IAM policies against CIS Benchmark v2.0 controls';
   }
-  
+
   getChecks(): ValidationCheck[] {
     return this.cisChecks;
   }
-  
+
   /**
    * Determines if this validator can handle the given statement
    * Only processes statements without HCL variables for accurate parsing
@@ -72,7 +73,7 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
   canHandle(statement: string): boolean {
     return !hasHclVariables(statement);
   }
-  
+
   public async validate(
     statements: string[],
     options: ValidationOptions = {},
@@ -84,26 +85,26 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
       this.logger?.debug('OciCisBenchmarkValidator: No static statements to validate');
       return []; // Nothing for this validator to do.
     }
-    
+
     this.logger?.debug(`Validating ${applicableStatements.length} static policy statements against OCI CIS Benchmark`);
-    
+
     try {
       // Use the ANTLR listener to analyze all applicable statements and gather findings.
       const results = this.analyzePolicy(applicableStatements);
-      
+
       let reports: ValidationReport[] = [
         validateServiceLevelAdmins(results, options),
         validateTenancyAdminRestriction(applicableStatements, results, options),
         validateAdminGroupRestrictions(applicableStatements, results, options),
         validateCompartmentLevelAdmins(results, options),
       ];
-      
+
       // Apply validator-specific warning configuration
       reports = reports.map(report => {
         const adjustedIssues = applyValidatorWarningConfig(report.issues, this.name(), options);
         const adjustedStatus = calculateValidationStatus(adjustedIssues);
         const { passed } = shouldPassWithValidatorConfig(adjustedIssues, this.name(), options);
-        
+
         return {
           ...report,
           issues: adjustedIssues,
@@ -111,12 +112,12 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
           passed: passed
         };
       });
-      
+
       return reports;
-      
+
     } catch (error) {
       this.logger?.error(`Error validating policies: ${error}`);
-      
+
       // Return an error report
       return [{
         checkId: 'CIS-OCI-ERROR',
@@ -134,25 +135,25 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
       }];
     }
   }
-  
+
   /**
    * Analyzes policies using ANTLR parser and listener
    */
   private analyzePolicy(statements: string[]): CisListenerResults {
     const listener = new OciCisListener(statements, this.logger);
     const walker = new ParseTreeWalker();
-    
+
     // Process each statement through ANTLR parser
     for (const statement of statements) {
       try {
         const trimmedStatement = statement.trim();
         if (!trimmedStatement) continue;
-        
+
         const inputStream = CharStreams.fromString(trimmedStatement);
         const lexer = new PolicyLexer(inputStream);
         const tokenStream = new CommonTokenStream(lexer);
         const parser = new PolicyParser(tokenStream);
-        
+
         // Use error handling strategy
         parser.removeErrorListeners();
         parser.addErrorListener({
@@ -161,7 +162,7 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
             this.logger?.debug(`Skipping statement due to parsing error: ${statement}`);
           }
         });
-        
+
         // Parse and walk the tree
         const tree = parser.policy();
         walker.walk(listener, tree);
@@ -170,7 +171,7 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
         this.logger?.debug(`Error: ${error}`);
       }
     }
-    
+
     // Get the analysis results
     return listener.getResults();
   }

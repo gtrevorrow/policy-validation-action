@@ -121,6 +121,18 @@ describe('OciCisBenchmarkValidator', () => {
       expect(adminProtectionCheck?.status).toBe('fail');
     });
 
+    it('should fail when administrator clause does not exclude Administrators group', async () => {
+      const statements = [
+        "Allow group IAMAdmins to manage groups in tenancy where target.group.name = 'Administrators'",
+      ];
+      const reports = await validator.validate(statements);
+      const adminProtectionCheck = reports.find(r => r.checkId === 'CIS-OCI-1.3');
+
+      expect(adminProtectionCheck).toBeDefined();
+      expect(adminProtectionCheck?.passed).toBeFalsy();
+      expect(adminProtectionCheck?.status).toBe('fail');
+    });
+
     it('should pass when IAM policies include administrator protection', async () => {
       const statements = [
         'Allow group IAMAdmins to manage groups in tenancy where target.group.name != \'Administrators\''

@@ -1,21 +1,21 @@
 export interface Logger {
-    debug(message: string): void;
-    info(message: string): void;
-    warn(message: string): void;
-    error(message: string): void;
+  debug(message: string): void;
+  info(message: string): void;
+  warn(message: string): void;
+  error(message: string): void;
 }
 
 export interface PolicyError {
-    statement: string;
-    position: number;
-    message: string;
+  statement: string;
+  position: number;
+  message: string;
 }
 
 export enum ExpressionType {
-    Allow = 'Allow',
-    Define = 'Define',
-    Endorse = 'Endorse',
-    Admit = 'Admit'
+  Allow = 'Allow',
+  Define = 'Define',
+  Endorse = 'Endorse',
+  Admit = 'Admit'
 }
 
 /** Final per‐file validation output, with one entry per validator run */
@@ -25,19 +25,19 @@ export interface FileValidationResult {
 }
 
 export interface ValidationPipelineResult {
-    validatorName: string;
-    validatorDescription: string;
-    reports: ValidationReport[];
+  validatorName: string;
+  validatorDescription: string;
+  reports: ValidationReport[];
 }
 
 export interface ValidationReport {
-    checkId: string;
-    name: string;
-    description: string;
-    passed: boolean;
-    status: 'pass' | 'fail' | 'pass-with-warnings';
-    issues: ValidationIssue[];
-    processedStatements?: string[]; // Track which statements were actually processed
+  checkId: string;
+  name: string;
+  description: string;
+  passed: boolean;
+  status: 'pass' | 'fail' | 'pass-with-warnings';
+  issues: ValidationIssue[];
+  processedStatements?: string[]; // Track which statements were actually processed
 }
 
 /**
@@ -45,11 +45,11 @@ export interface ValidationReport {
  * This is the single source of truth for issue reporting.
  */
 export interface ValidationIssue {
-    checkId: string;
-    statement: string;
-    message: string;
-    severity: 'info' | 'warning' | 'error';
-    recommendation?: string; // Correctly marked as optional
+  checkId: string;
+  statement: string;
+  message: string;
+  severity: 'info' | 'warning' | 'error';
+  recommendation?: string; // Correctly marked as optional
 }
 
 /**
@@ -95,6 +95,7 @@ export interface ValidationOptions {
   exitOnError?: boolean;
   validatorConfig?: ValidatorConfig;
   agenticValidation?: AgenticValidationOptions;
+  attachmentPoint?: string;
 }
 
 /**
@@ -118,45 +119,45 @@ export interface PlatformOperations {
    * @returns The input value
    */
   getInput(name: string, required?: boolean): string;
-  
+
   /**
    * Set an output value
    * @param name The name of the output
    * @param value The value of the output
    */
   setOutput(name: string, value: string): void;
-  
+
   /**
    * Set success or failed status
    * @param success Whether the operation was successful
    * @param message Optional message
    */
   setResult(success: boolean, message?: string): void;
-  
+
   /**
    * Log debug information
    * @param message The debug message
    */
   debug(message: string): void;
-  
+
   /**
    * Log info message
    * @param message The info message
    */
   info(message: string): void;
-  
+
   /**
    * Log warning message
    * @param message The warning message
    */
   warning(message: string): void;
-  
+
   /**
    * Log error message
    * @param message The error message
    */
   error(message: string): void;
-  
+
   /**
    * Create a logger instance compatible with the Logger interface
    * @returns Logger instance
@@ -182,8 +183,8 @@ export interface PlatformConfig {
  * catastrophic backtracking on malformed input.
  */
 export const POLICY_STATEMENTS_REGEX = new RegExp(
-    process.env.POLICY_STATEMENTS_PATTERN || 
-    // More robust pattern with non-greedy matching and bounds
-    'statements\\s*=\\s*\\[\\s*((?:[^\\[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*?"|\'(?:[^\'\\\\]|\\\\.)*?\'|\\$\\{(?:[^{}]|\\{[^{}]*?\\})*?\\})?)*?)\\s*\\]',
-    'sg'
+  process.env.POLICY_STATEMENTS_PATTERN ||
+  // More robust pattern with non-greedy matching and bounds
+  'statements\\s*=\\s*\\[\\s*((?:[^\\[\\]]*?(?:"(?:[^"\\\\]|\\\\.)*?"|\'(?:[^\'\\\\]|\\\\.)*?\'|\\$\\{(?:[^{}]|\\{[^{}]*?\\})*?\\})?)*?)\\s*\\]',
+  'sg'
 );

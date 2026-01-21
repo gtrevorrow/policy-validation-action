@@ -56,15 +56,15 @@ export class ValidatorFactory {
    */
   static createGlobalValidators(options: ValidationOptions = {}, logger?: Logger): (OciCisBenchmarkValidator)[] {
     const validators: OciCisBenchmarkValidator[] = [];
-    
+
     // Include CIS benchmark validator when global validators are enabled
     validators.push(ValidatorFactory.createCisBenchmarkValidator(logger));
-    
+
     // Future global validators can be added here based on other options
-    
+
     return validators;
   }
-  
+
   /**
    * Creates a local validation pipeline with configured validators
    * Local pipelines run on each file individually
@@ -82,23 +82,32 @@ export class ValidatorFactory {
     validators.forEach(validator => pipeline.addValidator(validator));
     return pipeline;
   }
-  
+
   /**
    * Creates a global validation pipeline with configured validators  
    * Global pipelines run on all statements from all files together
    * 
    * @param logger Optional logger for recording diagnostic info
    * @param options Optional configuration options for global validators
+   * @param context Optional validation context for semantic validation
    * @returns A configured ValidationPipeline instance with global validators
    */
   public static createGlobalPipeline(
     logger: Logger,
     options: ValidationOptions,
+    context?: import('./context/ValidationContext').ValidationContext
   ): ValidationPipeline {
     const pipeline = new ValidationPipeline(logger);
 
     // Always add the standard CIS validator (it will self-filter to statements without variables)
     pipeline.addValidator(new OciCisBenchmarkValidator(logger));
+
+    // Add semantic validator if context is provided
+    if (context) {
+      // Dynamic import to avoid circular dep if any (SemanticValidator imports ValidatorFactory?) No.
+      const { SemanticValidator } = require('./SemanticValidator');
+      pipeline.addValidator(new SemanticValidator(context, logger));
+    }
 
     // Add the agentic validator if enabled (it will self-filter to statements with variables)
     if (options.agenticValidation?.enabled) {

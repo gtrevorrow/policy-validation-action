@@ -1,24 +1,33 @@
-// Generated from Policy.g4 by ANTLR 4.13.2
-// noinspection ES6UnusedImports,JSUnusedGlobalSymbols,JSUnusedLocalSymbols
+// Generated from Policy.g4 by ANTLR 4.9.0-SNAPSHOT
 
-import {
-	ATN,
-	ATNDeserializer, DecisionState, DFA, FailedPredicateException,
-	RecognitionException, NoViableAltException, BailErrorStrategy,
-	Parser, ParserATNSimulator,
-	RuleContext, ParserRuleContext, PredictionMode, PredictionContextCache,
-	TerminalNode, RuleNode,
-	Token, TokenStream,
-	Interval, IntervalSet
-} from 'antlr4';
-import PolicyListener from "./PolicyListener.js";
-import PolicyVisitor from "./PolicyVisitor.js";
 
-// for running tests with parameters, TODO: discuss strategy for typed parameters in CI
-// eslint-disable-next-line no-unused-vars
-type int = number;
+import { ATN } from "antlr4ts/atn/ATN";
+import { ATNDeserializer } from "antlr4ts/atn/ATNDeserializer";
+import { FailedPredicateException } from "antlr4ts/FailedPredicateException";
+import { NotNull } from "antlr4ts/Decorators";
+import { NoViableAltException } from "antlr4ts/NoViableAltException";
+import { Override } from "antlr4ts/Decorators";
+import { Parser } from "antlr4ts/Parser";
+import { ParserRuleContext } from "antlr4ts/ParserRuleContext";
+import { ParserATNSimulator } from "antlr4ts/atn/ParserATNSimulator";
+import { ParseTreeListener } from "antlr4ts/tree/ParseTreeListener";
+import { ParseTreeVisitor } from "antlr4ts/tree/ParseTreeVisitor";
+import { RecognitionException } from "antlr4ts/RecognitionException";
+import { RuleContext } from "antlr4ts/RuleContext";
+//import { RuleVersion } from "antlr4ts/RuleVersion";
+import { TerminalNode } from "antlr4ts/tree/TerminalNode";
+import { Token } from "antlr4ts/Token";
+import { TokenStream } from "antlr4ts/TokenStream";
+import { Vocabulary } from "antlr4ts/Vocabulary";
+import { VocabularyImpl } from "antlr4ts/VocabularyImpl";
 
-export default class PolicyParser extends Parser {
+import * as Utils from "antlr4ts/misc/Utils";
+
+import { PolicyListener } from "./PolicyListener";
+import { PolicyVisitor } from "./PolicyVisitor";
+
+
+export class PolicyParser extends Parser {
 	public static readonly T__0 = 1;
 	public static readonly T__1 = 2;
 	public static readonly T__2 = 3;
@@ -34,14 +43,14 @@ export default class PolicyParser extends Parser {
 	public static readonly T__12 = 13;
 	public static readonly BEFORE = 14;
 	public static readonly BETWEEN = 15;
-	public static readonly NOT = 16;
-	public static readonly NEWLINE = 17;
-	public static readonly QUOTED_STRING = 18;
-	public static readonly WS = 19;
-	public static readonly ANYUSER = 20;
-	public static readonly ANYTENANCY = 21;
-	public static readonly ENDORSE = 22;
-	public static readonly ALLOW = 23;
+	public static readonly NEWLINE = 16;
+	public static readonly QUOTED_STRING = 17;
+	public static readonly WS = 18;
+	public static readonly ANYUSER = 19;
+	public static readonly ANYTENANCY = 20;
+	public static readonly ENDORSE = 21;
+	public static readonly ALLOW = 22;
+	public static readonly DENY = 23;
 	public static readonly DEFINE = 24;
 	public static readonly RESOURCE = 25;
 	public static readonly TO = 26;
@@ -67,90 +76,85 @@ export default class PolicyParser extends Parser {
 	public static readonly ID = 46;
 	public static readonly HCL_VAR = 47;
 	public static readonly WORD = 48;
-	public static override readonly EOF = Token.EOF;
 	public static readonly RULE_policy = 0;
 	public static readonly RULE_allowExpression = 1;
 	public static readonly RULE_endorseExpression = 2;
 	public static readonly RULE_defineExpression = 3;
 	public static readonly RULE_admitExpression = 4;
-	public static readonly RULE_endorseVerb = 5;
-	public static readonly RULE_verb = 6;
-	public static readonly RULE_permissionList = 7;
-	public static readonly RULE_scope = 8;
-	public static readonly RULE_endorseScope = 9;
-	public static readonly RULE_subject = 10;
-	public static readonly RULE_groupSubject = 11;
-	public static readonly RULE_resourceSubject = 12;
-	public static readonly RULE_serviceSubject = 13;
-	public static readonly RULE_groupName = 14;
-	public static readonly RULE_resourceSubjectId = 15;
-	public static readonly RULE_serviceSubjectId = 16;
-	public static readonly RULE_groupID = 17;
-	public static readonly RULE_dynamicGroupSubject = 18;
-	public static readonly RULE_tenancySubject = 19;
-	public static readonly RULE_definedSubject = 20;
-	public static readonly RULE_defined = 21;
-	public static readonly RULE_resource = 22;
-	public static readonly RULE_condition = 23;
-	public static readonly RULE_comparison = 24;
-	public static readonly RULE_variable = 25;
-	public static readonly RULE_operator = 26;
-	public static readonly RULE_value = 27;
-	public static readonly RULE_valueList = 28;
-	public static readonly RULE_timeWindow = 29;
-	public static readonly RULE_comparisonList = 30;
-	public static readonly RULE_logicalCombine = 31;
-	public static readonly RULE_patternMatch = 32;
-	public static readonly literalNames: (string | null)[] = [ null, "'{'", 
-                                                            "','", "'}'", 
-                                                            "':'", "'/'", 
-                                                            "'''", "'.'", 
-                                                            "'='", "'!='", 
-                                                            "'('", "')'", 
-                                                            "'*/'", "'/*'" ];
-	public static readonly symbolicNames: (string | null)[] = [ null, null, 
-                                                             null, null, 
-                                                             null, null, 
-                                                             null, null, 
-                                                             null, null, 
-                                                             null, null, 
-                                                             null, null, 
-                                                             "BEFORE", "BETWEEN", 
-                                                             "NOT", "NEWLINE", 
-                                                             "QUOTED_STRING", 
-                                                             "WS", "ANYUSER", 
-                                                             "ANYTENANCY", 
-                                                             "ENDORSE", 
-                                                             "ALLOW", "DEFINE", 
-                                                             "RESOURCE", 
-                                                             "TO", "OF", 
-                                                             "IN", "WHERE", 
-                                                             "WITH", "DYNAMICGROUP", 
-                                                             "GROUP", "SERVICE", 
-                                                             "COMPARTMENT", 
-                                                             "TENANCY", 
-                                                             "READ", "INSPECT", 
-                                                             "MANAGE", "ASSOCIATE", 
-                                                             "ADMIT", "USE", 
-                                                             "ANY", "AND", 
-                                                             "ALL", "AS", 
-                                                             "ID", "HCL_VAR", 
-                                                             "WORD" ];
+	public static readonly RULE_denyExpression = 5;
+	public static readonly RULE_endorseVerb = 6;
+	public static readonly RULE_verb = 7;
+	public static readonly RULE_permissionList = 8;
+	public static readonly RULE_scope = 9;
+	public static readonly RULE_endorseScope = 10;
+	public static readonly RULE_subject = 11;
+	public static readonly RULE_groupSubject = 12;
+	public static readonly RULE_resourceSubject = 13;
+	public static readonly RULE_serviceSubject = 14;
+	public static readonly RULE_groupName = 15;
+	public static readonly RULE_resourceSubjectId = 16;
+	public static readonly RULE_serviceSubjectId = 17;
+	public static readonly RULE_groupID = 18;
+	public static readonly RULE_dynamicGroupSubject = 19;
+	public static readonly RULE_tenancySubject = 20;
+	public static readonly RULE_definedSubject = 21;
+	public static readonly RULE_defined = 22;
+	public static readonly RULE_resource = 23;
+	public static readonly RULE_condition = 24;
+	public static readonly RULE_functionCall = 25;
+	public static readonly RULE_argumentList = 26;
+	public static readonly RULE_argument = 27;
+	public static readonly RULE_comparison = 28;
+	public static readonly RULE_variable = 29;
+	public static readonly RULE_operator = 30;
+	public static readonly RULE_value = 31;
+	public static readonly RULE_valueList = 32;
+	public static readonly RULE_timeWindow = 33;
+	public static readonly RULE_comparisonList = 34;
+	public static readonly RULE_logicalCombine = 35;
+	public static readonly RULE_patternMatch = 36;
 	// tslint:disable:no-trailing-whitespace
 	public static readonly ruleNames: string[] = [
 		"policy", "allowExpression", "endorseExpression", "defineExpression", 
-		"admitExpression", "endorseVerb", "verb", "permissionList", "scope", "endorseScope", 
-		"subject", "groupSubject", "resourceSubject", "serviceSubject", "groupName", 
-		"resourceSubjectId", "serviceSubjectId", "groupID", "dynamicGroupSubject", 
-		"tenancySubject", "definedSubject", "defined", "resource", "condition", 
+		"admitExpression", "denyExpression", "endorseVerb", "verb", "permissionList", 
+		"scope", "endorseScope", "subject", "groupSubject", "resourceSubject", 
+		"serviceSubject", "groupName", "resourceSubjectId", "serviceSubjectId", 
+		"groupID", "dynamicGroupSubject", "tenancySubject", "definedSubject", 
+		"defined", "resource", "condition", "functionCall", "argumentList", "argument", 
 		"comparison", "variable", "operator", "value", "valueList", "timeWindow", 
 		"comparisonList", "logicalCombine", "patternMatch",
 	];
+
+	private static readonly _LITERAL_NAMES: Array<string | undefined> = [
+		undefined, "'{'", "','", "'}'", "':'", "'/'", "'''", "'('", "')'", "'.'", 
+		"'='", "'!'", "'*/'", "'/*'",
+	];
+	private static readonly _SYMBOLIC_NAMES: Array<string | undefined> = [
+		undefined, undefined, undefined, undefined, undefined, undefined, undefined, 
+		undefined, undefined, undefined, undefined, undefined, undefined, undefined, 
+		"BEFORE", "BETWEEN", "NEWLINE", "QUOTED_STRING", "WS", "ANYUSER", "ANYTENANCY", 
+		"ENDORSE", "ALLOW", "DENY", "DEFINE", "RESOURCE", "TO", "OF", "IN", "WHERE", 
+		"WITH", "DYNAMICGROUP", "GROUP", "SERVICE", "COMPARTMENT", "TENANCY", 
+		"READ", "INSPECT", "MANAGE", "ASSOCIATE", "ADMIT", "USE", "ANY", "AND", 
+		"ALL", "AS", "ID", "HCL_VAR", "WORD",
+	];
+	public static readonly VOCABULARY: Vocabulary = new VocabularyImpl(PolicyParser._LITERAL_NAMES, PolicyParser._SYMBOLIC_NAMES, []);
+
+	// @Override
+	// @NotNull
+	public get vocabulary(): Vocabulary {
+		return PolicyParser.VOCABULARY;
+	}
+	// tslint:enable:no-trailing-whitespace
+
+	// @Override
 	public get grammarFileName(): string { return "Policy.g4"; }
-	public get literalNames(): (string | null)[] { return PolicyParser.literalNames; }
-	public get symbolicNames(): (string | null)[] { return PolicyParser.symbolicNames; }
+
+	// @Override
 	public get ruleNames(): string[] { return PolicyParser.ruleNames; }
-	public get serializedATN(): number[] { return PolicyParser._serializedATN; }
+
+	// @Override
+	public get serializedATN(): string { return PolicyParser._serializedATN; }
 
 	protected createFailedPredicateException(predicate?: string, message?: string): FailedPredicateException {
 		return new FailedPredicateException(this, predicate, message);
@@ -158,45 +162,51 @@ export default class PolicyParser extends Parser {
 
 	constructor(input: TokenStream) {
 		super(input);
-		this._interp = new ParserATNSimulator(this, PolicyParser._ATN, PolicyParser.DecisionsToDFA, new PredictionContextCache());
+		this._interp = new ParserATNSimulator(PolicyParser._ATN, this);
 	}
 	// @RuleVersion(0)
 	public policy(): PolicyContext {
-		let localctx: PolicyContext = new PolicyContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 0, PolicyParser.RULE_policy);
+		let _localctx: PolicyContext = new PolicyContext(this._ctx, this.state);
+		this.enterRule(_localctx, 0, PolicyParser.RULE_policy);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 70;
+			this.state = 79;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			do {
 				{
-				this.state = 70;
+				this.state = 79;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 23:
+				case PolicyParser.ALLOW:
 					{
-					this.state = 66;
+					this.state = 74;
 					this.allowExpression();
 					}
 					break;
-				case 22:
+				case PolicyParser.DENY:
 					{
-					this.state = 67;
+					this.state = 75;
+					this.denyExpression();
+					}
+					break;
+				case PolicyParser.ENDORSE:
+					{
+					this.state = 76;
 					this.endorseExpression();
 					}
 					break;
-				case 24:
+				case PolicyParser.DEFINE:
 					{
-					this.state = 68;
+					this.state = 77;
 					this.defineExpression();
 					}
 					break;
-				case 40:
+				case PolicyParser.ADMIT:
 					{
-					this.state = 69;
+					this.state = 78;
 					this.admitExpression();
 					}
 					break;
@@ -204,17 +214,17 @@ export default class PolicyParser extends Parser {
 					throw new NoViableAltException(this);
 				}
 				}
-				this.state = 72;
+				this.state = 81;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-			} while (((((_la - 22)) & ~0x1F) === 0 && ((1 << (_la - 22)) & 262151) !== 0));
-			this.state = 74;
+			} while (((((_la - 21)) & ~0x1F) === 0 && ((1 << (_la - 21)) & ((1 << (PolicyParser.ENDORSE - 21)) | (1 << (PolicyParser.ALLOW - 21)) | (1 << (PolicyParser.DENY - 21)) | (1 << (PolicyParser.DEFINE - 21)) | (1 << (PolicyParser.ADMIT - 21)))) !== 0));
+			this.state = 83;
 			this.match(PolicyParser.EOF);
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -224,80 +234,81 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public allowExpression(): AllowExpressionContext {
-		let localctx: AllowExpressionContext = new AllowExpressionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 2, PolicyParser.RULE_allowExpression);
+		let _localctx: AllowExpressionContext = new AllowExpressionContext(this._ctx, this.state);
+		this.enterRule(_localctx, 2, PolicyParser.RULE_allowExpression);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 76;
+			this.state = 85;
 			this.match(PolicyParser.ALLOW);
-			this.state = 77;
+			this.state = 86;
 			this.subject();
-			this.state = 88;
+			this.state = 97;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 4, this._ctx) ) {
+			switch ( this.interpreter.adaptivePredict(this._input, 4, this._ctx) ) {
 			case 1:
 				{
-				this.state = 79;
+				this.state = 88;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===26) {
+				if (_la === PolicyParser.TO) {
 					{
-					this.state = 78;
+					this.state = 87;
 					this.match(PolicyParser.TO);
 					}
 				}
 
-				this.state = 81;
+				this.state = 90;
 				this.verb();
-				this.state = 82;
+				this.state = 91;
 				this.resource();
 				}
 				break;
+
 			case 2:
 				{
-				this.state = 85;
+				this.state = 94;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===26) {
+				if (_la === PolicyParser.TO) {
 					{
-					this.state = 84;
+					this.state = 93;
 					this.match(PolicyParser.TO);
 					}
 				}
 
-				this.state = 87;
+				this.state = 96;
 				this.permissionList();
 				}
 				break;
 			}
-			this.state = 90;
+			this.state = 99;
 			this.match(PolicyParser.IN);
-			this.state = 91;
+			this.state = 100;
 			this.scope();
-			this.state = 94;
+			this.state = 103;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===29) {
+			if (_la === PolicyParser.WHERE) {
 				{
-				this.state = 92;
+				this.state = 101;
 				this.match(PolicyParser.WHERE);
-				this.state = 93;
+				this.state = 102;
 				this.condition();
 				}
 			}
 
-			this.state = 97;
+			this.state = 106;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===17) {
+			if (_la === PolicyParser.NEWLINE) {
 				{
-				this.state = 96;
+				this.state = 105;
 				this.match(PolicyParser.NEWLINE);
 				}
 			}
@@ -306,7 +317,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -316,142 +327,96 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public endorseExpression(): EndorseExpressionContext {
-		let localctx: EndorseExpressionContext = new EndorseExpressionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 4, PolicyParser.RULE_endorseExpression);
+		let _localctx: EndorseExpressionContext = new EndorseExpressionContext(this._ctx, this.state);
+		this.enterRule(_localctx, 4, PolicyParser.RULE_endorseExpression);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 99;
+			this.state = 108;
 			this.match(PolicyParser.ENDORSE);
-			this.state = 100;
-			this.subject();
 			this.state = 109;
+			this.subject();
+			this.state = 118;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 8, this._ctx) ) {
+			switch ( this.interpreter.adaptivePredict(this._input, 8, this._ctx) ) {
 			case 1:
 				{
-				this.state = 101;
+				this.state = 110;
 				this.match(PolicyParser.TO);
-				this.state = 102;
+				this.state = 111;
 				this.endorseVerb();
-				this.state = 103;
+				this.state = 112;
 				this.resource();
 				}
 				break;
+
 			case 2:
 				{
-				this.state = 106;
+				this.state = 115;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===26) {
+				if (_la === PolicyParser.TO) {
 					{
-					this.state = 105;
+					this.state = 114;
 					this.match(PolicyParser.TO);
 					}
 				}
 
-				this.state = 108;
+				this.state = 117;
 				this.permissionList();
 				}
 				break;
 			}
-			this.state = 111;
+			this.state = 120;
 			this.match(PolicyParser.IN);
-			this.state = 114;
+			this.state = 128;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 9, this._ctx) ) {
+			switch ( this.interpreter.adaptivePredict(this._input, 9, this._ctx) ) {
 			case 1:
 				{
-				this.state = 112;
+				this.state = 121;
 				this.endorseScope();
 				}
 				break;
+
 			case 2:
 				{
-				this.state = 113;
+				{
+				this.state = 122;
 				this.scope();
+				this.state = 123;
+				this.match(PolicyParser.WITH);
+				this.state = 124;
+				this.resource();
+				this.state = 125;
+				this.match(PolicyParser.IN);
+				this.state = 126;
+				this.endorseScope();
+				}
 				}
 				break;
 			}
-			this.state = 121;
+			this.state = 132;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===30) {
+			if (_la === PolicyParser.WHERE) {
 				{
-				this.state = 116;
-				this.match(PolicyParser.WITH);
-				this.state = 117;
-				this.resource();
-				this.state = 118;
-				this.match(PolicyParser.IN);
-				this.state = 119;
-				this.endorseScope();
-				}
-			}
-
-			this.state = 125;
-			this._errHandler.sync(this);
-			_la = this._input.LA(1);
-			if (_la===29) {
-				{
-				this.state = 123;
+				this.state = 130;
 				this.match(PolicyParser.WHERE);
-				this.state = 124;
+				this.state = 131;
 				this.condition();
 				}
 			}
 
-			this.state = 128;
-			this._errHandler.sync(this);
-			_la = this._input.LA(1);
-			if (_la===17) {
-				{
-				this.state = 127;
-				this.match(PolicyParser.NEWLINE);
-				}
-			}
-
-			}
-		}
-		catch (re) {
-			if (re instanceof RecognitionException) {
-				localctx.exception = re;
-				this._errHandler.reportError(this, re);
-				this._errHandler.recover(this, re);
-			} else {
-				throw re;
-			}
-		}
-		finally {
-			this.exitRule();
-		}
-		return localctx;
-	}
-	// @RuleVersion(0)
-	public defineExpression(): DefineExpressionContext {
-		let localctx: DefineExpressionContext = new DefineExpressionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 6, PolicyParser.RULE_defineExpression);
-		let _la: number;
-		try {
-			this.enterOuterAlt(localctx, 1);
-			{
-			this.state = 130;
-			this.match(PolicyParser.DEFINE);
-			this.state = 131;
-			this.definedSubject();
-			this.state = 132;
-			this.match(PolicyParser.AS);
-			this.state = 133;
-			this.defined();
 			this.state = 135;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===17) {
+			if (_la === PolicyParser.NEWLINE) {
 				{
 				this.state = 134;
 				this.match(PolicyParser.NEWLINE);
@@ -462,7 +427,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -472,100 +437,30 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
-	public admitExpression(): AdmitExpressionContext {
-		let localctx: AdmitExpressionContext = new AdmitExpressionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 8, PolicyParser.RULE_admitExpression);
+	public defineExpression(): DefineExpressionContext {
+		let _localctx: DefineExpressionContext = new DefineExpressionContext(this._ctx, this.state);
+		this.enterRule(_localctx, 6, PolicyParser.RULE_defineExpression);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
 			this.state = 137;
-			this.match(PolicyParser.ADMIT);
+			this.match(PolicyParser.DEFINE);
 			this.state = 138;
-			this.subject();
-			this.state = 141;
+			this.definedSubject();
+			this.state = 139;
+			this.match(PolicyParser.AS);
+			this.state = 140;
+			this.defined();
+			this.state = 142;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===27) {
+			if (_la === PolicyParser.NEWLINE) {
 				{
-				this.state = 139;
-				this.match(PolicyParser.OF);
-				this.state = 140;
-				this.endorseScope();
-				}
-			}
-
-			this.state = 151;
-			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 16, this._ctx) ) {
-			case 1:
-				{
-				this.state = 143;
-				this.match(PolicyParser.TO);
-				this.state = 144;
-				this.endorseVerb();
-				this.state = 145;
-				this.resource();
-				}
-				break;
-			case 2:
-				{
-				this.state = 148;
-				this._errHandler.sync(this);
-				_la = this._input.LA(1);
-				if (_la===26) {
-					{
-					this.state = 147;
-					this.match(PolicyParser.TO);
-					}
-				}
-
-				this.state = 150;
-				this.permissionList();
-				}
-				break;
-			}
-			this.state = 153;
-			this.match(PolicyParser.IN);
-			this.state = 154;
-			this.scope();
-			this.state = 160;
-			this._errHandler.sync(this);
-			_la = this._input.LA(1);
-			if (_la===30) {
-				{
-				this.state = 155;
-				this.match(PolicyParser.WITH);
-				this.state = 156;
-				this.resource();
-				this.state = 157;
-				this.match(PolicyParser.IN);
-				this.state = 158;
-				this.endorseScope();
-				}
-			}
-
-			this.state = 164;
-			this._errHandler.sync(this);
-			_la = this._input.LA(1);
-			if (_la===29) {
-				{
-				this.state = 162;
-				this.match(PolicyParser.WHERE);
-				this.state = 163;
-				this.condition();
-				}
-			}
-
-			this.state = 167;
-			this._errHandler.sync(this);
-			_la = this._input.LA(1);
-			if (_la===17) {
-				{
-				this.state = 166;
+				this.state = 141;
 				this.match(PolicyParser.NEWLINE);
 				}
 			}
@@ -574,7 +469,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -584,30 +479,262 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
+	}
+	// @RuleVersion(0)
+	public admitExpression(): AdmitExpressionContext {
+		let _localctx: AdmitExpressionContext = new AdmitExpressionContext(this._ctx, this.state);
+		this.enterRule(_localctx, 8, PolicyParser.RULE_admitExpression);
+		let _la: number;
+		try {
+			this.enterOuterAlt(_localctx, 1);
+			{
+			this.state = 144;
+			this.match(PolicyParser.ADMIT);
+			this.state = 145;
+			this.subject();
+			this.state = 148;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			if (_la === PolicyParser.OF) {
+				{
+				this.state = 146;
+				this.match(PolicyParser.OF);
+				this.state = 147;
+				this.endorseScope();
+				}
+			}
+
+			this.state = 158;
+			this._errHandler.sync(this);
+			switch ( this.interpreter.adaptivePredict(this._input, 15, this._ctx) ) {
+			case 1:
+				{
+				this.state = 150;
+				this.match(PolicyParser.TO);
+				this.state = 151;
+				this.endorseVerb();
+				this.state = 152;
+				this.resource();
+				}
+				break;
+
+			case 2:
+				{
+				this.state = 155;
+				this._errHandler.sync(this);
+				_la = this._input.LA(1);
+				if (_la === PolicyParser.TO) {
+					{
+					this.state = 154;
+					this.match(PolicyParser.TO);
+					}
+				}
+
+				this.state = 157;
+				this.permissionList();
+				}
+				break;
+			}
+			this.state = 160;
+			this.match(PolicyParser.IN);
+			this.state = 161;
+			this.scope();
+			this.state = 167;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			if (_la === PolicyParser.WITH) {
+				{
+				this.state = 162;
+				this.match(PolicyParser.WITH);
+				this.state = 163;
+				this.resource();
+				this.state = 164;
+				this.match(PolicyParser.IN);
+				this.state = 165;
+				this.endorseScope();
+				}
+			}
+
+			this.state = 171;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			if (_la === PolicyParser.WHERE) {
+				{
+				this.state = 169;
+				this.match(PolicyParser.WHERE);
+				this.state = 170;
+				this.condition();
+				}
+			}
+
+			this.state = 174;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			if (_la === PolicyParser.NEWLINE) {
+				{
+				this.state = 173;
+				this.match(PolicyParser.NEWLINE);
+				}
+			}
+
+			}
+		}
+		catch (re) {
+			if (re instanceof RecognitionException) {
+				_localctx.exception = re;
+				this._errHandler.reportError(this, re);
+				this._errHandler.recover(this, re);
+			} else {
+				throw re;
+			}
+		}
+		finally {
+			this.exitRule();
+		}
+		return _localctx;
+	}
+	// @RuleVersion(0)
+	public denyExpression(): DenyExpressionContext {
+		let _localctx: DenyExpressionContext = new DenyExpressionContext(this._ctx, this.state);
+		this.enterRule(_localctx, 10, PolicyParser.RULE_denyExpression);
+		let _la: number;
+		try {
+			this.enterOuterAlt(_localctx, 1);
+			{
+			this.state = 176;
+			this.match(PolicyParser.DENY);
+			this.state = 201;
+			this._errHandler.sync(this);
+			switch (this._input.LA(1)) {
+			case PolicyParser.ADMIT:
+				{
+				this.state = 177;
+				this.admitExpression();
+				}
+				break;
+			case PolicyParser.ENDORSE:
+				{
+				this.state = 178;
+				this.endorseExpression();
+				}
+				break;
+			case PolicyParser.ANYUSER:
+			case PolicyParser.RESOURCE:
+			case PolicyParser.DYNAMICGROUP:
+			case PolicyParser.GROUP:
+			case PolicyParser.SERVICE:
+				{
+				this.state = 179;
+				this.subject();
+				this.state = 190;
+				this._errHandler.sync(this);
+				switch ( this.interpreter.adaptivePredict(this._input, 21, this._ctx) ) {
+				case 1:
+					{
+					this.state = 181;
+					this._errHandler.sync(this);
+					_la = this._input.LA(1);
+					if (_la === PolicyParser.TO) {
+						{
+						this.state = 180;
+						this.match(PolicyParser.TO);
+						}
+					}
+
+					this.state = 183;
+					this.verb();
+					this.state = 184;
+					this.resource();
+					}
+					break;
+
+				case 2:
+					{
+					this.state = 187;
+					this._errHandler.sync(this);
+					_la = this._input.LA(1);
+					if (_la === PolicyParser.TO) {
+						{
+						this.state = 186;
+						this.match(PolicyParser.TO);
+						}
+					}
+
+					this.state = 189;
+					this.permissionList();
+					}
+					break;
+				}
+				this.state = 192;
+				this.match(PolicyParser.IN);
+				this.state = 193;
+				this.scope();
+				this.state = 196;
+				this._errHandler.sync(this);
+				_la = this._input.LA(1);
+				if (_la === PolicyParser.WHERE) {
+					{
+					this.state = 194;
+					this.match(PolicyParser.WHERE);
+					this.state = 195;
+					this.condition();
+					}
+				}
+
+				this.state = 199;
+				this._errHandler.sync(this);
+				_la = this._input.LA(1);
+				if (_la === PolicyParser.NEWLINE) {
+					{
+					this.state = 198;
+					this.match(PolicyParser.NEWLINE);
+					}
+				}
+
+				}
+				break;
+			default:
+				throw new NoViableAltException(this);
+			}
+			}
+		}
+		catch (re) {
+			if (re instanceof RecognitionException) {
+				_localctx.exception = re;
+				this._errHandler.reportError(this, re);
+				this._errHandler.recover(this, re);
+			} else {
+				throw re;
+			}
+		}
+		finally {
+			this.exitRule();
+		}
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public endorseVerb(): EndorseVerbContext {
-		let localctx: EndorseVerbContext = new EndorseVerbContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 10, PolicyParser.RULE_endorseVerb);
+		let _localctx: EndorseVerbContext = new EndorseVerbContext(this._ctx, this.state);
+		this.enterRule(_localctx, 12, PolicyParser.RULE_endorseVerb);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 171;
+			this.state = 205;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 36:
-			case 37:
-			case 38:
-			case 41:
+			case PolicyParser.READ:
+			case PolicyParser.INSPECT:
+			case PolicyParser.MANAGE:
+			case PolicyParser.USE:
 				{
-				this.state = 169;
+				this.state = 203;
 				this.verb();
 				}
 				break;
-			case 39:
+			case PolicyParser.ASSOCIATE:
 				{
-				this.state = 170;
+				this.state = 204;
 				this.match(PolicyParser.ASSOCIATE);
 				}
 				break;
@@ -618,7 +745,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -628,30 +755,33 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public verb(): VerbContext {
-		let localctx: VerbContext = new VerbContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 12, PolicyParser.RULE_verb);
+		let _localctx: VerbContext = new VerbContext(this._ctx, this.state);
+		this.enterRule(_localctx, 14, PolicyParser.RULE_verb);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 173;
+			this.state = 207;
 			_la = this._input.LA(1);
-			if(!(((((_la - 36)) & ~0x1F) === 0 && ((1 << (_la - 36)) & 39) !== 0))) {
+			if (!(((((_la - 36)) & ~0x1F) === 0 && ((1 << (_la - 36)) & ((1 << (PolicyParser.READ - 36)) | (1 << (PolicyParser.INSPECT - 36)) | (1 << (PolicyParser.MANAGE - 36)) | (1 << (PolicyParser.USE - 36)))) !== 0))) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -661,57 +791,43 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public permissionList(): PermissionListContext {
-		let localctx: PermissionListContext = new PermissionListContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 14, PolicyParser.RULE_permissionList);
+		let _localctx: PermissionListContext = new PermissionListContext(this._ctx, this.state);
+		this.enterRule(_localctx, 16, PolicyParser.RULE_permissionList);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 175;
+			this.state = 209;
 			this.match(PolicyParser.T__0);
-			this.state = 176;
-			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
-			this._errHandler.recoverInline(this);
-			}
-			else {
-				this._errHandler.reportMatch(this);
-			    this.consume();
-			}
-			this.state = 181;
+			this.state = 210;
+			this.match(PolicyParser.WORD);
+			this.state = 215;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===2) {
+			while (_la === PolicyParser.T__1) {
 				{
 				{
-				this.state = 177;
+				this.state = 211;
 				this.match(PolicyParser.T__1);
-				this.state = 178;
-				_la = this._input.LA(1);
-				if(!(_la===47 || _la===48)) {
-				this._errHandler.recoverInline(this);
-				}
-				else {
-					this._errHandler.reportMatch(this);
-				    this.consume();
+				this.state = 212;
+				this.match(PolicyParser.WORD);
 				}
 				}
-				}
-				this.state = 183;
+				this.state = 217;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 184;
+			this.state = 218;
 			this.match(PolicyParser.T__2);
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -721,72 +837,78 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public scope(): ScopeContext {
-		let localctx: ScopeContext = new ScopeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 16, PolicyParser.RULE_scope);
+		let _localctx: ScopeContext = new ScopeContext(this._ctx, this.state);
+		this.enterRule(_localctx, 18, PolicyParser.RULE_scope);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 199;
+			this.state = 233;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 34:
+			case PolicyParser.COMPARTMENT:
 				{
 				{
-				this.state = 186;
+				this.state = 220;
 				this.match(PolicyParser.COMPARTMENT);
-				this.state = 188;
+				this.state = 222;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				if (_la===46) {
+				if (_la === PolicyParser.ID) {
 					{
-					this.state = 187;
+					this.state = 221;
 					this.match(PolicyParser.ID);
 					}
 				}
 
 				}
-				this.state = 190;
+				this.state = 224;
 				_la = this._input.LA(1);
-				if(!(_la===47 || _la===48)) {
+				if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 				this._errHandler.recoverInline(this);
-				}
-				else {
+				} else {
+					if (this._input.LA(1) === Token.EOF) {
+						this.matchedEOF = true;
+					}
+
 					this._errHandler.reportMatch(this);
-				    this.consume();
+					this.consume();
 				}
-				this.state = 195;
+				this.state = 229;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
-				while (_la===4) {
+				while (_la === PolicyParser.T__3) {
 					{
 					{
-					this.state = 191;
+					this.state = 225;
 					this.match(PolicyParser.T__3);
-					this.state = 192;
+					this.state = 226;
 					_la = this._input.LA(1);
-					if(!(_la===47 || _la===48)) {
+					if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 					this._errHandler.recoverInline(this);
-					}
-					else {
+					} else {
+						if (this._input.LA(1) === Token.EOF) {
+							this.matchedEOF = true;
+						}
+
 						this._errHandler.reportMatch(this);
-					    this.consume();
+						this.consume();
 					}
 					}
 					}
-					this.state = 197;
+					this.state = 231;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 				}
 				}
 				break;
-			case 35:
+			case PolicyParser.TENANCY:
 				{
-				this.state = 198;
+				this.state = 232;
 				this.match(PolicyParser.TENANCY);
 				}
 				break;
@@ -797,7 +919,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -807,37 +929,40 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public endorseScope(): EndorseScopeContext {
-		let localctx: EndorseScopeContext = new EndorseScopeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 18, PolicyParser.RULE_endorseScope);
+		let _localctx: EndorseScopeContext = new EndorseScopeContext(this._ctx, this.state);
+		this.enterRule(_localctx, 20, PolicyParser.RULE_endorseScope);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 204;
+			this.state = 238;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 21:
+			case PolicyParser.ANYTENANCY:
 				{
-				this.state = 201;
+				this.state = 235;
 				this.match(PolicyParser.ANYTENANCY);
 				}
 				break;
-			case 35:
+			case PolicyParser.TENANCY:
 				{
-				this.state = 202;
+				this.state = 236;
 				this.match(PolicyParser.TENANCY);
-				this.state = 203;
+				this.state = 237;
 				_la = this._input.LA(1);
-				if(!(_la===47 || _la===48)) {
+				if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 				this._errHandler.recoverInline(this);
-				}
-				else {
+				} else {
+					if (this._input.LA(1) === Token.EOF) {
+						this.matchedEOF = true;
+					}
+
 					this._errHandler.reportMatch(this);
-				    this.consume();
+					this.consume();
 				}
 				}
 				break;
@@ -848,7 +973,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -858,45 +983,45 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public subject(): SubjectContext {
-		let localctx: SubjectContext = new SubjectContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 20, PolicyParser.RULE_subject);
+		let _localctx: SubjectContext = new SubjectContext(this._ctx, this.state);
+		this.enterRule(_localctx, 22, PolicyParser.RULE_subject);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 211;
+			this.state = 245;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 32:
+			case PolicyParser.GROUP:
 				{
-				this.state = 206;
+				this.state = 240;
 				this.groupSubject();
 				}
 				break;
-			case 33:
+			case PolicyParser.SERVICE:
 				{
-				this.state = 207;
+				this.state = 241;
 				this.serviceSubject();
 				}
 				break;
-			case 31:
+			case PolicyParser.DYNAMICGROUP:
 				{
-				this.state = 208;
+				this.state = 242;
 				this.dynamicGroupSubject();
 				}
 				break;
-			case 25:
+			case PolicyParser.RESOURCE:
 				{
-				this.state = 209;
+				this.state = 243;
 				this.resourceSubject();
 				}
 				break;
-			case 20:
+			case PolicyParser.ANYUSER:
 				{
-				this.state = 210;
+				this.state = 244;
 				this.match(PolicyParser.ANYUSER);
 				}
 				break;
@@ -907,7 +1032,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -917,60 +1042,60 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public groupSubject(): GroupSubjectContext {
-		let localctx: GroupSubjectContext = new GroupSubjectContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 22, PolicyParser.RULE_groupSubject);
+		let _localctx: GroupSubjectContext = new GroupSubjectContext(this._ctx, this.state);
+		this.enterRule(_localctx, 24, PolicyParser.RULE_groupSubject);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 213;
+			this.state = 247;
 			this.match(PolicyParser.GROUP);
-			this.state = 216;
+			this.state = 250;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 18:
-			case 47:
-			case 48:
+			case PolicyParser.QUOTED_STRING:
+			case PolicyParser.HCL_VAR:
+			case PolicyParser.WORD:
 				{
-				this.state = 214;
+				this.state = 248;
 				this.groupName();
 				}
 				break;
-			case 46:
+			case PolicyParser.ID:
 				{
-				this.state = 215;
+				this.state = 249;
 				this.groupID();
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 225;
+			this.state = 259;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===2) {
+			while (_la === PolicyParser.T__1) {
 				{
 				{
-				this.state = 218;
+				this.state = 252;
 				this.match(PolicyParser.T__1);
-				this.state = 221;
+				this.state = 255;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 18:
-				case 47:
-				case 48:
+				case PolicyParser.QUOTED_STRING:
+				case PolicyParser.HCL_VAR:
+				case PolicyParser.WORD:
 					{
-					this.state = 219;
+					this.state = 253;
 					this.groupName();
 					}
 					break;
-				case 46:
+				case PolicyParser.ID:
 					{
-					this.state = 220;
+					this.state = 254;
 					this.groupID();
 					}
 					break;
@@ -979,7 +1104,7 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 227;
+				this.state = 261;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -987,7 +1112,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -997,31 +1122,31 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public resourceSubject(): ResourceSubjectContext {
-		let localctx: ResourceSubjectContext = new ResourceSubjectContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 24, PolicyParser.RULE_resourceSubject);
+		let _localctx: ResourceSubjectContext = new ResourceSubjectContext(this._ctx, this.state);
+		this.enterRule(_localctx, 26, PolicyParser.RULE_resourceSubject);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 228;
+			this.state = 262;
 			this.match(PolicyParser.RESOURCE);
-			this.state = 229;
+			this.state = 263;
 			this.resourceSubjectId();
-			this.state = 233;
+			this.state = 267;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===47 || _la===48) {
+			while (_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD) {
 				{
 				{
-				this.state = 230;
+				this.state = 264;
 				this.resourceSubjectId();
 				}
 				}
-				this.state = 235;
+				this.state = 269;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1029,7 +1154,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1039,33 +1164,33 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public serviceSubject(): ServiceSubjectContext {
-		let localctx: ServiceSubjectContext = new ServiceSubjectContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 26, PolicyParser.RULE_serviceSubject);
+		let _localctx: ServiceSubjectContext = new ServiceSubjectContext(this._ctx, this.state);
+		this.enterRule(_localctx, 28, PolicyParser.RULE_serviceSubject);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 236;
+			this.state = 270;
 			this.match(PolicyParser.SERVICE);
-			this.state = 237;
+			this.state = 271;
 			this.serviceSubjectId();
-			this.state = 242;
+			this.state = 276;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===2) {
+			while (_la === PolicyParser.T__1) {
 				{
 				{
-				this.state = 238;
+				this.state = 272;
 				this.match(PolicyParser.T__1);
-				this.state = 239;
+				this.state = 273;
 				this.serviceSubjectId();
 				}
 				}
-				this.state = 244;
+				this.state = 278;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1073,7 +1198,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1083,63 +1208,68 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public groupName(): GroupNameContext {
-		let localctx: GroupNameContext = new GroupNameContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 28, PolicyParser.RULE_groupName);
+		let _localctx: GroupNameContext = new GroupNameContext(this._ctx, this.state);
+		this.enterRule(_localctx, 30, PolicyParser.RULE_groupName);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 257;
+			this.state = 291;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 32, this._ctx) ) {
+			switch ( this.interpreter.adaptivePredict(this._input, 37, this._ctx) ) {
 			case 1:
 				{
-				this.state = 245;
+				this.state = 279;
 				this.match(PolicyParser.WORD);
 				}
 				break;
+
 			case 2:
 				{
-				this.state = 246;
+				this.state = 280;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 247;
+				this.state = 281;
 				this.match(PolicyParser.T__4);
-				this.state = 248;
+				this.state = 282;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
+
 			case 3:
 				{
-				this.state = 249;
+				this.state = 283;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
+
 			case 4:
 				{
-				this.state = 250;
+				this.state = 284;
 				this.match(PolicyParser.WORD);
-				this.state = 251;
+				this.state = 285;
 				this.match(PolicyParser.T__4);
-				this.state = 252;
+				this.state = 286;
 				this.match(PolicyParser.WORD);
 				}
 				break;
+
 			case 5:
 				{
-				this.state = 253;
+				this.state = 287;
 				this.match(PolicyParser.WORD);
-				this.state = 254;
+				this.state = 288;
 				this.match(PolicyParser.T__4);
-				this.state = 255;
+				this.state = 289;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
+
 			case 6:
 				{
-				this.state = 256;
+				this.state = 290;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
@@ -1148,7 +1278,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1158,78 +1288,91 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public resourceSubjectId(): ResourceSubjectIdContext {
-		let localctx: ResourceSubjectIdContext = new ResourceSubjectIdContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 30, PolicyParser.RULE_resourceSubjectId);
+		let _localctx: ResourceSubjectIdContext = new ResourceSubjectIdContext(this._ctx, this.state);
+		this.enterRule(_localctx, 32, PolicyParser.RULE_resourceSubjectId);
 		let _la: number;
 		try {
 			let _alt: number;
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 259;
+			this.state = 293;
 			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
+			if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
-			this.state = 268;
+			this.state = 302;
 			this._errHandler.sync(this);
 			_alt = 1 + 1;
 			do {
 				switch (_alt) {
 				case 1 + 1:
 					{
-					this.state = 268;
+					this.state = 302;
 					this._errHandler.sync(this);
-					switch ( this._interp.adaptivePredict(this._input, 33, this._ctx) ) {
+					switch ( this.interpreter.adaptivePredict(this._input, 38, this._ctx) ) {
 					case 1:
 						{
-						this.state = 260;
+						this.state = 294;
 						this.match(PolicyParser.T__5);
-						this.state = 261;
+						this.state = 295;
 						_la = this._input.LA(1);
-						if(!(_la===47 || _la===48)) {
+						if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 						this._errHandler.recoverInline(this);
-						}
-						else {
+						} else {
+							if (this._input.LA(1) === Token.EOF) {
+								this.matchedEOF = true;
+							}
+
 							this._errHandler.reportMatch(this);
-						    this.consume();
+							this.consume();
 						}
-						this.state = 262;
+						this.state = 296;
 						this.match(PolicyParser.T__5);
 						}
 						break;
+
 					case 2:
 						{
-						this.state = 263;
+						this.state = 297;
 						this.match(PolicyParser.T__5);
-						this.state = 264;
+						this.state = 298;
 						_la = this._input.LA(1);
-						if(!(_la===47 || _la===48)) {
+						if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 						this._errHandler.recoverInline(this);
-						}
-						else {
+						} else {
+							if (this._input.LA(1) === Token.EOF) {
+								this.matchedEOF = true;
+							}
+
 							this._errHandler.reportMatch(this);
-						    this.consume();
+							this.consume();
 						}
-						this.state = 265;
+						this.state = 299;
 						this.match(PolicyParser.T__4);
-						this.state = 266;
+						this.state = 300;
 						_la = this._input.LA(1);
-						if(!(_la===47 || _la===48)) {
+						if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 						this._errHandler.recoverInline(this);
-						}
-						else {
+						} else {
+							if (this._input.LA(1) === Token.EOF) {
+								this.matchedEOF = true;
+							}
+
 							this._errHandler.reportMatch(this);
-						    this.consume();
+							this.consume();
 						}
-						this.state = 267;
+						this.state = 301;
 						this.match(PolicyParser.T__5);
 						}
 						break;
@@ -1239,15 +1382,15 @@ export default class PolicyParser extends Parser {
 				default:
 					throw new NoViableAltException(this);
 				}
-				this.state = 270;
+				this.state = 304;
 				this._errHandler.sync(this);
-				_alt = this._interp.adaptivePredict(this._input, 34, this._ctx);
+				_alt = this.interpreter.adaptivePredict(this._input, 39, this._ctx);
 			} while (_alt !== 1 && _alt !== ATN.INVALID_ALT_NUMBER);
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1257,30 +1400,33 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public serviceSubjectId(): ServiceSubjectIdContext {
-		let localctx: ServiceSubjectIdContext = new ServiceSubjectIdContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 32, PolicyParser.RULE_serviceSubjectId);
+		let _localctx: ServiceSubjectIdContext = new ServiceSubjectIdContext(this._ctx, this.state);
+		this.enterRule(_localctx, 34, PolicyParser.RULE_serviceSubjectId);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 272;
+			this.state = 306;
 			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
+			if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1290,32 +1436,35 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public groupID(): GroupIDContext {
-		let localctx: GroupIDContext = new GroupIDContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 34, PolicyParser.RULE_groupID);
+		let _localctx: GroupIDContext = new GroupIDContext(this._ctx, this.state);
+		this.enterRule(_localctx, 36, PolicyParser.RULE_groupID);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 274;
+			this.state = 308;
 			this.match(PolicyParser.ID);
-			this.state = 275;
+			this.state = 309;
 			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
+			if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1325,60 +1474,60 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public dynamicGroupSubject(): DynamicGroupSubjectContext {
-		let localctx: DynamicGroupSubjectContext = new DynamicGroupSubjectContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 36, PolicyParser.RULE_dynamicGroupSubject);
+		let _localctx: DynamicGroupSubjectContext = new DynamicGroupSubjectContext(this._ctx, this.state);
+		this.enterRule(_localctx, 38, PolicyParser.RULE_dynamicGroupSubject);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 277;
+			this.state = 311;
 			this.match(PolicyParser.DYNAMICGROUP);
-			this.state = 280;
+			this.state = 314;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 18:
-			case 47:
-			case 48:
+			case PolicyParser.QUOTED_STRING:
+			case PolicyParser.HCL_VAR:
+			case PolicyParser.WORD:
 				{
-				this.state = 278;
+				this.state = 312;
 				this.groupName();
 				}
 				break;
-			case 46:
+			case PolicyParser.ID:
 				{
-				this.state = 279;
+				this.state = 313;
 				this.groupID();
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 289;
+			this.state = 323;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===2) {
+			while (_la === PolicyParser.T__1) {
 				{
 				{
-				this.state = 282;
+				this.state = 316;
 				this.match(PolicyParser.T__1);
-				this.state = 285;
+				this.state = 319;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 18:
-				case 47:
-				case 48:
+				case PolicyParser.QUOTED_STRING:
+				case PolicyParser.HCL_VAR:
+				case PolicyParser.WORD:
 					{
-					this.state = 283;
+					this.state = 317;
 					this.groupName();
 					}
 					break;
-				case 46:
+				case PolicyParser.ID:
 					{
-					this.state = 284;
+					this.state = 318;
 					this.groupID();
 					}
 					break;
@@ -1387,7 +1536,7 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 291;
+				this.state = 325;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
@@ -1395,7 +1544,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1405,32 +1554,35 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public tenancySubject(): TenancySubjectContext {
-		let localctx: TenancySubjectContext = new TenancySubjectContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 38, PolicyParser.RULE_tenancySubject);
+		let _localctx: TenancySubjectContext = new TenancySubjectContext(this._ctx, this.state);
+		this.enterRule(_localctx, 40, PolicyParser.RULE_tenancySubject);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 292;
+			this.state = 326;
 			this.match(PolicyParser.TENANCY);
-			this.state = 293;
+			this.state = 327;
 			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
+			if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1440,39 +1592,39 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public definedSubject(): DefinedSubjectContext {
-		let localctx: DefinedSubjectContext = new DefinedSubjectContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 40, PolicyParser.RULE_definedSubject);
+		let _localctx: DefinedSubjectContext = new DefinedSubjectContext(this._ctx, this.state);
+		this.enterRule(_localctx, 42, PolicyParser.RULE_definedSubject);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 299;
+			this.state = 333;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 32:
+			case PolicyParser.GROUP:
 				{
-				this.state = 295;
+				this.state = 329;
 				this.groupSubject();
 				}
 				break;
-			case 31:
+			case PolicyParser.DYNAMICGROUP:
 				{
-				this.state = 296;
+				this.state = 330;
 				this.dynamicGroupSubject();
 				}
 				break;
-			case 33:
+			case PolicyParser.SERVICE:
 				{
-				this.state = 297;
+				this.state = 331;
 				this.serviceSubject();
 				}
 				break;
-			case 35:
+			case PolicyParser.TENANCY:
 				{
-				this.state = 298;
+				this.state = 332;
 				this.tenancySubject();
 				}
 				break;
@@ -1483,7 +1635,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1493,30 +1645,33 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public defined(): DefinedContext {
-		let localctx: DefinedContext = new DefinedContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 42, PolicyParser.RULE_defined);
+		let _localctx: DefinedContext = new DefinedContext(this._ctx, this.state);
+		this.enterRule(_localctx, 44, PolicyParser.RULE_defined);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 301;
+			this.state = 335;
 			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
+			if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1526,30 +1681,33 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public resource(): ResourceContext {
-		let localctx: ResourceContext = new ResourceContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 44, PolicyParser.RULE_resource);
+		let _localctx: ResourceContext = new ResourceContext(this._ctx, this.state);
+		this.enterRule(_localctx, 46, PolicyParser.RULE_resource);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 303;
+			this.state = 337;
 			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
+			if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1559,33 +1717,42 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public condition(): ConditionContext {
-		let localctx: ConditionContext = new ConditionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 46, PolicyParser.RULE_condition);
+		let _localctx: ConditionContext = new ConditionContext(this._ctx, this.state);
+		this.enterRule(_localctx, 48, PolicyParser.RULE_condition);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 308;
+			this.state = 343;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 39, this._ctx) ) {
+			switch ( this.interpreter.adaptivePredict(this._input, 44, this._ctx) ) {
 			case 1:
 				{
-				this.state = 305;
+				this.state = 339;
 				this.comparisonList();
 				}
 				break;
+
 			case 2:
 				{
-				this.state = 306;
+				this.state = 340;
 				this.comparison();
 				}
 				break;
+
 			case 3:
 				{
-				this.state = 307;
+				this.state = 341;
+				this.functionCall();
+				}
+				break;
+
+			case 4:
+				{
+				this.state = 342;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
@@ -1594,7 +1761,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1604,43 +1771,183 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
-	public comparison(): ComparisonContext {
-		let localctx: ComparisonContext = new ComparisonContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 48, PolicyParser.RULE_comparison);
+	public functionCall(): FunctionCallContext {
+		let _localctx: FunctionCallContext = new FunctionCallContext(this._ctx, this.state);
+		this.enterRule(_localctx, 50, PolicyParser.RULE_functionCall);
+		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 310;
-			this.variable();
-			this.state = 311;
-			this.operator();
-			this.state = 316;
+			this.state = 345;
+			this.match(PolicyParser.WORD);
+			this.state = 346;
+			this.match(PolicyParser.T__6);
+			this.state = 348;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 40, this._ctx) ) {
-			case 1:
+			_la = this._input.LA(1);
+			if ((((_la) & ~0x1F) === 0 && ((1 << _la) & ((1 << PolicyParser.T__5) | (1 << PolicyParser.T__6) | (1 << PolicyParser.QUOTED_STRING))) !== 0) || _la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD) {
 				{
-				this.state = 312;
+				this.state = 347;
+				this.argumentList();
+				}
+			}
+
+			this.state = 350;
+			this.match(PolicyParser.T__7);
+			}
+		}
+		catch (re) {
+			if (re instanceof RecognitionException) {
+				_localctx.exception = re;
+				this._errHandler.reportError(this, re);
+				this._errHandler.recover(this, re);
+			} else {
+				throw re;
+			}
+		}
+		finally {
+			this.exitRule();
+		}
+		return _localctx;
+	}
+	// @RuleVersion(0)
+	public argumentList(): ArgumentListContext {
+		let _localctx: ArgumentListContext = new ArgumentListContext(this._ctx, this.state);
+		this.enterRule(_localctx, 52, PolicyParser.RULE_argumentList);
+		let _la: number;
+		try {
+			this.enterOuterAlt(_localctx, 1);
+			{
+			this.state = 352;
+			this.argument();
+			this.state = 357;
+			this._errHandler.sync(this);
+			_la = this._input.LA(1);
+			while (_la === PolicyParser.T__1) {
+				{
+				{
+				this.state = 353;
+				this.match(PolicyParser.T__1);
+				this.state = 354;
+				this.argument();
+				}
+				}
+				this.state = 359;
+				this._errHandler.sync(this);
+				_la = this._input.LA(1);
+			}
+			}
+		}
+		catch (re) {
+			if (re instanceof RecognitionException) {
+				_localctx.exception = re;
+				this._errHandler.reportError(this, re);
+				this._errHandler.recover(this, re);
+			} else {
+				throw re;
+			}
+		}
+		finally {
+			this.exitRule();
+		}
+		return _localctx;
+	}
+	// @RuleVersion(0)
+	public argument(): ArgumentContext {
+		let _localctx: ArgumentContext = new ArgumentContext(this._ctx, this.state);
+		this.enterRule(_localctx, 54, PolicyParser.RULE_argument);
+		try {
+			this.state = 364;
+			this._errHandler.sync(this);
+			switch ( this.interpreter.adaptivePredict(this._input, 47, this._ctx) ) {
+			case 1:
+				this.enterOuterAlt(_localctx, 1);
+				{
+				this.state = 360;
+				this.variable();
+				}
+				break;
+
+			case 2:
+				this.enterOuterAlt(_localctx, 2);
+				{
+				this.state = 361;
 				this.value();
 				}
 				break;
-			case 2:
+
+			case 3:
+				this.enterOuterAlt(_localctx, 3);
 				{
-				this.state = 313;
+				this.state = 362;
 				this.valueList();
 				}
 				break;
+
+			case 4:
+				this.enterOuterAlt(_localctx, 4);
+				{
+				this.state = 363;
+				this.functionCall();
+				}
+				break;
+			}
+		}
+		catch (re) {
+			if (re instanceof RecognitionException) {
+				_localctx.exception = re;
+				this._errHandler.reportError(this, re);
+				this._errHandler.recover(this, re);
+			} else {
+				throw re;
+			}
+		}
+		finally {
+			this.exitRule();
+		}
+		return _localctx;
+	}
+	// @RuleVersion(0)
+	public comparison(): ComparisonContext {
+		let _localctx: ComparisonContext = new ComparisonContext(this._ctx, this.state);
+		this.enterRule(_localctx, 56, PolicyParser.RULE_comparison);
+		try {
+			this.enterOuterAlt(_localctx, 1);
+			{
+			this.state = 366;
+			this.variable();
+			this.state = 367;
+			this.operator();
+			this.state = 372;
+			this._errHandler.sync(this);
+			switch ( this.interpreter.adaptivePredict(this._input, 48, this._ctx) ) {
+			case 1:
+				{
+				this.state = 368;
+				this.value();
+				}
+				break;
+
+			case 2:
+				{
+				this.state = 369;
+				this.valueList();
+				}
+				break;
+
 			case 3:
 				{
-				this.state = 314;
+				this.state = 370;
 				this.timeWindow();
 				}
 				break;
+
 			case 4:
 				{
-				this.state = 315;
+				this.state = 371;
 				this.patternMatch();
 				}
 				break;
@@ -1649,7 +1956,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1659,53 +1966,59 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public variable(): VariableContext {
-		let localctx: VariableContext = new VariableContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 50, PolicyParser.RULE_variable);
+		let _localctx: VariableContext = new VariableContext(this._ctx, this.state);
+		this.enterRule(_localctx, 58, PolicyParser.RULE_variable);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 318;
+			this.state = 374;
 			_la = this._input.LA(1);
-			if(!(_la===47 || _la===48)) {
+			if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
-			this.state = 325;
+			this.state = 381;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la===7) {
+			if (_la === PolicyParser.T__8) {
 				{
-				this.state = 321;
+				this.state = 377;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 319;
-					this.match(PolicyParser.T__6);
-					this.state = 320;
+					this.state = 375;
+					this.match(PolicyParser.T__8);
+					this.state = 376;
 					_la = this._input.LA(1);
-					if(!(_la===47 || _la===48)) {
+					if (!(_la === PolicyParser.HCL_VAR || _la === PolicyParser.WORD)) {
 					this._errHandler.recoverInline(this);
-					}
-					else {
+					} else {
+						if (this._input.LA(1) === Token.EOF) {
+							this.matchedEOF = true;
+						}
+
 						this._errHandler.reportMatch(this);
-					    this.consume();
+						this.consume();
 					}
 					}
 					}
-					this.state = 323;
+					this.state = 379;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
-				} while (_la===7);
+				} while (_la === PolicyParser.T__8);
 				}
 			}
 
@@ -1713,7 +2026,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1723,53 +2036,47 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public operator(): OperatorContext {
-		let localctx: OperatorContext = new OperatorContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 52, PolicyParser.RULE_operator);
+		let _localctx: OperatorContext = new OperatorContext(this._ctx, this.state);
+		this.enterRule(_localctx, 60, PolicyParser.RULE_operator);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 334;
+			this.state = 389;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 8:
+			case PolicyParser.T__9:
 				{
-				this.state = 327;
-				this.match(PolicyParser.T__7);
+				this.state = 383;
+				this.match(PolicyParser.T__9);
 				}
 				break;
-			case 9:
+			case PolicyParser.T__10:
 				{
-				this.state = 328;
-				this.match(PolicyParser.T__8);
+				this.state = 384;
+				this.match(PolicyParser.T__10);
+				this.state = 385;
+				this.match(PolicyParser.T__9);
 				}
 				break;
-			case 14:
+			case PolicyParser.BEFORE:
 				{
-				this.state = 329;
+				this.state = 386;
 				this.match(PolicyParser.BEFORE);
 				}
 				break;
-			case 28:
+			case PolicyParser.IN:
 				{
-				this.state = 330;
+				this.state = 387;
 				this.match(PolicyParser.IN);
 				}
 				break;
-			case 16:
+			case PolicyParser.BETWEEN:
 				{
-				this.state = 331;
-				this.match(PolicyParser.NOT);
-				this.state = 332;
-				this.match(PolicyParser.IN);
-				}
-				break;
-			case 15:
-				{
-				this.state = 333;
+				this.state = 388;
 				this.match(PolicyParser.BETWEEN);
 				}
 				break;
@@ -1780,7 +2087,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1790,76 +2097,81 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public value(): ValueContext {
-		let localctx: ValueContext = new ValueContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 54, PolicyParser.RULE_value);
+		let _localctx: ValueContext = new ValueContext(this._ctx, this.state);
+		this.enterRule(_localctx, 62, PolicyParser.RULE_value);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 352;
+			this.state = 407;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 45, this._ctx) ) {
+			switch ( this.interpreter.adaptivePredict(this._input, 53, this._ctx) ) {
 			case 1:
 				{
-				this.state = 336;
+				this.state = 391;
 				this.match(PolicyParser.WORD);
 				}
 				break;
+
 			case 2:
 				{
-				this.state = 337;
+				this.state = 392;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
+
 			case 3:
 				{
-				this.state = 338;
+				this.state = 393;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 339;
+				this.state = 394;
 				this.match(PolicyParser.T__4);
-				this.state = 340;
+				this.state = 395;
 				this.match(PolicyParser.WORD);
 				}
 				break;
+
 			case 4:
 				{
-				this.state = 341;
+				this.state = 396;
 				this.match(PolicyParser.QUOTED_STRING);
-				this.state = 344;
+				this.state = 399;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				do {
 					{
 					{
-					this.state = 342;
+					this.state = 397;
 					this.match(PolicyParser.WS);
-					this.state = 343;
+					this.state = 398;
 					this.match(PolicyParser.WORD);
 					}
 					}
-					this.state = 346;
+					this.state = 401;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
-				} while (_la===19);
+				} while (_la === PolicyParser.WS);
 				}
 				break;
+
 			case 5:
 				{
-				this.state = 348;
+				this.state = 403;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
+
 			case 6:
 				{
-				this.state = 349;
+				this.state = 404;
 				this.match(PolicyParser.T__5);
-				this.state = 350;
+				this.state = 405;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 351;
+				this.state = 406;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -1868,7 +2180,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1878,76 +2190,76 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public valueList(): ValueListContext {
-		let localctx: ValueListContext = new ValueListContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 56, PolicyParser.RULE_valueList);
+		let _localctx: ValueListContext = new ValueListContext(this._ctx, this.state);
+		this.enterRule(_localctx, 64, PolicyParser.RULE_valueList);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 354;
-			this.match(PolicyParser.T__9);
-			this.state = 360;
+			this.state = 409;
+			this.match(PolicyParser.T__6);
+			this.state = 415;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 18:
+			case PolicyParser.QUOTED_STRING:
 				{
-				this.state = 355;
+				this.state = 410;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
-			case 47:
+			case PolicyParser.HCL_VAR:
 				{
-				this.state = 356;
+				this.state = 411;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
-			case 6:
+			case PolicyParser.T__5:
 				{
-				this.state = 357;
+				this.state = 412;
 				this.match(PolicyParser.T__5);
-				this.state = 358;
+				this.state = 413;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 359;
+				this.state = 414;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 372;
+			this.state = 427;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===2) {
+			while (_la === PolicyParser.T__1) {
 				{
 				{
-				this.state = 362;
+				this.state = 417;
 				this.match(PolicyParser.T__1);
-				this.state = 368;
+				this.state = 423;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
-				case 18:
+				case PolicyParser.QUOTED_STRING:
 					{
-					this.state = 363;
+					this.state = 418;
 					this.match(PolicyParser.QUOTED_STRING);
 					}
 					break;
-				case 47:
+				case PolicyParser.HCL_VAR:
 					{
-					this.state = 364;
+					this.state = 419;
 					this.match(PolicyParser.HCL_VAR);
 					}
 					break;
-				case 6:
+				case PolicyParser.T__5:
 					{
-					this.state = 365;
+					this.state = 420;
 					this.match(PolicyParser.T__5);
-					this.state = 366;
+					this.state = 421;
 					this.match(PolicyParser.HCL_VAR);
-					this.state = 367;
+					this.state = 422;
 					this.match(PolicyParser.T__5);
 					}
 					break;
@@ -1956,17 +2268,17 @@ export default class PolicyParser extends Parser {
 				}
 				}
 				}
-				this.state = 374;
+				this.state = 429;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 375;
-			this.match(PolicyParser.T__10);
+			this.state = 430;
+			this.match(PolicyParser.T__7);
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -1976,67 +2288,67 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public timeWindow(): TimeWindowContext {
-		let localctx: TimeWindowContext = new TimeWindowContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 58, PolicyParser.RULE_timeWindow);
+		let _localctx: TimeWindowContext = new TimeWindowContext(this._ctx, this.state);
+		this.enterRule(_localctx, 66, PolicyParser.RULE_timeWindow);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 382;
+			this.state = 437;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 18:
+			case PolicyParser.QUOTED_STRING:
 				{
-				this.state = 377;
+				this.state = 432;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
-			case 47:
+			case PolicyParser.HCL_VAR:
 				{
-				this.state = 378;
+				this.state = 433;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
-			case 6:
+			case PolicyParser.T__5:
 				{
-				this.state = 379;
+				this.state = 434;
 				this.match(PolicyParser.T__5);
-				this.state = 380;
+				this.state = 435;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 381;
+				this.state = 436;
 				this.match(PolicyParser.T__5);
 				}
 				break;
 			default:
 				throw new NoViableAltException(this);
 			}
-			this.state = 384;
+			this.state = 439;
 			this.match(PolicyParser.AND);
-			this.state = 390;
+			this.state = 445;
 			this._errHandler.sync(this);
 			switch (this._input.LA(1)) {
-			case 18:
+			case PolicyParser.QUOTED_STRING:
 				{
-				this.state = 385;
+				this.state = 440;
 				this.match(PolicyParser.QUOTED_STRING);
 				}
 				break;
-			case 47:
+			case PolicyParser.HCL_VAR:
 				{
-				this.state = 386;
+				this.state = 441;
 				this.match(PolicyParser.HCL_VAR);
 				}
 				break;
-			case 6:
+			case PolicyParser.T__5:
 				{
-				this.state = 387;
+				this.state = 442;
 				this.match(PolicyParser.T__5);
-				this.state = 388;
+				this.state = 443;
 				this.match(PolicyParser.HCL_VAR);
-				this.state = 389;
+				this.state = 444;
 				this.match(PolicyParser.T__5);
 				}
 				break;
@@ -2047,7 +2359,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -2057,45 +2369,45 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public comparisonList(): ComparisonListContext {
-		let localctx: ComparisonListContext = new ComparisonListContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 60, PolicyParser.RULE_comparisonList);
+		let _localctx: ComparisonListContext = new ComparisonListContext(this._ctx, this.state);
+		this.enterRule(_localctx, 68, PolicyParser.RULE_comparisonList);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 392;
+			this.state = 447;
 			this.logicalCombine();
-			this.state = 393;
+			this.state = 448;
 			this.match(PolicyParser.T__0);
-			this.state = 394;
+			this.state = 449;
 			this.condition();
-			this.state = 399;
+			this.state = 454;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			while (_la===2) {
+			while (_la === PolicyParser.T__1) {
 				{
 				{
-				this.state = 395;
+				this.state = 450;
 				this.match(PolicyParser.T__1);
-				this.state = 396;
+				this.state = 451;
 				this.condition();
 				}
 				}
-				this.state = 401;
+				this.state = 456;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 			}
-			this.state = 402;
+			this.state = 457;
 			this.match(PolicyParser.T__2);
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -2105,30 +2417,33 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public logicalCombine(): LogicalCombineContext {
-		let localctx: LogicalCombineContext = new LogicalCombineContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 62, PolicyParser.RULE_logicalCombine);
+		let _localctx: LogicalCombineContext = new LogicalCombineContext(this._ctx, this.state);
+		this.enterRule(_localctx, 70, PolicyParser.RULE_logicalCombine);
 		let _la: number;
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 404;
+			this.state = 459;
 			_la = this._input.LA(1);
-			if(!(_la===42 || _la===44)) {
+			if (!(_la === PolicyParser.ANY || _la === PolicyParser.ALL)) {
 			this._errHandler.recoverInline(this);
-			}
-			else {
+			} else {
+				if (this._input.LA(1) === Token.EOF) {
+					this.matchedEOF = true;
+				}
+
 				this._errHandler.reportMatch(this);
-			    this.consume();
+				this.consume();
 			}
 			}
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -2138,84 +2453,58 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 	// @RuleVersion(0)
 	public patternMatch(): PatternMatchContext {
-		let localctx: PatternMatchContext = new PatternMatchContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 64, PolicyParser.RULE_patternMatch);
-		let _la: number;
+		let _localctx: PatternMatchContext = new PatternMatchContext(this._ctx, this.state);
+		this.enterRule(_localctx, 72, PolicyParser.RULE_patternMatch);
 		try {
-			this.enterOuterAlt(localctx, 1);
+			this.enterOuterAlt(_localctx, 1);
 			{
-			this.state = 418;
+			this.state = 473;
 			this._errHandler.sync(this);
-			switch ( this._interp.adaptivePredict(this._input, 52, this._ctx) ) {
+			switch ( this.interpreter.adaptivePredict(this._input, 60, this._ctx) ) {
 			case 1:
 				{
-				this.state = 406;
+				this.state = 461;
 				this.match(PolicyParser.T__4);
-				this.state = 407;
-				_la = this._input.LA(1);
-				if(!(_la===47 || _la===48)) {
-				this._errHandler.recoverInline(this);
-				}
-				else {
-					this._errHandler.reportMatch(this);
-				    this.consume();
-				}
-				this.state = 408;
+				this.state = 462;
+				this.match(PolicyParser.WORD);
+				this.state = 463;
 				this.match(PolicyParser.T__11);
 				}
 				break;
+
 			case 2:
 				{
-				this.state = 409;
+				this.state = 464;
 				this.match(PolicyParser.T__12);
-				this.state = 410;
-				_la = this._input.LA(1);
-				if(!(_la===47 || _la===48)) {
-				this._errHandler.recoverInline(this);
-				}
-				else {
-					this._errHandler.reportMatch(this);
-				    this.consume();
-				}
-				this.state = 411;
+				this.state = 465;
+				this.match(PolicyParser.WORD);
+				this.state = 466;
 				this.match(PolicyParser.T__4);
 				}
 				break;
+
 			case 3:
 				{
-				this.state = 412;
+				this.state = 467;
 				this.match(PolicyParser.T__4);
-				this.state = 413;
-				_la = this._input.LA(1);
-				if(!(_la===47 || _la===48)) {
-				this._errHandler.recoverInline(this);
-				}
-				else {
-					this._errHandler.reportMatch(this);
-				    this.consume();
-				}
-				this.state = 414;
+				this.state = 468;
+				this.match(PolicyParser.WORD);
+				this.state = 469;
 				this.match(PolicyParser.T__4);
 				}
 				break;
+
 			case 4:
 				{
-				this.state = 415;
+				this.state = 470;
 				this.match(PolicyParser.T__12);
-				this.state = 416;
-				_la = this._input.LA(1);
-				if(!(_la===47 || _la===48)) {
-				this._errHandler.recoverInline(this);
-				}
-				else {
-					this._errHandler.reportMatch(this);
-				    this.consume();
-				}
-				this.state = 417;
+				this.state = 471;
+				this.match(PolicyParser.WORD);
+				this.state = 472;
 				this.match(PolicyParser.T__11);
 				}
 				break;
@@ -2224,7 +2513,7 @@ export default class PolicyParser extends Parser {
 		}
 		catch (re) {
 			if (re instanceof RecognitionException) {
-				localctx.exception = re;
+				_localctx.exception = re;
 				this._errHandler.reportError(this, re);
 				this._errHandler.recover(this, re);
 			} else {
@@ -2234,208 +2523,324 @@ export default class PolicyParser extends Parser {
 		finally {
 			this.exitRule();
 		}
-		return localctx;
+		return _localctx;
 	}
 
-	public static readonly _serializedATN: number[] = [4,1,48,421,2,0,7,0,2,
-	1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,2,
-	10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,14,2,15,7,15,2,16,7,16,2,17,
-	7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,21,2,22,7,22,2,23,7,23,2,24,7,
-	24,2,25,7,25,2,26,7,26,2,27,7,27,2,28,7,28,2,29,7,29,2,30,7,30,2,31,7,31,
-	2,32,7,32,1,0,1,0,1,0,1,0,4,0,71,8,0,11,0,12,0,72,1,0,1,0,1,1,1,1,1,1,3,
-	1,80,8,1,1,1,1,1,1,1,1,1,3,1,86,8,1,1,1,3,1,89,8,1,1,1,1,1,1,1,1,1,3,1,
-	95,8,1,1,1,3,1,98,8,1,1,2,1,2,1,2,1,2,1,2,1,2,1,2,3,2,107,8,2,1,2,3,2,110,
-	8,2,1,2,1,2,1,2,3,2,115,8,2,1,2,1,2,1,2,1,2,1,2,3,2,122,8,2,1,2,1,2,3,2,
-	126,8,2,1,2,3,2,129,8,2,1,3,1,3,1,3,1,3,1,3,3,3,136,8,3,1,4,1,4,1,4,1,4,
-	3,4,142,8,4,1,4,1,4,1,4,1,4,1,4,3,4,149,8,4,1,4,3,4,152,8,4,1,4,1,4,1,4,
-	1,4,1,4,1,4,1,4,3,4,161,8,4,1,4,1,4,3,4,165,8,4,1,4,3,4,168,8,4,1,5,1,5,
-	3,5,172,8,5,1,6,1,6,1,7,1,7,1,7,1,7,5,7,180,8,7,10,7,12,7,183,9,7,1,7,1,
-	7,1,8,1,8,3,8,189,8,8,1,8,1,8,1,8,5,8,194,8,8,10,8,12,8,197,9,8,1,8,3,8,
-	200,8,8,1,9,1,9,1,9,3,9,205,8,9,1,10,1,10,1,10,1,10,1,10,3,10,212,8,10,
-	1,11,1,11,1,11,3,11,217,8,11,1,11,1,11,1,11,3,11,222,8,11,5,11,224,8,11,
-	10,11,12,11,227,9,11,1,12,1,12,1,12,5,12,232,8,12,10,12,12,12,235,9,12,
-	1,13,1,13,1,13,1,13,5,13,241,8,13,10,13,12,13,244,9,13,1,14,1,14,1,14,1,
-	14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,1,14,3,14,258,8,14,1,15,1,15,1,15,
-	1,15,1,15,1,15,1,15,1,15,1,15,4,15,269,8,15,11,15,12,15,270,1,16,1,16,1,
-	17,1,17,1,17,1,18,1,18,1,18,3,18,281,8,18,1,18,1,18,1,18,3,18,286,8,18,
-	5,18,288,8,18,10,18,12,18,291,9,18,1,19,1,19,1,19,1,20,1,20,1,20,1,20,3,
-	20,300,8,20,1,21,1,21,1,22,1,22,1,23,1,23,1,23,3,23,309,8,23,1,24,1,24,
-	1,24,1,24,1,24,1,24,3,24,317,8,24,1,25,1,25,1,25,4,25,322,8,25,11,25,12,
-	25,323,3,25,326,8,25,1,26,1,26,1,26,1,26,1,26,1,26,1,26,3,26,335,8,26,1,
-	27,1,27,1,27,1,27,1,27,1,27,1,27,1,27,4,27,345,8,27,11,27,12,27,346,1,27,
-	1,27,1,27,1,27,3,27,353,8,27,1,28,1,28,1,28,1,28,1,28,1,28,3,28,361,8,28,
-	1,28,1,28,1,28,1,28,1,28,1,28,3,28,369,8,28,5,28,371,8,28,10,28,12,28,374,
-	9,28,1,28,1,28,1,29,1,29,1,29,1,29,1,29,3,29,383,8,29,1,29,1,29,1,29,1,
-	29,1,29,1,29,3,29,391,8,29,1,30,1,30,1,30,1,30,1,30,5,30,398,8,30,10,30,
-	12,30,401,9,30,1,30,1,30,1,31,1,31,1,32,1,32,1,32,1,32,1,32,1,32,1,32,1,
-	32,1,32,1,32,1,32,1,32,3,32,419,8,32,1,32,1,270,0,33,0,2,4,6,8,10,12,14,
-	16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,
-	64,0,3,2,0,36,38,41,41,1,0,47,48,2,0,42,42,44,44,468,0,70,1,0,0,0,2,76,
-	1,0,0,0,4,99,1,0,0,0,6,130,1,0,0,0,8,137,1,0,0,0,10,171,1,0,0,0,12,173,
-	1,0,0,0,14,175,1,0,0,0,16,199,1,0,0,0,18,204,1,0,0,0,20,211,1,0,0,0,22,
-	213,1,0,0,0,24,228,1,0,0,0,26,236,1,0,0,0,28,257,1,0,0,0,30,259,1,0,0,0,
-	32,272,1,0,0,0,34,274,1,0,0,0,36,277,1,0,0,0,38,292,1,0,0,0,40,299,1,0,
-	0,0,42,301,1,0,0,0,44,303,1,0,0,0,46,308,1,0,0,0,48,310,1,0,0,0,50,318,
-	1,0,0,0,52,334,1,0,0,0,54,352,1,0,0,0,56,354,1,0,0,0,58,382,1,0,0,0,60,
-	392,1,0,0,0,62,404,1,0,0,0,64,418,1,0,0,0,66,71,3,2,1,0,67,71,3,4,2,0,68,
-	71,3,6,3,0,69,71,3,8,4,0,70,66,1,0,0,0,70,67,1,0,0,0,70,68,1,0,0,0,70,69,
-	1,0,0,0,71,72,1,0,0,0,72,70,1,0,0,0,72,73,1,0,0,0,73,74,1,0,0,0,74,75,5,
-	0,0,1,75,1,1,0,0,0,76,77,5,23,0,0,77,88,3,20,10,0,78,80,5,26,0,0,79,78,
-	1,0,0,0,79,80,1,0,0,0,80,81,1,0,0,0,81,82,3,12,6,0,82,83,3,44,22,0,83,89,
-	1,0,0,0,84,86,5,26,0,0,85,84,1,0,0,0,85,86,1,0,0,0,86,87,1,0,0,0,87,89,
-	3,14,7,0,88,79,1,0,0,0,88,85,1,0,0,0,89,90,1,0,0,0,90,91,5,28,0,0,91,94,
-	3,16,8,0,92,93,5,29,0,0,93,95,3,46,23,0,94,92,1,0,0,0,94,95,1,0,0,0,95,
-	97,1,0,0,0,96,98,5,17,0,0,97,96,1,0,0,0,97,98,1,0,0,0,98,3,1,0,0,0,99,100,
-	5,22,0,0,100,109,3,20,10,0,101,102,5,26,0,0,102,103,3,10,5,0,103,104,3,
-	44,22,0,104,110,1,0,0,0,105,107,5,26,0,0,106,105,1,0,0,0,106,107,1,0,0,
-	0,107,108,1,0,0,0,108,110,3,14,7,0,109,101,1,0,0,0,109,106,1,0,0,0,110,
-	111,1,0,0,0,111,114,5,28,0,0,112,115,3,18,9,0,113,115,3,16,8,0,114,112,
-	1,0,0,0,114,113,1,0,0,0,115,121,1,0,0,0,116,117,5,30,0,0,117,118,3,44,22,
-	0,118,119,5,28,0,0,119,120,3,18,9,0,120,122,1,0,0,0,121,116,1,0,0,0,121,
-	122,1,0,0,0,122,125,1,0,0,0,123,124,5,29,0,0,124,126,3,46,23,0,125,123,
-	1,0,0,0,125,126,1,0,0,0,126,128,1,0,0,0,127,129,5,17,0,0,128,127,1,0,0,
-	0,128,129,1,0,0,0,129,5,1,0,0,0,130,131,5,24,0,0,131,132,3,40,20,0,132,
-	133,5,45,0,0,133,135,3,42,21,0,134,136,5,17,0,0,135,134,1,0,0,0,135,136,
-	1,0,0,0,136,7,1,0,0,0,137,138,5,40,0,0,138,141,3,20,10,0,139,140,5,27,0,
-	0,140,142,3,18,9,0,141,139,1,0,0,0,141,142,1,0,0,0,142,151,1,0,0,0,143,
-	144,5,26,0,0,144,145,3,10,5,0,145,146,3,44,22,0,146,152,1,0,0,0,147,149,
-	5,26,0,0,148,147,1,0,0,0,148,149,1,0,0,0,149,150,1,0,0,0,150,152,3,14,7,
-	0,151,143,1,0,0,0,151,148,1,0,0,0,152,153,1,0,0,0,153,154,5,28,0,0,154,
-	160,3,16,8,0,155,156,5,30,0,0,156,157,3,44,22,0,157,158,5,28,0,0,158,159,
-	3,18,9,0,159,161,1,0,0,0,160,155,1,0,0,0,160,161,1,0,0,0,161,164,1,0,0,
-	0,162,163,5,29,0,0,163,165,3,46,23,0,164,162,1,0,0,0,164,165,1,0,0,0,165,
-	167,1,0,0,0,166,168,5,17,0,0,167,166,1,0,0,0,167,168,1,0,0,0,168,9,1,0,
-	0,0,169,172,3,12,6,0,170,172,5,39,0,0,171,169,1,0,0,0,171,170,1,0,0,0,172,
-	11,1,0,0,0,173,174,7,0,0,0,174,13,1,0,0,0,175,176,5,1,0,0,176,181,7,1,0,
-	0,177,178,5,2,0,0,178,180,7,1,0,0,179,177,1,0,0,0,180,183,1,0,0,0,181,179,
-	1,0,0,0,181,182,1,0,0,0,182,184,1,0,0,0,183,181,1,0,0,0,184,185,5,3,0,0,
-	185,15,1,0,0,0,186,188,5,34,0,0,187,189,5,46,0,0,188,187,1,0,0,0,188,189,
-	1,0,0,0,189,190,1,0,0,0,190,195,7,1,0,0,191,192,5,4,0,0,192,194,7,1,0,0,
-	193,191,1,0,0,0,194,197,1,0,0,0,195,193,1,0,0,0,195,196,1,0,0,0,196,200,
-	1,0,0,0,197,195,1,0,0,0,198,200,5,35,0,0,199,186,1,0,0,0,199,198,1,0,0,
-	0,200,17,1,0,0,0,201,205,5,21,0,0,202,203,5,35,0,0,203,205,7,1,0,0,204,
-	201,1,0,0,0,204,202,1,0,0,0,205,19,1,0,0,0,206,212,3,22,11,0,207,212,3,
-	26,13,0,208,212,3,36,18,0,209,212,3,24,12,0,210,212,5,20,0,0,211,206,1,
-	0,0,0,211,207,1,0,0,0,211,208,1,0,0,0,211,209,1,0,0,0,211,210,1,0,0,0,212,
-	21,1,0,0,0,213,216,5,32,0,0,214,217,3,28,14,0,215,217,3,34,17,0,216,214,
-	1,0,0,0,216,215,1,0,0,0,217,225,1,0,0,0,218,221,5,2,0,0,219,222,3,28,14,
-	0,220,222,3,34,17,0,221,219,1,0,0,0,221,220,1,0,0,0,222,224,1,0,0,0,223,
-	218,1,0,0,0,224,227,1,0,0,0,225,223,1,0,0,0,225,226,1,0,0,0,226,23,1,0,
-	0,0,227,225,1,0,0,0,228,229,5,25,0,0,229,233,3,30,15,0,230,232,3,30,15,
-	0,231,230,1,0,0,0,232,235,1,0,0,0,233,231,1,0,0,0,233,234,1,0,0,0,234,25,
-	1,0,0,0,235,233,1,0,0,0,236,237,5,33,0,0,237,242,3,32,16,0,238,239,5,2,
-	0,0,239,241,3,32,16,0,240,238,1,0,0,0,241,244,1,0,0,0,242,240,1,0,0,0,242,
-	243,1,0,0,0,243,27,1,0,0,0,244,242,1,0,0,0,245,258,5,48,0,0,246,247,5,18,
-	0,0,247,248,5,5,0,0,248,258,5,18,0,0,249,258,5,18,0,0,250,251,5,48,0,0,
-	251,252,5,5,0,0,252,258,5,48,0,0,253,254,5,48,0,0,254,255,5,5,0,0,255,258,
-	5,18,0,0,256,258,5,47,0,0,257,245,1,0,0,0,257,246,1,0,0,0,257,249,1,0,0,
-	0,257,250,1,0,0,0,257,253,1,0,0,0,257,256,1,0,0,0,258,29,1,0,0,0,259,268,
-	7,1,0,0,260,261,5,6,0,0,261,262,7,1,0,0,262,269,5,6,0,0,263,264,5,6,0,0,
-	264,265,7,1,0,0,265,266,5,5,0,0,266,267,7,1,0,0,267,269,5,6,0,0,268,260,
-	1,0,0,0,268,263,1,0,0,0,269,270,1,0,0,0,270,271,1,0,0,0,270,268,1,0,0,0,
-	271,31,1,0,0,0,272,273,7,1,0,0,273,33,1,0,0,0,274,275,5,46,0,0,275,276,
-	7,1,0,0,276,35,1,0,0,0,277,280,5,31,0,0,278,281,3,28,14,0,279,281,3,34,
-	17,0,280,278,1,0,0,0,280,279,1,0,0,0,281,289,1,0,0,0,282,285,5,2,0,0,283,
-	286,3,28,14,0,284,286,3,34,17,0,285,283,1,0,0,0,285,284,1,0,0,0,286,288,
-	1,0,0,0,287,282,1,0,0,0,288,291,1,0,0,0,289,287,1,0,0,0,289,290,1,0,0,0,
-	290,37,1,0,0,0,291,289,1,0,0,0,292,293,5,35,0,0,293,294,7,1,0,0,294,39,
-	1,0,0,0,295,300,3,22,11,0,296,300,3,36,18,0,297,300,3,26,13,0,298,300,3,
-	38,19,0,299,295,1,0,0,0,299,296,1,0,0,0,299,297,1,0,0,0,299,298,1,0,0,0,
-	300,41,1,0,0,0,301,302,7,1,0,0,302,43,1,0,0,0,303,304,7,1,0,0,304,45,1,
-	0,0,0,305,309,3,60,30,0,306,309,3,48,24,0,307,309,5,47,0,0,308,305,1,0,
-	0,0,308,306,1,0,0,0,308,307,1,0,0,0,309,47,1,0,0,0,310,311,3,50,25,0,311,
-	316,3,52,26,0,312,317,3,54,27,0,313,317,3,56,28,0,314,317,3,58,29,0,315,
-	317,3,64,32,0,316,312,1,0,0,0,316,313,1,0,0,0,316,314,1,0,0,0,316,315,1,
-	0,0,0,317,49,1,0,0,0,318,325,7,1,0,0,319,320,5,7,0,0,320,322,7,1,0,0,321,
-	319,1,0,0,0,322,323,1,0,0,0,323,321,1,0,0,0,323,324,1,0,0,0,324,326,1,0,
-	0,0,325,321,1,0,0,0,325,326,1,0,0,0,326,51,1,0,0,0,327,335,5,8,0,0,328,
-	335,5,9,0,0,329,335,5,14,0,0,330,335,5,28,0,0,331,332,5,16,0,0,332,335,
-	5,28,0,0,333,335,5,15,0,0,334,327,1,0,0,0,334,328,1,0,0,0,334,329,1,0,0,
-	0,334,330,1,0,0,0,334,331,1,0,0,0,334,333,1,0,0,0,335,53,1,0,0,0,336,353,
-	5,48,0,0,337,353,5,18,0,0,338,339,5,18,0,0,339,340,5,5,0,0,340,353,5,48,
-	0,0,341,344,5,18,0,0,342,343,5,19,0,0,343,345,5,48,0,0,344,342,1,0,0,0,
-	345,346,1,0,0,0,346,344,1,0,0,0,346,347,1,0,0,0,347,353,1,0,0,0,348,353,
-	5,47,0,0,349,350,5,6,0,0,350,351,5,47,0,0,351,353,5,6,0,0,352,336,1,0,0,
-	0,352,337,1,0,0,0,352,338,1,0,0,0,352,341,1,0,0,0,352,348,1,0,0,0,352,349,
-	1,0,0,0,353,55,1,0,0,0,354,360,5,10,0,0,355,361,5,18,0,0,356,361,5,47,0,
-	0,357,358,5,6,0,0,358,359,5,47,0,0,359,361,5,6,0,0,360,355,1,0,0,0,360,
-	356,1,0,0,0,360,357,1,0,0,0,361,372,1,0,0,0,362,368,5,2,0,0,363,369,5,18,
-	0,0,364,369,5,47,0,0,365,366,5,6,0,0,366,367,5,47,0,0,367,369,5,6,0,0,368,
-	363,1,0,0,0,368,364,1,0,0,0,368,365,1,0,0,0,369,371,1,0,0,0,370,362,1,0,
-	0,0,371,374,1,0,0,0,372,370,1,0,0,0,372,373,1,0,0,0,373,375,1,0,0,0,374,
-	372,1,0,0,0,375,376,5,11,0,0,376,57,1,0,0,0,377,383,5,18,0,0,378,383,5,
-	47,0,0,379,380,5,6,0,0,380,381,5,47,0,0,381,383,5,6,0,0,382,377,1,0,0,0,
-	382,378,1,0,0,0,382,379,1,0,0,0,383,384,1,0,0,0,384,390,5,43,0,0,385,391,
-	5,18,0,0,386,391,5,47,0,0,387,388,5,6,0,0,388,389,5,47,0,0,389,391,5,6,
-	0,0,390,385,1,0,0,0,390,386,1,0,0,0,390,387,1,0,0,0,391,59,1,0,0,0,392,
-	393,3,62,31,0,393,394,5,1,0,0,394,399,3,46,23,0,395,396,5,2,0,0,396,398,
-	3,46,23,0,397,395,1,0,0,0,398,401,1,0,0,0,399,397,1,0,0,0,399,400,1,0,0,
-	0,400,402,1,0,0,0,401,399,1,0,0,0,402,403,5,3,0,0,403,61,1,0,0,0,404,405,
-	7,2,0,0,405,63,1,0,0,0,406,407,5,5,0,0,407,408,7,1,0,0,408,419,5,12,0,0,
-	409,410,5,13,0,0,410,411,7,1,0,0,411,419,5,5,0,0,412,413,5,5,0,0,413,414,
-	7,1,0,0,414,419,5,5,0,0,415,416,5,13,0,0,416,417,7,1,0,0,417,419,5,12,0,
-	0,418,406,1,0,0,0,418,409,1,0,0,0,418,412,1,0,0,0,418,415,1,0,0,0,419,65,
-	1,0,0,0,53,70,72,79,85,88,94,97,106,109,114,121,125,128,135,141,148,151,
-	160,164,167,171,181,188,195,199,204,211,216,221,225,233,242,257,268,270,
-	280,285,289,299,308,316,323,325,334,346,352,360,368,372,382,390,399,418];
-
-	private static __ATN: ATN;
+	public static readonly _serializedATN: string =
+		"\x03\uC91D\uCABA\u058D\uAFBA\u4F53\u0607\uEA8B\uC241\x032\u01DE\x04\x02" +
+		"\t\x02\x04\x03\t\x03\x04\x04\t\x04\x04\x05\t\x05\x04\x06\t\x06\x04\x07" +
+		"\t\x07\x04\b\t\b\x04\t\t\t\x04\n\t\n\x04\v\t\v\x04\f\t\f\x04\r\t\r\x04" +
+		"\x0E\t\x0E\x04\x0F\t\x0F\x04\x10\t\x10\x04\x11\t\x11\x04\x12\t\x12\x04" +
+		"\x13\t\x13\x04\x14\t\x14\x04\x15\t\x15\x04\x16\t\x16\x04\x17\t\x17\x04" +
+		"\x18\t\x18\x04\x19\t\x19\x04\x1A\t\x1A\x04\x1B\t\x1B\x04\x1C\t\x1C\x04" +
+		"\x1D\t\x1D\x04\x1E\t\x1E\x04\x1F\t\x1F\x04 \t \x04!\t!\x04\"\t\"\x04#" +
+		"\t#\x04$\t$\x04%\t%\x04&\t&\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x06" +
+		"\x02R\n\x02\r\x02\x0E\x02S\x03\x02\x03\x02\x03\x03\x03\x03\x03\x03\x05" +
+		"\x03[\n\x03\x03\x03\x03\x03\x03\x03\x03\x03\x05\x03a\n\x03\x03\x03\x05" +
+		"\x03d\n\x03\x03\x03\x03\x03\x03\x03\x03\x03\x05\x03j\n\x03\x03\x03\x05" +
+		"\x03m\n\x03\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x05" +
+		"\x04v\n\x04\x03\x04\x05\x04y\n\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03" +
+		"\x04\x03\x04\x03\x04\x03\x04\x05\x04\x83\n\x04\x03\x04\x03\x04\x05\x04" +
+		"\x87\n\x04\x03\x04\x05\x04\x8A\n\x04\x03\x05\x03\x05\x03\x05\x03\x05\x03" +
+		"\x05\x05\x05\x91\n\x05\x03\x06\x03\x06\x03\x06\x03\x06\x05\x06\x97\n\x06" +
+		"\x03\x06\x03\x06\x03\x06\x03\x06\x03\x06\x05\x06\x9E\n\x06\x03\x06\x05" +
+		"\x06\xA1\n\x06\x03\x06\x03\x06\x03\x06\x03\x06\x03\x06\x03\x06\x03\x06" +
+		"\x05\x06\xAA\n\x06\x03\x06\x03\x06\x05\x06\xAE\n\x06\x03\x06\x05\x06\xB1" +
+		"\n\x06\x03\x07\x03\x07\x03\x07\x03\x07\x03\x07\x05\x07\xB8\n\x07\x03\x07" +
+		"\x03\x07\x03\x07\x03\x07\x05\x07\xBE\n\x07\x03\x07\x05\x07\xC1\n\x07\x03" +
+		"\x07\x03\x07\x03\x07\x03\x07\x05\x07\xC7\n\x07\x03\x07\x05\x07\xCA\n\x07" +
+		"\x05\x07\xCC\n\x07\x03\b\x03\b\x05\b\xD0\n\b\x03\t\x03\t\x03\n\x03\n\x03" +
+		"\n\x03\n\x07\n\xD8\n\n\f\n\x0E\n\xDB\v\n\x03\n\x03\n\x03\v\x03\v\x05\v" +
+		"\xE1\n\v\x03\v\x03\v\x03\v\x07\v\xE6\n\v\f\v\x0E\v\xE9\v\v\x03\v\x05\v" +
+		"\xEC\n\v\x03\f\x03\f\x03\f\x05\f\xF1\n\f\x03\r\x03\r\x03\r\x03\r\x03\r" +
+		"\x05\r\xF8\n\r\x03\x0E\x03\x0E\x03\x0E\x05\x0E\xFD\n\x0E\x03\x0E\x03\x0E" +
+		"\x03\x0E\x05\x0E\u0102\n\x0E\x07\x0E\u0104\n\x0E\f\x0E\x0E\x0E\u0107\v" +
+		"\x0E\x03\x0F\x03\x0F\x03\x0F\x07\x0F\u010C\n\x0F\f\x0F\x0E\x0F\u010F\v" +
+		"\x0F\x03\x10\x03\x10\x03\x10\x03\x10\x07\x10\u0115\n\x10\f\x10\x0E\x10" +
+		"\u0118\v\x10\x03\x11\x03\x11\x03\x11\x03\x11\x03\x11\x03\x11\x03\x11\x03" +
+		"\x11\x03\x11\x03\x11\x03\x11\x03\x11\x05\x11\u0126\n\x11\x03\x12\x03\x12" +
+		"\x03\x12\x03\x12\x03\x12\x03\x12\x03\x12\x03\x12\x03\x12\x06\x12\u0131" +
+		"\n\x12\r\x12\x0E\x12\u0132\x03\x13\x03\x13\x03\x14\x03\x14\x03\x14\x03" +
+		"\x15\x03\x15\x03\x15\x05\x15\u013D\n\x15\x03\x15\x03\x15\x03\x15\x05\x15" +
+		"\u0142\n\x15\x07\x15\u0144\n\x15\f\x15\x0E\x15\u0147\v\x15\x03\x16\x03" +
+		"\x16\x03\x16\x03\x17\x03\x17\x03\x17\x03\x17\x05\x17\u0150\n\x17\x03\x18" +
+		"\x03\x18\x03\x19\x03\x19\x03\x1A\x03\x1A\x03\x1A\x03\x1A\x05\x1A\u015A" +
+		"\n\x1A\x03\x1B\x03\x1B\x03\x1B\x05\x1B\u015F\n\x1B\x03\x1B\x03\x1B\x03" +
+		"\x1C\x03\x1C\x03\x1C\x07\x1C\u0166\n\x1C\f\x1C\x0E\x1C\u0169\v\x1C\x03" +
+		"\x1D\x03\x1D\x03\x1D\x03\x1D\x05\x1D\u016F\n\x1D\x03\x1E\x03\x1E\x03\x1E" +
+		"\x03\x1E\x03\x1E\x03\x1E\x05\x1E\u0177\n\x1E\x03\x1F\x03\x1F\x03\x1F\x06" +
+		"\x1F\u017C\n\x1F\r\x1F\x0E\x1F\u017D\x05\x1F\u0180\n\x1F\x03 \x03 \x03" +
+		" \x03 \x03 \x03 \x05 \u0188\n \x03!\x03!\x03!\x03!\x03!\x03!\x03!\x03" +
+		"!\x06!\u0192\n!\r!\x0E!\u0193\x03!\x03!\x03!\x03!\x05!\u019A\n!\x03\"" +
+		"\x03\"\x03\"\x03\"\x03\"\x03\"\x05\"\u01A2\n\"\x03\"\x03\"\x03\"\x03\"" +
+		"\x03\"\x03\"\x05\"\u01AA\n\"\x07\"\u01AC\n\"\f\"\x0E\"\u01AF\v\"\x03\"" +
+		"\x03\"\x03#\x03#\x03#\x03#\x03#\x05#\u01B8\n#\x03#\x03#\x03#\x03#\x03" +
+		"#\x03#\x05#\u01C0\n#\x03$\x03$\x03$\x03$\x03$\x07$\u01C7\n$\f$\x0E$\u01CA" +
+		"\v$\x03$\x03$\x03%\x03%\x03&\x03&\x03&\x03&\x03&\x03&\x03&\x03&\x03&\x03" +
+		"&\x03&\x03&\x05&\u01DC\n&\x03&\x03\u0132\x02\x02\'\x02\x02\x04\x02\x06" +
+		"\x02\b\x02\n\x02\f\x02\x0E\x02\x10\x02\x12\x02\x14\x02\x16\x02\x18\x02" +
+		"\x1A\x02\x1C\x02\x1E\x02 \x02\"\x02$\x02&\x02(\x02*\x02,\x02.\x020\x02" +
+		"2\x024\x026\x028\x02:\x02<\x02>\x02@\x02B\x02D\x02F\x02H\x02J\x02\x02" +
+		"\x05\x04\x02&(++\x03\x0212\x04\x02,,..\x02\u0215\x02Q\x03\x02\x02\x02" +
+		"\x04W\x03\x02\x02\x02\x06n\x03\x02\x02\x02\b\x8B\x03\x02\x02\x02\n\x92" +
+		"\x03\x02\x02\x02\f\xB2\x03\x02\x02\x02\x0E\xCF\x03\x02\x02\x02\x10\xD1" +
+		"\x03\x02\x02\x02\x12\xD3\x03\x02\x02\x02\x14\xEB\x03\x02\x02\x02\x16\xF0" +
+		"\x03\x02\x02\x02\x18\xF7\x03\x02\x02\x02\x1A\xF9\x03\x02\x02\x02\x1C\u0108" +
+		"\x03\x02\x02\x02\x1E\u0110\x03\x02\x02\x02 \u0125\x03\x02\x02\x02\"\u0127" +
+		"\x03\x02\x02\x02$\u0134\x03\x02\x02\x02&\u0136\x03\x02\x02\x02(\u0139" +
+		"\x03\x02\x02\x02*\u0148\x03\x02\x02\x02,\u014F\x03\x02\x02\x02.\u0151" +
+		"\x03\x02\x02\x020\u0153\x03\x02\x02\x022\u0159\x03\x02\x02\x024\u015B" +
+		"\x03\x02\x02\x026\u0162\x03\x02\x02\x028\u016E\x03\x02\x02\x02:\u0170" +
+		"\x03\x02\x02\x02<\u0178\x03\x02\x02\x02>\u0187\x03\x02\x02\x02@\u0199" +
+		"\x03\x02\x02\x02B\u019B\x03\x02\x02\x02D\u01B7\x03\x02\x02\x02F\u01C1" +
+		"\x03\x02\x02\x02H\u01CD\x03\x02\x02\x02J\u01DB\x03\x02\x02\x02LR\x05\x04" +
+		"\x03\x02MR\x05\f\x07\x02NR\x05\x06\x04\x02OR\x05\b\x05\x02PR\x05\n\x06" +
+		"\x02QL\x03\x02\x02\x02QM\x03\x02\x02\x02QN\x03\x02\x02\x02QO\x03\x02\x02" +
+		"\x02QP\x03\x02\x02\x02RS\x03\x02\x02\x02SQ\x03\x02\x02\x02ST\x03\x02\x02" +
+		"\x02TU\x03\x02\x02\x02UV\x07\x02\x02\x03V\x03\x03\x02\x02\x02WX\x07\x18" +
+		"\x02\x02Xc\x05\x18\r\x02Y[\x07\x1C\x02\x02ZY\x03\x02\x02\x02Z[\x03\x02" +
+		"\x02\x02[\\\x03\x02\x02\x02\\]\x05\x10\t\x02]^\x050\x19\x02^d\x03\x02" +
+		"\x02\x02_a\x07\x1C\x02\x02`_\x03\x02\x02\x02`a\x03\x02\x02\x02ab\x03\x02" +
+		"\x02\x02bd\x05\x12\n\x02cZ\x03\x02\x02\x02c`\x03\x02\x02\x02de\x03\x02" +
+		"\x02\x02ef\x07\x1E\x02\x02fi\x05\x14\v\x02gh\x07\x1F\x02\x02hj\x052\x1A" +
+		"\x02ig\x03\x02\x02\x02ij\x03\x02\x02\x02jl\x03\x02\x02\x02km\x07\x12\x02" +
+		"\x02lk\x03\x02\x02\x02lm\x03\x02\x02\x02m\x05\x03\x02\x02\x02no\x07\x17" +
+		"\x02\x02ox\x05\x18\r\x02pq\x07\x1C\x02\x02qr\x05\x0E\b\x02rs\x050\x19" +
+		"\x02sy\x03\x02\x02\x02tv\x07\x1C\x02\x02ut\x03\x02\x02\x02uv\x03\x02\x02" +
+		"\x02vw\x03\x02\x02\x02wy\x05\x12\n\x02xp\x03\x02\x02\x02xu\x03\x02\x02" +
+		"\x02yz\x03\x02\x02\x02z\x82\x07\x1E\x02\x02{\x83\x05\x16\f\x02|}\x05\x14" +
+		"\v\x02}~\x07 \x02\x02~\x7F\x050\x19\x02\x7F\x80\x07\x1E\x02\x02\x80\x81" +
+		"\x05\x16\f\x02\x81\x83\x03\x02\x02\x02\x82{\x03\x02\x02\x02\x82|\x03\x02" +
+		"\x02\x02\x83\x86\x03\x02\x02\x02\x84\x85\x07\x1F\x02\x02\x85\x87\x052" +
+		"\x1A\x02\x86\x84\x03\x02\x02\x02\x86\x87\x03\x02\x02\x02\x87\x89\x03\x02" +
+		"\x02\x02\x88\x8A\x07\x12\x02\x02\x89\x88\x03\x02\x02\x02\x89\x8A\x03\x02" +
+		"\x02\x02\x8A\x07\x03\x02\x02\x02\x8B\x8C\x07\x1A\x02\x02\x8C\x8D\x05," +
+		"\x17\x02\x8D\x8E\x07/\x02\x02\x8E\x90\x05.\x18\x02\x8F\x91\x07\x12\x02" +
+		"\x02\x90\x8F\x03\x02\x02\x02\x90\x91\x03\x02\x02\x02\x91\t\x03\x02\x02" +
+		"\x02\x92\x93\x07*\x02\x02\x93\x96\x05\x18\r\x02\x94\x95\x07\x1D\x02\x02" +
+		"\x95\x97\x05\x16\f\x02\x96\x94\x03\x02\x02\x02\x96\x97\x03\x02\x02\x02" +
+		"\x97\xA0\x03\x02\x02\x02\x98\x99\x07\x1C\x02\x02\x99\x9A\x05\x0E\b\x02" +
+		"\x9A\x9B\x050\x19\x02\x9B\xA1\x03\x02\x02\x02\x9C\x9E\x07\x1C\x02\x02" +
+		"\x9D\x9C\x03\x02\x02\x02\x9D\x9E\x03\x02\x02\x02\x9E\x9F\x03\x02\x02\x02" +
+		"\x9F\xA1\x05\x12\n\x02\xA0\x98\x03\x02\x02\x02\xA0\x9D\x03\x02\x02\x02" +
+		"\xA1\xA2\x03\x02\x02\x02\xA2\xA3\x07\x1E\x02\x02\xA3\xA9\x05\x14\v\x02" +
+		"\xA4\xA5\x07 \x02\x02\xA5\xA6\x050\x19\x02\xA6\xA7\x07\x1E\x02\x02\xA7" +
+		"\xA8\x05\x16\f\x02\xA8\xAA\x03\x02\x02\x02\xA9\xA4\x03\x02\x02\x02\xA9" +
+		"\xAA\x03\x02\x02\x02\xAA\xAD\x03\x02\x02\x02\xAB\xAC\x07\x1F\x02\x02\xAC" +
+		"\xAE\x052\x1A\x02\xAD\xAB\x03\x02\x02\x02\xAD\xAE\x03\x02\x02\x02\xAE" +
+		"\xB0\x03\x02\x02\x02\xAF\xB1\x07\x12\x02\x02\xB0\xAF\x03\x02\x02\x02\xB0" +
+		"\xB1\x03\x02\x02\x02\xB1\v\x03\x02\x02\x02\xB2\xCB\x07\x19\x02\x02\xB3" +
+		"\xCC\x05\n\x06\x02\xB4\xCC\x05\x06\x04\x02\xB5\xC0\x05\x18\r\x02\xB6\xB8" +
+		"\x07\x1C\x02\x02\xB7\xB6\x03\x02\x02\x02\xB7\xB8\x03\x02\x02\x02\xB8\xB9" +
+		"\x03\x02\x02\x02\xB9\xBA\x05\x10\t\x02\xBA\xBB\x050\x19\x02\xBB\xC1\x03" +
+		"\x02\x02\x02\xBC\xBE\x07\x1C\x02\x02\xBD\xBC\x03\x02\x02\x02\xBD\xBE\x03" +
+		"\x02\x02\x02\xBE\xBF\x03\x02\x02\x02\xBF\xC1\x05\x12\n\x02\xC0\xB7\x03" +
+		"\x02\x02\x02\xC0\xBD\x03\x02\x02\x02\xC1\xC2\x03\x02\x02\x02\xC2\xC3\x07" +
+		"\x1E\x02\x02\xC3\xC6\x05\x14\v\x02\xC4\xC5\x07\x1F\x02\x02\xC5\xC7\x05" +
+		"2\x1A\x02\xC6\xC4\x03\x02\x02\x02\xC6\xC7\x03\x02\x02\x02\xC7\xC9\x03" +
+		"\x02\x02\x02\xC8\xCA\x07\x12\x02\x02\xC9\xC8\x03\x02\x02\x02\xC9\xCA\x03" +
+		"\x02\x02\x02\xCA\xCC\x03\x02\x02\x02\xCB\xB3\x03\x02\x02\x02\xCB\xB4\x03" +
+		"\x02\x02\x02\xCB\xB5\x03\x02\x02\x02\xCC\r\x03\x02\x02\x02\xCD\xD0\x05" +
+		"\x10\t\x02\xCE\xD0\x07)\x02\x02\xCF\xCD\x03\x02\x02\x02\xCF\xCE\x03\x02" +
+		"\x02\x02\xD0\x0F\x03\x02\x02\x02\xD1\xD2\t\x02\x02\x02\xD2\x11\x03\x02" +
+		"\x02\x02\xD3\xD4\x07\x03\x02\x02\xD4\xD9\x072\x02\x02\xD5\xD6\x07\x04" +
+		"\x02\x02\xD6\xD8\x072\x02\x02\xD7\xD5\x03\x02\x02\x02\xD8\xDB\x03\x02" +
+		"\x02\x02\xD9\xD7\x03\x02\x02\x02\xD9\xDA\x03\x02\x02\x02\xDA\xDC\x03\x02" +
+		"\x02\x02\xDB\xD9\x03\x02\x02\x02\xDC\xDD\x07\x05\x02\x02\xDD\x13\x03\x02" +
+		"\x02\x02\xDE\xE0\x07$\x02\x02\xDF\xE1\x070\x02\x02\xE0\xDF\x03\x02\x02" +
+		"\x02\xE0\xE1\x03\x02\x02\x02\xE1\xE2\x03\x02\x02\x02\xE2\xE7\t\x03\x02" +
+		"\x02\xE3\xE4\x07\x06\x02\x02\xE4\xE6\t\x03\x02\x02\xE5\xE3\x03\x02\x02" +
+		"\x02\xE6\xE9\x03\x02\x02\x02\xE7\xE5\x03\x02\x02\x02\xE7\xE8\x03\x02\x02" +
+		"\x02\xE8\xEC\x03\x02\x02\x02\xE9\xE7\x03\x02\x02\x02\xEA\xEC\x07%\x02" +
+		"\x02\xEB\xDE\x03\x02\x02\x02\xEB\xEA\x03\x02\x02\x02\xEC\x15\x03\x02\x02" +
+		"\x02\xED\xF1\x07\x16\x02\x02\xEE\xEF\x07%\x02\x02\xEF\xF1\t\x03\x02\x02" +
+		"\xF0\xED\x03\x02\x02\x02\xF0\xEE\x03\x02\x02\x02\xF1\x17\x03\x02\x02\x02" +
+		"\xF2\xF8\x05\x1A\x0E\x02\xF3\xF8\x05\x1E\x10\x02\xF4\xF8\x05(\x15\x02" +
+		"\xF5\xF8\x05\x1C\x0F\x02\xF6\xF8\x07\x15\x02\x02\xF7\xF2\x03\x02\x02\x02" +
+		"\xF7\xF3\x03\x02\x02\x02\xF7\xF4\x03\x02\x02\x02\xF7\xF5\x03\x02\x02\x02" +
+		"\xF7\xF6\x03\x02\x02\x02\xF8\x19\x03\x02\x02\x02\xF9\xFC\x07\"\x02\x02" +
+		"\xFA\xFD\x05 \x11\x02\xFB\xFD\x05&\x14\x02\xFC\xFA\x03\x02\x02\x02\xFC" +
+		"\xFB\x03\x02\x02\x02\xFD\u0105\x03\x02\x02\x02\xFE\u0101\x07\x04\x02\x02" +
+		"\xFF\u0102\x05 \x11\x02\u0100\u0102\x05&\x14\x02\u0101\xFF\x03\x02\x02" +
+		"\x02\u0101\u0100\x03\x02\x02\x02\u0102\u0104\x03\x02\x02\x02\u0103\xFE" +
+		"\x03\x02\x02\x02\u0104\u0107\x03\x02\x02\x02\u0105\u0103\x03\x02\x02\x02" +
+		"\u0105\u0106\x03\x02\x02\x02\u0106\x1B\x03\x02\x02\x02\u0107\u0105\x03" +
+		"\x02\x02\x02\u0108\u0109\x07\x1B\x02\x02\u0109\u010D\x05\"\x12\x02\u010A" +
+		"\u010C\x05\"\x12\x02\u010B\u010A\x03\x02\x02\x02\u010C\u010F\x03\x02\x02" +
+		"\x02\u010D\u010B\x03\x02\x02\x02\u010D\u010E\x03\x02\x02\x02\u010E\x1D" +
+		"\x03\x02\x02\x02\u010F\u010D\x03\x02\x02\x02\u0110\u0111\x07#\x02\x02" +
+		"\u0111\u0116\x05$\x13\x02\u0112\u0113\x07\x04\x02\x02\u0113\u0115\x05" +
+		"$\x13\x02\u0114\u0112\x03\x02\x02\x02\u0115\u0118\x03\x02\x02\x02\u0116" +
+		"\u0114\x03\x02\x02\x02\u0116\u0117\x03\x02\x02\x02\u0117\x1F\x03\x02\x02" +
+		"\x02\u0118\u0116\x03\x02\x02\x02\u0119\u0126\x072\x02\x02\u011A\u011B" +
+		"\x07\x13\x02\x02\u011B\u011C\x07\x07\x02\x02\u011C\u0126\x07\x13\x02\x02" +
+		"\u011D\u0126\x07\x13\x02\x02\u011E\u011F\x072\x02\x02\u011F\u0120\x07" +
+		"\x07\x02\x02\u0120\u0126\x072\x02\x02\u0121\u0122\x072\x02\x02\u0122\u0123" +
+		"\x07\x07\x02\x02\u0123\u0126\x07\x13\x02\x02\u0124\u0126\x071\x02\x02" +
+		"\u0125\u0119\x03\x02\x02\x02\u0125\u011A\x03\x02\x02\x02\u0125\u011D\x03" +
+		"\x02\x02\x02\u0125\u011E\x03\x02\x02\x02\u0125\u0121\x03\x02\x02\x02\u0125" +
+		"\u0124\x03\x02\x02\x02\u0126!\x03\x02\x02\x02\u0127\u0130\t\x03\x02\x02" +
+		"\u0128\u0129\x07\b\x02\x02\u0129\u012A\t\x03\x02\x02\u012A\u0131\x07\b" +
+		"\x02\x02\u012B\u012C\x07\b\x02\x02\u012C\u012D\t\x03\x02\x02\u012D\u012E" +
+		"\x07\x07\x02\x02\u012E\u012F\t\x03\x02\x02\u012F\u0131\x07\b\x02\x02\u0130" +
+		"\u0128\x03\x02\x02\x02\u0130\u012B\x03\x02\x02\x02\u0131\u0132\x03\x02" +
+		"\x02\x02\u0132\u0133\x03\x02\x02\x02\u0132\u0130\x03\x02\x02\x02\u0133" +
+		"#\x03\x02\x02\x02\u0134\u0135\t\x03\x02\x02\u0135%\x03\x02\x02\x02\u0136" +
+		"\u0137\x070\x02\x02\u0137\u0138\t\x03\x02\x02\u0138\'\x03\x02\x02\x02" +
+		"\u0139\u013C\x07!\x02\x02\u013A\u013D\x05 \x11\x02\u013B\u013D\x05&\x14" +
+		"\x02\u013C\u013A\x03\x02\x02\x02\u013C\u013B\x03\x02\x02\x02\u013D\u0145" +
+		"\x03\x02\x02\x02\u013E\u0141\x07\x04\x02\x02\u013F\u0142\x05 \x11\x02" +
+		"\u0140\u0142\x05&\x14\x02\u0141\u013F\x03\x02\x02\x02\u0141\u0140\x03" +
+		"\x02\x02\x02\u0142\u0144\x03\x02\x02\x02\u0143\u013E\x03\x02\x02\x02\u0144" +
+		"\u0147\x03\x02\x02\x02\u0145\u0143\x03\x02\x02\x02\u0145\u0146\x03\x02" +
+		"\x02\x02\u0146)\x03\x02\x02\x02\u0147\u0145\x03\x02\x02\x02\u0148\u0149" +
+		"\x07%\x02\x02\u0149\u014A\t\x03\x02\x02\u014A+\x03\x02\x02\x02\u014B\u0150" +
+		"\x05\x1A\x0E\x02\u014C\u0150\x05(\x15\x02\u014D\u0150\x05\x1E\x10\x02" +
+		"\u014E\u0150\x05*\x16\x02\u014F\u014B\x03\x02\x02\x02\u014F\u014C\x03" +
+		"\x02\x02\x02\u014F\u014D\x03\x02\x02\x02\u014F\u014E\x03\x02\x02\x02\u0150" +
+		"-\x03\x02\x02\x02\u0151\u0152\t\x03\x02\x02\u0152/\x03\x02\x02\x02\u0153" +
+		"\u0154\t\x03\x02\x02\u01541\x03\x02\x02\x02\u0155\u015A\x05F$\x02\u0156" +
+		"\u015A\x05:\x1E\x02\u0157\u015A\x054\x1B\x02\u0158\u015A\x071\x02\x02" +
+		"\u0159\u0155\x03\x02\x02\x02\u0159\u0156\x03\x02\x02\x02\u0159\u0157\x03" +
+		"\x02\x02\x02\u0159\u0158\x03\x02\x02\x02\u015A3\x03\x02\x02\x02\u015B" +
+		"\u015C\x072\x02\x02\u015C\u015E\x07\t\x02\x02\u015D\u015F\x056\x1C\x02" +
+		"\u015E\u015D\x03\x02\x02\x02\u015E\u015F\x03\x02\x02\x02\u015F\u0160\x03" +
+		"\x02\x02\x02\u0160\u0161\x07\n\x02\x02\u01615\x03\x02\x02\x02\u0162\u0167" +
+		"\x058\x1D\x02\u0163\u0164\x07\x04\x02\x02\u0164\u0166\x058\x1D\x02\u0165" +
+		"\u0163\x03\x02\x02\x02\u0166\u0169\x03\x02\x02\x02\u0167\u0165\x03\x02" +
+		"\x02\x02\u0167\u0168\x03\x02\x02\x02\u01687\x03\x02\x02\x02\u0169\u0167" +
+		"\x03\x02\x02\x02\u016A\u016F\x05<\x1F\x02\u016B\u016F\x05@!\x02\u016C" +
+		"\u016F\x05B\"\x02\u016D\u016F\x054\x1B\x02\u016E\u016A\x03\x02\x02\x02" +
+		"\u016E\u016B\x03\x02\x02\x02\u016E\u016C\x03\x02\x02\x02\u016E\u016D\x03" +
+		"\x02\x02\x02\u016F9\x03\x02\x02\x02\u0170\u0171\x05<\x1F\x02\u0171\u0176" +
+		"\x05> \x02\u0172\u0177\x05@!\x02\u0173\u0177\x05B\"\x02\u0174\u0177\x05" +
+		"D#\x02\u0175\u0177\x05J&\x02\u0176\u0172\x03\x02\x02\x02\u0176\u0173\x03" +
+		"\x02\x02\x02\u0176\u0174\x03\x02\x02\x02\u0176\u0175\x03\x02\x02\x02\u0177" +
+		";\x03\x02\x02\x02\u0178\u017F\t\x03\x02\x02\u0179\u017A\x07\v\x02\x02" +
+		"\u017A\u017C\t\x03\x02\x02\u017B\u0179\x03\x02\x02\x02\u017C\u017D\x03" +
+		"\x02\x02\x02\u017D\u017B\x03\x02\x02\x02\u017D\u017E\x03\x02\x02\x02\u017E" +
+		"\u0180\x03\x02\x02\x02\u017F\u017B\x03\x02\x02\x02\u017F\u0180\x03\x02" +
+		"\x02\x02\u0180=\x03\x02\x02\x02\u0181\u0188\x07\f\x02\x02\u0182\u0183" +
+		"\x07\r\x02\x02\u0183\u0188\x07\f\x02\x02\u0184\u0188\x07\x10\x02\x02\u0185" +
+		"\u0188\x07\x1E\x02\x02\u0186\u0188\x07\x11\x02\x02\u0187\u0181\x03\x02" +
+		"\x02\x02\u0187\u0182\x03\x02\x02\x02\u0187\u0184\x03\x02\x02\x02\u0187" +
+		"\u0185\x03\x02\x02\x02\u0187\u0186\x03\x02\x02\x02\u0188?\x03\x02\x02" +
+		"\x02\u0189\u019A\x072\x02\x02\u018A\u019A\x07\x13\x02\x02\u018B\u018C" +
+		"\x07\x13\x02\x02\u018C\u018D\x07\x07\x02\x02\u018D\u019A\x072\x02\x02" +
+		"\u018E\u0191\x07\x13\x02\x02\u018F\u0190\x07\x14\x02\x02\u0190\u0192\x07" +
+		"2\x02\x02\u0191\u018F\x03\x02\x02\x02\u0192\u0193\x03\x02\x02\x02\u0193" +
+		"\u0191\x03\x02\x02\x02\u0193\u0194\x03\x02\x02\x02\u0194\u019A\x03\x02" +
+		"\x02\x02\u0195\u019A\x071\x02\x02\u0196\u0197\x07\b\x02\x02\u0197\u0198" +
+		"\x071\x02\x02\u0198\u019A\x07\b\x02\x02\u0199\u0189\x03\x02\x02\x02\u0199" +
+		"\u018A\x03\x02\x02\x02\u0199\u018B\x03\x02\x02\x02\u0199\u018E\x03\x02" +
+		"\x02\x02\u0199\u0195\x03\x02\x02\x02\u0199\u0196\x03\x02\x02\x02\u019A" +
+		"A\x03\x02\x02\x02\u019B\u01A1\x07\t\x02\x02\u019C\u01A2\x07\x13\x02\x02" +
+		"\u019D\u01A2\x071\x02\x02\u019E\u019F\x07\b\x02\x02\u019F\u01A0\x071\x02" +
+		"\x02\u01A0\u01A2\x07\b\x02\x02\u01A1\u019C\x03\x02\x02\x02\u01A1\u019D" +
+		"\x03\x02\x02\x02\u01A1\u019E\x03\x02\x02\x02\u01A2\u01AD\x03\x02\x02\x02" +
+		"\u01A3\u01A9\x07\x04\x02\x02\u01A4\u01AA\x07\x13\x02\x02\u01A5\u01AA\x07" +
+		"1\x02\x02\u01A6\u01A7\x07\b\x02\x02\u01A7\u01A8\x071\x02\x02\u01A8\u01AA" +
+		"\x07\b\x02\x02\u01A9\u01A4\x03\x02\x02\x02\u01A9\u01A5\x03\x02\x02\x02" +
+		"\u01A9\u01A6\x03\x02\x02\x02\u01AA\u01AC\x03\x02\x02\x02\u01AB\u01A3\x03" +
+		"\x02\x02\x02\u01AC\u01AF\x03\x02\x02\x02\u01AD\u01AB\x03\x02\x02\x02\u01AD" +
+		"\u01AE\x03\x02\x02\x02\u01AE\u01B0\x03\x02\x02\x02\u01AF\u01AD\x03\x02" +
+		"\x02\x02\u01B0\u01B1\x07\n\x02\x02\u01B1C\x03\x02\x02\x02\u01B2\u01B8" +
+		"\x07\x13\x02\x02\u01B3\u01B8\x071\x02\x02\u01B4\u01B5\x07\b\x02\x02\u01B5" +
+		"\u01B6\x071\x02\x02\u01B6\u01B8\x07\b\x02\x02\u01B7\u01B2\x03\x02\x02" +
+		"\x02\u01B7\u01B3\x03\x02\x02\x02\u01B7\u01B4\x03\x02\x02\x02\u01B8\u01B9" +
+		"\x03\x02\x02\x02\u01B9\u01BF\x07-\x02\x02\u01BA\u01C0\x07\x13\x02\x02" +
+		"\u01BB\u01C0\x071\x02\x02\u01BC\u01BD\x07\b\x02\x02\u01BD\u01BE\x071\x02" +
+		"\x02\u01BE\u01C0\x07\b\x02\x02\u01BF\u01BA\x03\x02\x02\x02\u01BF\u01BB" +
+		"\x03\x02\x02\x02\u01BF\u01BC\x03\x02\x02\x02\u01C0E\x03\x02\x02\x02\u01C1" +
+		"\u01C2\x05H%\x02\u01C2\u01C3\x07\x03\x02\x02\u01C3\u01C8\x052\x1A\x02" +
+		"\u01C4\u01C5\x07\x04\x02\x02\u01C5\u01C7\x052\x1A\x02\u01C6\u01C4\x03" +
+		"\x02\x02\x02\u01C7\u01CA\x03\x02\x02\x02\u01C8\u01C6\x03\x02\x02\x02\u01C8" +
+		"\u01C9\x03\x02\x02\x02\u01C9\u01CB\x03\x02\x02\x02\u01CA\u01C8\x03\x02" +
+		"\x02\x02\u01CB\u01CC\x07\x05\x02\x02\u01CCG\x03\x02\x02\x02\u01CD\u01CE" +
+		"\t\x04\x02\x02\u01CEI\x03\x02\x02\x02\u01CF\u01D0\x07\x07\x02\x02\u01D0" +
+		"\u01D1\x072\x02\x02\u01D1\u01DC\x07\x0E\x02\x02\u01D2\u01D3\x07\x0F\x02" +
+		"\x02\u01D3\u01D4\x072\x02\x02\u01D4\u01DC\x07\x07\x02\x02\u01D5\u01D6" +
+		"\x07\x07\x02\x02\u01D6\u01D7\x072\x02\x02\u01D7\u01DC\x07\x07\x02\x02" +
+		"\u01D8\u01D9\x07\x0F\x02\x02\u01D9\u01DA\x072\x02\x02\u01DA\u01DC\x07" +
+		"\x0E\x02\x02\u01DB\u01CF\x03\x02\x02\x02\u01DB\u01D2\x03\x02\x02\x02\u01DB" +
+		"\u01D5\x03\x02\x02\x02\u01DB\u01D8\x03\x02\x02\x02\u01DCK\x03\x02\x02" +
+		"\x02?QSZ`cilux\x82\x86\x89\x90\x96\x9D\xA0\xA9\xAD\xB0\xB7\xBD\xC0\xC6" +
+		"\xC9\xCB\xCF\xD9\xE0\xE7\xEB\xF0\xF7\xFC\u0101\u0105\u010D\u0116\u0125" +
+		"\u0130\u0132\u013C\u0141\u0145\u014F\u0159\u015E\u0167\u016E\u0176\u017D" +
+		"\u017F\u0187\u0193\u0199\u01A1\u01A9\u01AD\u01B7\u01BF\u01C8\u01DB";
+	public static __ATN: ATN;
 	public static get _ATN(): ATN {
 		if (!PolicyParser.__ATN) {
-			PolicyParser.__ATN = new ATNDeserializer().deserialize(PolicyParser._serializedATN);
+			PolicyParser.__ATN = new ATNDeserializer().deserialize(Utils.toCharArray(PolicyParser._serializedATN));
 		}
 
 		return PolicyParser.__ATN;
 	}
 
-
-	static DecisionsToDFA = PolicyParser._ATN.decisionToState.map( (ds: DecisionState, index: number) => new DFA(ds, index) );
-
 }
 
 export class PolicyContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public EOF(): TerminalNode {
-		return this.getToken(PolicyParser.EOF, 0);
-	}
-	public allowExpression_list(): AllowExpressionContext[] {
-		return this.getTypedRuleContexts(AllowExpressionContext) as AllowExpressionContext[];
-	}
-	public allowExpression(i: number): AllowExpressionContext {
-		return this.getTypedRuleContext(AllowExpressionContext, i) as AllowExpressionContext;
-	}
-	public endorseExpression_list(): EndorseExpressionContext[] {
-		return this.getTypedRuleContexts(EndorseExpressionContext) as EndorseExpressionContext[];
-	}
-	public endorseExpression(i: number): EndorseExpressionContext {
-		return this.getTypedRuleContext(EndorseExpressionContext, i) as EndorseExpressionContext;
-	}
-	public defineExpression_list(): DefineExpressionContext[] {
-		return this.getTypedRuleContexts(DefineExpressionContext) as DefineExpressionContext[];
-	}
-	public defineExpression(i: number): DefineExpressionContext {
-		return this.getTypedRuleContext(DefineExpressionContext, i) as DefineExpressionContext;
-	}
-	public admitExpression_list(): AdmitExpressionContext[] {
-		return this.getTypedRuleContexts(AdmitExpressionContext) as AdmitExpressionContext[];
-	}
-	public admitExpression(i: number): AdmitExpressionContext {
-		return this.getTypedRuleContext(AdmitExpressionContext, i) as AdmitExpressionContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_policy;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterPolicy) {
-	 		listener.enterPolicy(this);
+	public EOF(): TerminalNode { return this.getToken(PolicyParser.EOF, 0); }
+	public allowExpression(): AllowExpressionContext[];
+	public allowExpression(i: number): AllowExpressionContext;
+	public allowExpression(i?: number): AllowExpressionContext | AllowExpressionContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(AllowExpressionContext);
+		} else {
+			return this.getRuleContext(i, AllowExpressionContext);
 		}
 	}
+	public denyExpression(): DenyExpressionContext[];
+	public denyExpression(i: number): DenyExpressionContext;
+	public denyExpression(i?: number): DenyExpressionContext | DenyExpressionContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(DenyExpressionContext);
+		} else {
+			return this.getRuleContext(i, DenyExpressionContext);
+		}
+	}
+	public endorseExpression(): EndorseExpressionContext[];
+	public endorseExpression(i: number): EndorseExpressionContext;
+	public endorseExpression(i?: number): EndorseExpressionContext | EndorseExpressionContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(EndorseExpressionContext);
+		} else {
+			return this.getRuleContext(i, EndorseExpressionContext);
+		}
+	}
+	public defineExpression(): DefineExpressionContext[];
+	public defineExpression(i: number): DefineExpressionContext;
+	public defineExpression(i?: number): DefineExpressionContext | DefineExpressionContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(DefineExpressionContext);
+		} else {
+			return this.getRuleContext(i, DefineExpressionContext);
+		}
+	}
+	public admitExpression(): AdmitExpressionContext[];
+	public admitExpression(i: number): AdmitExpressionContext;
+	public admitExpression(i?: number): AdmitExpressionContext | AdmitExpressionContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(AdmitExpressionContext);
+		} else {
+			return this.getRuleContext(i, AdmitExpressionContext);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_policy; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterPolicy) {
+			listener.enterPolicy(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitPolicy) {
-	 		listener.exitPolicy(this);
+		if (listener.exitPolicy) {
+			listener.exitPolicy(this);
 		}
 	}
 	// @Override
@@ -2450,54 +2855,44 @@ export class PolicyContext extends ParserRuleContext {
 
 
 export class AllowExpressionContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public ALLOW(): TerminalNode {
-		return this.getToken(PolicyParser.ALLOW, 0);
-	}
+	public ALLOW(): TerminalNode { return this.getToken(PolicyParser.ALLOW, 0); }
 	public subject(): SubjectContext {
-		return this.getTypedRuleContext(SubjectContext, 0) as SubjectContext;
+		return this.getRuleContext(0, SubjectContext);
 	}
-	public IN(): TerminalNode {
-		return this.getToken(PolicyParser.IN, 0);
-	}
+	public IN(): TerminalNode { return this.getToken(PolicyParser.IN, 0); }
 	public scope(): ScopeContext {
-		return this.getTypedRuleContext(ScopeContext, 0) as ScopeContext;
+		return this.getRuleContext(0, ScopeContext);
 	}
-	public verb(): VerbContext {
-		return this.getTypedRuleContext(VerbContext, 0) as VerbContext;
+	public verb(): VerbContext | undefined {
+		return this.tryGetRuleContext(0, VerbContext);
 	}
-	public resource(): ResourceContext {
-		return this.getTypedRuleContext(ResourceContext, 0) as ResourceContext;
+	public resource(): ResourceContext | undefined {
+		return this.tryGetRuleContext(0, ResourceContext);
 	}
-	public permissionList(): PermissionListContext {
-		return this.getTypedRuleContext(PermissionListContext, 0) as PermissionListContext;
+	public permissionList(): PermissionListContext | undefined {
+		return this.tryGetRuleContext(0, PermissionListContext);
 	}
-	public WHERE(): TerminalNode {
-		return this.getToken(PolicyParser.WHERE, 0);
+	public WHERE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WHERE, 0); }
+	public condition(): ConditionContext | undefined {
+		return this.tryGetRuleContext(0, ConditionContext);
 	}
-	public condition(): ConditionContext {
-		return this.getTypedRuleContext(ConditionContext, 0) as ConditionContext;
+	public NEWLINE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.NEWLINE, 0); }
+	public TO(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.TO, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
 	}
-	public NEWLINE(): TerminalNode {
-		return this.getToken(PolicyParser.NEWLINE, 0);
-	}
-	public TO(): TerminalNode {
-		return this.getToken(PolicyParser.TO, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_allowExpression;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_allowExpression; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterAllowExpression) {
-	 		listener.enterAllowExpression(this);
+		if (listener.enterAllowExpression) {
+			listener.enterAllowExpression(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitAllowExpression) {
-	 		listener.exitAllowExpression(this);
+		if (listener.exitAllowExpression) {
+			listener.exitAllowExpression(this);
 		}
 	}
 	// @Override
@@ -2512,69 +2907,62 @@ export class AllowExpressionContext extends ParserRuleContext {
 
 
 export class EndorseExpressionContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public ENDORSE(): TerminalNode {
-		return this.getToken(PolicyParser.ENDORSE, 0);
-	}
+	public ENDORSE(): TerminalNode { return this.getToken(PolicyParser.ENDORSE, 0); }
 	public subject(): SubjectContext {
-		return this.getTypedRuleContext(SubjectContext, 0) as SubjectContext;
+		return this.getRuleContext(0, SubjectContext);
 	}
-	public IN_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.IN);
-	}
-	public IN(i: number): TerminalNode {
-		return this.getToken(PolicyParser.IN, i);
-	}
-	public TO(): TerminalNode {
-		return this.getToken(PolicyParser.TO, 0);
-	}
-	public endorseVerb(): EndorseVerbContext {
-		return this.getTypedRuleContext(EndorseVerbContext, 0) as EndorseVerbContext;
-	}
-	public resource_list(): ResourceContext[] {
-		return this.getTypedRuleContexts(ResourceContext) as ResourceContext[];
-	}
-	public resource(i: number): ResourceContext {
-		return this.getTypedRuleContext(ResourceContext, i) as ResourceContext;
-	}
-	public permissionList(): PermissionListContext {
-		return this.getTypedRuleContext(PermissionListContext, 0) as PermissionListContext;
-	}
-	public endorseScope_list(): EndorseScopeContext[] {
-		return this.getTypedRuleContexts(EndorseScopeContext) as EndorseScopeContext[];
-	}
-	public endorseScope(i: number): EndorseScopeContext {
-		return this.getTypedRuleContext(EndorseScopeContext, i) as EndorseScopeContext;
-	}
-	public scope(): ScopeContext {
-		return this.getTypedRuleContext(ScopeContext, 0) as ScopeContext;
-	}
-	public WITH(): TerminalNode {
-		return this.getToken(PolicyParser.WITH, 0);
-	}
-	public WHERE(): TerminalNode {
-		return this.getToken(PolicyParser.WHERE, 0);
-	}
-	public condition(): ConditionContext {
-		return this.getTypedRuleContext(ConditionContext, 0) as ConditionContext;
-	}
-	public NEWLINE(): TerminalNode {
-		return this.getToken(PolicyParser.NEWLINE, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_endorseExpression;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterEndorseExpression) {
-	 		listener.enterEndorseExpression(this);
+	public IN(): TerminalNode[];
+	public IN(i: number): TerminalNode;
+	public IN(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.IN);
+		} else {
+			return this.getToken(PolicyParser.IN, i);
 		}
 	}
+	public TO(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.TO, 0); }
+	public endorseVerb(): EndorseVerbContext | undefined {
+		return this.tryGetRuleContext(0, EndorseVerbContext);
+	}
+	public resource(): ResourceContext[];
+	public resource(i: number): ResourceContext;
+	public resource(i?: number): ResourceContext | ResourceContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(ResourceContext);
+		} else {
+			return this.getRuleContext(i, ResourceContext);
+		}
+	}
+	public permissionList(): PermissionListContext | undefined {
+		return this.tryGetRuleContext(0, PermissionListContext);
+	}
+	public endorseScope(): EndorseScopeContext | undefined {
+		return this.tryGetRuleContext(0, EndorseScopeContext);
+	}
+	public WHERE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WHERE, 0); }
+	public condition(): ConditionContext | undefined {
+		return this.tryGetRuleContext(0, ConditionContext);
+	}
+	public NEWLINE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.NEWLINE, 0); }
+	public scope(): ScopeContext | undefined {
+		return this.tryGetRuleContext(0, ScopeContext);
+	}
+	public WITH(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WITH, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_endorseExpression; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterEndorseExpression) {
+			listener.enterEndorseExpression(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitEndorseExpression) {
-	 		listener.exitEndorseExpression(this);
+		if (listener.exitEndorseExpression) {
+			listener.exitEndorseExpression(this);
 		}
 	}
 	// @Override
@@ -2589,36 +2977,30 @@ export class EndorseExpressionContext extends ParserRuleContext {
 
 
 export class DefineExpressionContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public DEFINE(): TerminalNode {
-		return this.getToken(PolicyParser.DEFINE, 0);
-	}
+	public DEFINE(): TerminalNode { return this.getToken(PolicyParser.DEFINE, 0); }
 	public definedSubject(): DefinedSubjectContext {
-		return this.getTypedRuleContext(DefinedSubjectContext, 0) as DefinedSubjectContext;
+		return this.getRuleContext(0, DefinedSubjectContext);
 	}
-	public AS(): TerminalNode {
-		return this.getToken(PolicyParser.AS, 0);
-	}
+	public AS(): TerminalNode { return this.getToken(PolicyParser.AS, 0); }
 	public defined(): DefinedContext {
-		return this.getTypedRuleContext(DefinedContext, 0) as DefinedContext;
+		return this.getRuleContext(0, DefinedContext);
 	}
-	public NEWLINE(): TerminalNode {
-		return this.getToken(PolicyParser.NEWLINE, 0);
+	public NEWLINE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.NEWLINE, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
 	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_defineExpression;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_defineExpression; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterDefineExpression) {
-	 		listener.enterDefineExpression(this);
+		if (listener.enterDefineExpression) {
+			listener.enterDefineExpression(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitDefineExpression) {
-	 		listener.exitDefineExpression(this);
+		if (listener.exitDefineExpression) {
+			listener.exitDefineExpression(this);
 		}
 	}
 	// @Override
@@ -2633,72 +3015,69 @@ export class DefineExpressionContext extends ParserRuleContext {
 
 
 export class AdmitExpressionContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public ADMIT(): TerminalNode {
-		return this.getToken(PolicyParser.ADMIT, 0);
-	}
+	public ADMIT(): TerminalNode { return this.getToken(PolicyParser.ADMIT, 0); }
 	public subject(): SubjectContext {
-		return this.getTypedRuleContext(SubjectContext, 0) as SubjectContext;
+		return this.getRuleContext(0, SubjectContext);
 	}
-	public IN_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.IN);
-	}
-	public IN(i: number): TerminalNode {
-		return this.getToken(PolicyParser.IN, i);
-	}
-	public scope(): ScopeContext {
-		return this.getTypedRuleContext(ScopeContext, 0) as ScopeContext;
-	}
-	public TO(): TerminalNode {
-		return this.getToken(PolicyParser.TO, 0);
-	}
-	public endorseVerb(): EndorseVerbContext {
-		return this.getTypedRuleContext(EndorseVerbContext, 0) as EndorseVerbContext;
-	}
-	public resource_list(): ResourceContext[] {
-		return this.getTypedRuleContexts(ResourceContext) as ResourceContext[];
-	}
-	public resource(i: number): ResourceContext {
-		return this.getTypedRuleContext(ResourceContext, i) as ResourceContext;
-	}
-	public permissionList(): PermissionListContext {
-		return this.getTypedRuleContext(PermissionListContext, 0) as PermissionListContext;
-	}
-	public OF(): TerminalNode {
-		return this.getToken(PolicyParser.OF, 0);
-	}
-	public endorseScope_list(): EndorseScopeContext[] {
-		return this.getTypedRuleContexts(EndorseScopeContext) as EndorseScopeContext[];
-	}
-	public endorseScope(i: number): EndorseScopeContext {
-		return this.getTypedRuleContext(EndorseScopeContext, i) as EndorseScopeContext;
-	}
-	public WITH(): TerminalNode {
-		return this.getToken(PolicyParser.WITH, 0);
-	}
-	public WHERE(): TerminalNode {
-		return this.getToken(PolicyParser.WHERE, 0);
-	}
-	public condition(): ConditionContext {
-		return this.getTypedRuleContext(ConditionContext, 0) as ConditionContext;
-	}
-	public NEWLINE(): TerminalNode {
-		return this.getToken(PolicyParser.NEWLINE, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_admitExpression;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterAdmitExpression) {
-	 		listener.enterAdmitExpression(this);
+	public IN(): TerminalNode[];
+	public IN(i: number): TerminalNode;
+	public IN(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.IN);
+		} else {
+			return this.getToken(PolicyParser.IN, i);
 		}
 	}
+	public scope(): ScopeContext {
+		return this.getRuleContext(0, ScopeContext);
+	}
+	public TO(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.TO, 0); }
+	public endorseVerb(): EndorseVerbContext | undefined {
+		return this.tryGetRuleContext(0, EndorseVerbContext);
+	}
+	public resource(): ResourceContext[];
+	public resource(i: number): ResourceContext;
+	public resource(i?: number): ResourceContext | ResourceContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(ResourceContext);
+		} else {
+			return this.getRuleContext(i, ResourceContext);
+		}
+	}
+	public permissionList(): PermissionListContext | undefined {
+		return this.tryGetRuleContext(0, PermissionListContext);
+	}
+	public OF(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.OF, 0); }
+	public endorseScope(): EndorseScopeContext[];
+	public endorseScope(i: number): EndorseScopeContext;
+	public endorseScope(i?: number): EndorseScopeContext | EndorseScopeContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(EndorseScopeContext);
+		} else {
+			return this.getRuleContext(i, EndorseScopeContext);
+		}
+	}
+	public WITH(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WITH, 0); }
+	public WHERE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WHERE, 0); }
+	public condition(): ConditionContext | undefined {
+		return this.tryGetRuleContext(0, ConditionContext);
+	}
+	public NEWLINE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.NEWLINE, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_admitExpression; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterAdmitExpression) {
+			listener.enterAdmitExpression(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitAdmitExpression) {
-	 		listener.exitAdmitExpression(this);
+		if (listener.exitAdmitExpression) {
+			listener.exitAdmitExpression(this);
 		}
 	}
 	// @Override
@@ -2712,28 +3091,84 @@ export class AdmitExpressionContext extends ParserRuleContext {
 }
 
 
-export class EndorseVerbContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+export class DenyExpressionContext extends ParserRuleContext {
+	public DENY(): TerminalNode { return this.getToken(PolicyParser.DENY, 0); }
+	public admitExpression(): AdmitExpressionContext | undefined {
+		return this.tryGetRuleContext(0, AdmitExpressionContext);
+	}
+	public endorseExpression(): EndorseExpressionContext | undefined {
+		return this.tryGetRuleContext(0, EndorseExpressionContext);
+	}
+	public subject(): SubjectContext | undefined {
+		return this.tryGetRuleContext(0, SubjectContext);
+	}
+	public IN(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.IN, 0); }
+	public scope(): ScopeContext | undefined {
+		return this.tryGetRuleContext(0, ScopeContext);
+	}
+	public verb(): VerbContext | undefined {
+		return this.tryGetRuleContext(0, VerbContext);
+	}
+	public resource(): ResourceContext | undefined {
+		return this.tryGetRuleContext(0, ResourceContext);
+	}
+	public permissionList(): PermissionListContext | undefined {
+		return this.tryGetRuleContext(0, PermissionListContext);
+	}
+	public WHERE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WHERE, 0); }
+	public condition(): ConditionContext | undefined {
+		return this.tryGetRuleContext(0, ConditionContext);
+	}
+	public NEWLINE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.NEWLINE, 0); }
+	public TO(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.TO, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public verb(): VerbContext {
-		return this.getTypedRuleContext(VerbContext, 0) as VerbContext;
-	}
-	public ASSOCIATE(): TerminalNode {
-		return this.getToken(PolicyParser.ASSOCIATE, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_endorseVerb;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_denyExpression; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterEndorseVerb) {
-	 		listener.enterEndorseVerb(this);
+		if (listener.enterDenyExpression) {
+			listener.enterDenyExpression(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitEndorseVerb) {
-	 		listener.exitEndorseVerb(this);
+		if (listener.exitDenyExpression) {
+			listener.exitDenyExpression(this);
+		}
+	}
+	// @Override
+	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
+		if (visitor.visitDenyExpression) {
+			return visitor.visitDenyExpression(this);
+		} else {
+			return visitor.visitChildren(this);
+		}
+	}
+}
+
+
+export class EndorseVerbContext extends ParserRuleContext {
+	public verb(): VerbContext | undefined {
+		return this.tryGetRuleContext(0, VerbContext);
+	}
+	public ASSOCIATE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.ASSOCIATE, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_endorseVerb; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterEndorseVerb) {
+			listener.enterEndorseVerb(this);
+		}
+	}
+	// @Override
+	public exitRule(listener: PolicyListener): void {
+		if (listener.exitEndorseVerb) {
+			listener.exitEndorseVerb(this);
 		}
 	}
 	// @Override
@@ -2748,33 +3183,25 @@ export class EndorseVerbContext extends ParserRuleContext {
 
 
 export class VerbContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public INSPECT(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.INSPECT, 0); }
+	public READ(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.READ, 0); }
+	public USE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.USE, 0); }
+	public MANAGE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.MANAGE, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public INSPECT(): TerminalNode {
-		return this.getToken(PolicyParser.INSPECT, 0);
-	}
-	public READ(): TerminalNode {
-		return this.getToken(PolicyParser.READ, 0);
-	}
-	public USE(): TerminalNode {
-		return this.getToken(PolicyParser.USE, 0);
-	}
-	public MANAGE(): TerminalNode {
-		return this.getToken(PolicyParser.MANAGE, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_verb;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_verb; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterVerb) {
-	 		listener.enterVerb(this);
+		if (listener.enterVerb) {
+			listener.enterVerb(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitVerb) {
-	 		listener.exitVerb(this);
+		if (listener.exitVerb) {
+			listener.exitVerb(this);
 		}
 	}
 	// @Override
@@ -2789,33 +3216,30 @@ export class VerbContext extends ParserRuleContext {
 
 
 export class PermissionListContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public WORD_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.WORD);
-	}
-	public WORD(i: number): TerminalNode {
-		return this.getToken(PolicyParser.WORD, i);
-	}
-	public HCL_VAR_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.HCL_VAR);
-	}
-	public HCL_VAR(i: number): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, i);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_permissionList;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterPermissionList) {
-	 		listener.enterPermissionList(this);
+	public WORD(): TerminalNode[];
+	public WORD(i: number): TerminalNode;
+	public WORD(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.WORD);
+		} else {
+			return this.getToken(PolicyParser.WORD, i);
 		}
 	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_permissionList; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterPermissionList) {
+			listener.enterPermissionList(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitPermissionList) {
-	 		listener.exitPermissionList(this);
+		if (listener.exitPermissionList) {
+			listener.exitPermissionList(this);
 		}
 	}
 	// @Override
@@ -2830,42 +3254,42 @@ export class PermissionListContext extends ParserRuleContext {
 
 
 export class ScopeContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public TENANCY(): TerminalNode {
-		return this.getToken(PolicyParser.TENANCY, 0);
-	}
-	public WORD_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.WORD);
-	}
-	public WORD(i: number): TerminalNode {
-		return this.getToken(PolicyParser.WORD, i);
-	}
-	public HCL_VAR_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.HCL_VAR);
-	}
-	public HCL_VAR(i: number): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, i);
-	}
-	public COMPARTMENT(): TerminalNode {
-		return this.getToken(PolicyParser.COMPARTMENT, 0);
-	}
-	public ID(): TerminalNode {
-		return this.getToken(PolicyParser.ID, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_scope;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterScope) {
-	 		listener.enterScope(this);
+	public TENANCY(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.TENANCY, 0); }
+	public WORD(): TerminalNode[];
+	public WORD(i: number): TerminalNode;
+	public WORD(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.WORD);
+		} else {
+			return this.getToken(PolicyParser.WORD, i);
 		}
 	}
+	public HCL_VAR(): TerminalNode[];
+	public HCL_VAR(i: number): TerminalNode;
+	public HCL_VAR(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.HCL_VAR);
+		} else {
+			return this.getToken(PolicyParser.HCL_VAR, i);
+		}
+	}
+	public COMPARTMENT(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.COMPARTMENT, 0); }
+	public ID(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.ID, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_scope; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterScope) {
+			listener.enterScope(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitScope) {
-	 		listener.exitScope(this);
+		if (listener.exitScope) {
+			listener.exitScope(this);
 		}
 	}
 	// @Override
@@ -2880,33 +3304,25 @@ export class ScopeContext extends ParserRuleContext {
 
 
 export class EndorseScopeContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public ANYTENANCY(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.ANYTENANCY, 0); }
+	public TENANCY(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.TENANCY, 0); }
+	public WORD(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WORD, 0); }
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public ANYTENANCY(): TerminalNode {
-		return this.getToken(PolicyParser.ANYTENANCY, 0);
-	}
-	public TENANCY(): TerminalNode {
-		return this.getToken(PolicyParser.TENANCY, 0);
-	}
-	public WORD(): TerminalNode {
-		return this.getToken(PolicyParser.WORD, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_endorseScope;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_endorseScope; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterEndorseScope) {
-	 		listener.enterEndorseScope(this);
+		if (listener.enterEndorseScope) {
+			listener.enterEndorseScope(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitEndorseScope) {
-	 		listener.exitEndorseScope(this);
+		if (listener.exitEndorseScope) {
+			listener.exitEndorseScope(this);
 		}
 	}
 	// @Override
@@ -2921,36 +3337,34 @@ export class EndorseScopeContext extends ParserRuleContext {
 
 
 export class SubjectContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public groupSubject(): GroupSubjectContext | undefined {
+		return this.tryGetRuleContext(0, GroupSubjectContext);
+	}
+	public serviceSubject(): ServiceSubjectContext | undefined {
+		return this.tryGetRuleContext(0, ServiceSubjectContext);
+	}
+	public dynamicGroupSubject(): DynamicGroupSubjectContext | undefined {
+		return this.tryGetRuleContext(0, DynamicGroupSubjectContext);
+	}
+	public resourceSubject(): ResourceSubjectContext | undefined {
+		return this.tryGetRuleContext(0, ResourceSubjectContext);
+	}
+	public ANYUSER(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.ANYUSER, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public groupSubject(): GroupSubjectContext {
-		return this.getTypedRuleContext(GroupSubjectContext, 0) as GroupSubjectContext;
-	}
-	public serviceSubject(): ServiceSubjectContext {
-		return this.getTypedRuleContext(ServiceSubjectContext, 0) as ServiceSubjectContext;
-	}
-	public dynamicGroupSubject(): DynamicGroupSubjectContext {
-		return this.getTypedRuleContext(DynamicGroupSubjectContext, 0) as DynamicGroupSubjectContext;
-	}
-	public resourceSubject(): ResourceSubjectContext {
-		return this.getTypedRuleContext(ResourceSubjectContext, 0) as ResourceSubjectContext;
-	}
-	public ANYUSER(): TerminalNode {
-		return this.getToken(PolicyParser.ANYUSER, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_subject;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_subject; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterSubject) {
-	 		listener.enterSubject(this);
+		if (listener.enterSubject) {
+			listener.enterSubject(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitSubject) {
-	 		listener.exitSubject(this);
+		if (listener.exitSubject) {
+			listener.exitSubject(this);
 		}
 	}
 	// @Override
@@ -2965,36 +3379,40 @@ export class SubjectContext extends ParserRuleContext {
 
 
 export class GroupSubjectContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public GROUP(): TerminalNode {
-		return this.getToken(PolicyParser.GROUP, 0);
-	}
-	public groupName_list(): GroupNameContext[] {
-		return this.getTypedRuleContexts(GroupNameContext) as GroupNameContext[];
-	}
-	public groupName(i: number): GroupNameContext {
-		return this.getTypedRuleContext(GroupNameContext, i) as GroupNameContext;
-	}
-	public groupID_list(): GroupIDContext[] {
-		return this.getTypedRuleContexts(GroupIDContext) as GroupIDContext[];
-	}
-	public groupID(i: number): GroupIDContext {
-		return this.getTypedRuleContext(GroupIDContext, i) as GroupIDContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_groupSubject;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterGroupSubject) {
-	 		listener.enterGroupSubject(this);
+	public GROUP(): TerminalNode { return this.getToken(PolicyParser.GROUP, 0); }
+	public groupName(): GroupNameContext[];
+	public groupName(i: number): GroupNameContext;
+	public groupName(i?: number): GroupNameContext | GroupNameContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(GroupNameContext);
+		} else {
+			return this.getRuleContext(i, GroupNameContext);
 		}
 	}
+	public groupID(): GroupIDContext[];
+	public groupID(i: number): GroupIDContext;
+	public groupID(i?: number): GroupIDContext | GroupIDContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(GroupIDContext);
+		} else {
+			return this.getRuleContext(i, GroupIDContext);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_groupSubject; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterGroupSubject) {
+			listener.enterGroupSubject(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitGroupSubject) {
-	 		listener.exitGroupSubject(this);
+		if (listener.exitGroupSubject) {
+			listener.exitGroupSubject(this);
 		}
 	}
 	// @Override
@@ -3009,30 +3427,31 @@ export class GroupSubjectContext extends ParserRuleContext {
 
 
 export class ResourceSubjectContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public RESOURCE(): TerminalNode {
-		return this.getToken(PolicyParser.RESOURCE, 0);
-	}
-	public resourceSubjectId_list(): ResourceSubjectIdContext[] {
-		return this.getTypedRuleContexts(ResourceSubjectIdContext) as ResourceSubjectIdContext[];
-	}
-	public resourceSubjectId(i: number): ResourceSubjectIdContext {
-		return this.getTypedRuleContext(ResourceSubjectIdContext, i) as ResourceSubjectIdContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_resourceSubject;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterResourceSubject) {
-	 		listener.enterResourceSubject(this);
+	public RESOURCE(): TerminalNode { return this.getToken(PolicyParser.RESOURCE, 0); }
+	public resourceSubjectId(): ResourceSubjectIdContext[];
+	public resourceSubjectId(i: number): ResourceSubjectIdContext;
+	public resourceSubjectId(i?: number): ResourceSubjectIdContext | ResourceSubjectIdContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(ResourceSubjectIdContext);
+		} else {
+			return this.getRuleContext(i, ResourceSubjectIdContext);
 		}
 	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_resourceSubject; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterResourceSubject) {
+			listener.enterResourceSubject(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitResourceSubject) {
-	 		listener.exitResourceSubject(this);
+		if (listener.exitResourceSubject) {
+			listener.exitResourceSubject(this);
 		}
 	}
 	// @Override
@@ -3047,30 +3466,31 @@ export class ResourceSubjectContext extends ParserRuleContext {
 
 
 export class ServiceSubjectContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public SERVICE(): TerminalNode {
-		return this.getToken(PolicyParser.SERVICE, 0);
-	}
-	public serviceSubjectId_list(): ServiceSubjectIdContext[] {
-		return this.getTypedRuleContexts(ServiceSubjectIdContext) as ServiceSubjectIdContext[];
-	}
-	public serviceSubjectId(i: number): ServiceSubjectIdContext {
-		return this.getTypedRuleContext(ServiceSubjectIdContext, i) as ServiceSubjectIdContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_serviceSubject;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterServiceSubject) {
-	 		listener.enterServiceSubject(this);
+	public SERVICE(): TerminalNode { return this.getToken(PolicyParser.SERVICE, 0); }
+	public serviceSubjectId(): ServiceSubjectIdContext[];
+	public serviceSubjectId(i: number): ServiceSubjectIdContext;
+	public serviceSubjectId(i?: number): ServiceSubjectIdContext | ServiceSubjectIdContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(ServiceSubjectIdContext);
+		} else {
+			return this.getRuleContext(i, ServiceSubjectIdContext);
 		}
 	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_serviceSubject; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterServiceSubject) {
+			listener.enterServiceSubject(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitServiceSubject) {
-	 		listener.exitServiceSubject(this);
+		if (listener.exitServiceSubject) {
+			listener.exitServiceSubject(this);
 		}
 	}
 	// @Override
@@ -3085,36 +3505,40 @@ export class ServiceSubjectContext extends ParserRuleContext {
 
 
 export class GroupNameContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public WORD_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.WORD);
-	}
-	public WORD(i: number): TerminalNode {
-		return this.getToken(PolicyParser.WORD, i);
-	}
-	public QUOTED_STRING_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.QUOTED_STRING);
-	}
-	public QUOTED_STRING(i: number): TerminalNode {
-		return this.getToken(PolicyParser.QUOTED_STRING, i);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_groupName;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterGroupName) {
-	 		listener.enterGroupName(this);
+	public WORD(): TerminalNode[];
+	public WORD(i: number): TerminalNode;
+	public WORD(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.WORD);
+		} else {
+			return this.getToken(PolicyParser.WORD, i);
 		}
 	}
+	public QUOTED_STRING(): TerminalNode[];
+	public QUOTED_STRING(i: number): TerminalNode;
+	public QUOTED_STRING(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.QUOTED_STRING);
+		} else {
+			return this.getToken(PolicyParser.QUOTED_STRING, i);
+		}
+	}
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_groupName; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterGroupName) {
+			listener.enterGroupName(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitGroupName) {
-	 		listener.exitGroupName(this);
+		if (listener.exitGroupName) {
+			listener.exitGroupName(this);
 		}
 	}
 	// @Override
@@ -3129,33 +3553,39 @@ export class GroupNameContext extends ParserRuleContext {
 
 
 export class ResourceSubjectIdContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public WORD_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.WORD);
-	}
-	public WORD(i: number): TerminalNode {
-		return this.getToken(PolicyParser.WORD, i);
-	}
-	public HCL_VAR_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.HCL_VAR);
-	}
-	public HCL_VAR(i: number): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, i);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_resourceSubjectId;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterResourceSubjectId) {
-	 		listener.enterResourceSubjectId(this);
+	public WORD(): TerminalNode[];
+	public WORD(i: number): TerminalNode;
+	public WORD(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.WORD);
+		} else {
+			return this.getToken(PolicyParser.WORD, i);
 		}
 	}
+	public HCL_VAR(): TerminalNode[];
+	public HCL_VAR(i: number): TerminalNode;
+	public HCL_VAR(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.HCL_VAR);
+		} else {
+			return this.getToken(PolicyParser.HCL_VAR, i);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_resourceSubjectId; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterResourceSubjectId) {
+			listener.enterResourceSubjectId(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitResourceSubjectId) {
-	 		listener.exitResourceSubjectId(this);
+		if (listener.exitResourceSubjectId) {
+			listener.exitResourceSubjectId(this);
 		}
 	}
 	// @Override
@@ -3170,27 +3600,23 @@ export class ResourceSubjectIdContext extends ParserRuleContext {
 
 
 export class ServiceSubjectIdContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public WORD(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WORD, 0); }
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public WORD(): TerminalNode {
-		return this.getToken(PolicyParser.WORD, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_serviceSubjectId;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_serviceSubjectId; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterServiceSubjectId) {
-	 		listener.enterServiceSubjectId(this);
+		if (listener.enterServiceSubjectId) {
+			listener.enterServiceSubjectId(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitServiceSubjectId) {
-	 		listener.exitServiceSubjectId(this);
+		if (listener.exitServiceSubjectId) {
+			listener.exitServiceSubjectId(this);
 		}
 	}
 	// @Override
@@ -3205,30 +3631,24 @@ export class ServiceSubjectIdContext extends ParserRuleContext {
 
 
 export class GroupIDContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public ID(): TerminalNode { return this.getToken(PolicyParser.ID, 0); }
+	public WORD(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WORD, 0); }
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public ID(): TerminalNode {
-		return this.getToken(PolicyParser.ID, 0);
-	}
-	public WORD(): TerminalNode {
-		return this.getToken(PolicyParser.WORD, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_groupID;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_groupID; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterGroupID) {
-	 		listener.enterGroupID(this);
+		if (listener.enterGroupID) {
+			listener.enterGroupID(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitGroupID) {
-	 		listener.exitGroupID(this);
+		if (listener.exitGroupID) {
+			listener.exitGroupID(this);
 		}
 	}
 	// @Override
@@ -3243,36 +3663,40 @@ export class GroupIDContext extends ParserRuleContext {
 
 
 export class DynamicGroupSubjectContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public DYNAMICGROUP(): TerminalNode {
-		return this.getToken(PolicyParser.DYNAMICGROUP, 0);
-	}
-	public groupName_list(): GroupNameContext[] {
-		return this.getTypedRuleContexts(GroupNameContext) as GroupNameContext[];
-	}
-	public groupName(i: number): GroupNameContext {
-		return this.getTypedRuleContext(GroupNameContext, i) as GroupNameContext;
-	}
-	public groupID_list(): GroupIDContext[] {
-		return this.getTypedRuleContexts(GroupIDContext) as GroupIDContext[];
-	}
-	public groupID(i: number): GroupIDContext {
-		return this.getTypedRuleContext(GroupIDContext, i) as GroupIDContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_dynamicGroupSubject;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterDynamicGroupSubject) {
-	 		listener.enterDynamicGroupSubject(this);
+	public DYNAMICGROUP(): TerminalNode { return this.getToken(PolicyParser.DYNAMICGROUP, 0); }
+	public groupName(): GroupNameContext[];
+	public groupName(i: number): GroupNameContext;
+	public groupName(i?: number): GroupNameContext | GroupNameContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(GroupNameContext);
+		} else {
+			return this.getRuleContext(i, GroupNameContext);
 		}
 	}
+	public groupID(): GroupIDContext[];
+	public groupID(i: number): GroupIDContext;
+	public groupID(i?: number): GroupIDContext | GroupIDContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(GroupIDContext);
+		} else {
+			return this.getRuleContext(i, GroupIDContext);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_dynamicGroupSubject; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterDynamicGroupSubject) {
+			listener.enterDynamicGroupSubject(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitDynamicGroupSubject) {
-	 		listener.exitDynamicGroupSubject(this);
+		if (listener.exitDynamicGroupSubject) {
+			listener.exitDynamicGroupSubject(this);
 		}
 	}
 	// @Override
@@ -3287,30 +3711,24 @@ export class DynamicGroupSubjectContext extends ParserRuleContext {
 
 
 export class TenancySubjectContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public TENANCY(): TerminalNode { return this.getToken(PolicyParser.TENANCY, 0); }
+	public WORD(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WORD, 0); }
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public TENANCY(): TerminalNode {
-		return this.getToken(PolicyParser.TENANCY, 0);
-	}
-	public WORD(): TerminalNode {
-		return this.getToken(PolicyParser.WORD, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_tenancySubject;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_tenancySubject; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterTenancySubject) {
-	 		listener.enterTenancySubject(this);
+		if (listener.enterTenancySubject) {
+			listener.enterTenancySubject(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitTenancySubject) {
-	 		listener.exitTenancySubject(this);
+		if (listener.exitTenancySubject) {
+			listener.exitTenancySubject(this);
 		}
 	}
 	// @Override
@@ -3325,33 +3743,33 @@ export class TenancySubjectContext extends ParserRuleContext {
 
 
 export class DefinedSubjectContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public groupSubject(): GroupSubjectContext | undefined {
+		return this.tryGetRuleContext(0, GroupSubjectContext);
+	}
+	public dynamicGroupSubject(): DynamicGroupSubjectContext | undefined {
+		return this.tryGetRuleContext(0, DynamicGroupSubjectContext);
+	}
+	public serviceSubject(): ServiceSubjectContext | undefined {
+		return this.tryGetRuleContext(0, ServiceSubjectContext);
+	}
+	public tenancySubject(): TenancySubjectContext | undefined {
+		return this.tryGetRuleContext(0, TenancySubjectContext);
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public groupSubject(): GroupSubjectContext {
-		return this.getTypedRuleContext(GroupSubjectContext, 0) as GroupSubjectContext;
-	}
-	public dynamicGroupSubject(): DynamicGroupSubjectContext {
-		return this.getTypedRuleContext(DynamicGroupSubjectContext, 0) as DynamicGroupSubjectContext;
-	}
-	public serviceSubject(): ServiceSubjectContext {
-		return this.getTypedRuleContext(ServiceSubjectContext, 0) as ServiceSubjectContext;
-	}
-	public tenancySubject(): TenancySubjectContext {
-		return this.getTypedRuleContext(TenancySubjectContext, 0) as TenancySubjectContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_definedSubject;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_definedSubject; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterDefinedSubject) {
-	 		listener.enterDefinedSubject(this);
+		if (listener.enterDefinedSubject) {
+			listener.enterDefinedSubject(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitDefinedSubject) {
-	 		listener.exitDefinedSubject(this);
+		if (listener.exitDefinedSubject) {
+			listener.exitDefinedSubject(this);
 		}
 	}
 	// @Override
@@ -3366,27 +3784,23 @@ export class DefinedSubjectContext extends ParserRuleContext {
 
 
 export class DefinedContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public WORD(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WORD, 0); }
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public WORD(): TerminalNode {
-		return this.getToken(PolicyParser.WORD, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_defined;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_defined; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterDefined) {
-	 		listener.enterDefined(this);
+		if (listener.enterDefined) {
+			listener.enterDefined(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitDefined) {
-	 		listener.exitDefined(this);
+		if (listener.exitDefined) {
+			listener.exitDefined(this);
 		}
 	}
 	// @Override
@@ -3401,27 +3815,23 @@ export class DefinedContext extends ParserRuleContext {
 
 
 export class ResourceContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public WORD(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WORD, 0); }
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public WORD(): TerminalNode {
-		return this.getToken(PolicyParser.WORD, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_resource;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_resource; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterResource) {
-	 		listener.enterResource(this);
+		if (listener.enterResource) {
+			listener.enterResource(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitResource) {
-	 		listener.exitResource(this);
+		if (listener.exitResource) {
+			listener.exitResource(this);
 		}
 	}
 	// @Override
@@ -3436,30 +3846,31 @@ export class ResourceContext extends ParserRuleContext {
 
 
 export class ConditionContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public comparisonList(): ComparisonListContext | undefined {
+		return this.tryGetRuleContext(0, ComparisonListContext);
+	}
+	public comparison(): ComparisonContext | undefined {
+		return this.tryGetRuleContext(0, ComparisonContext);
+	}
+	public functionCall(): FunctionCallContext | undefined {
+		return this.tryGetRuleContext(0, FunctionCallContext);
+	}
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public comparisonList(): ComparisonListContext {
-		return this.getTypedRuleContext(ComparisonListContext, 0) as ComparisonListContext;
-	}
-	public comparison(): ComparisonContext {
-		return this.getTypedRuleContext(ComparisonContext, 0) as ComparisonContext;
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_condition;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_condition; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterCondition) {
-	 		listener.enterCondition(this);
+		if (listener.enterCondition) {
+			listener.enterCondition(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitCondition) {
-	 		listener.exitCondition(this);
+		if (listener.exitCondition) {
+			listener.exitCondition(this);
 		}
 	}
 	// @Override
@@ -3473,40 +3884,152 @@ export class ConditionContext extends ParserRuleContext {
 }
 
 
-export class ComparisonContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+export class FunctionCallContext extends ParserRuleContext {
+	public WORD(): TerminalNode { return this.getToken(PolicyParser.WORD, 0); }
+	public argumentList(): ArgumentListContext | undefined {
+		return this.tryGetRuleContext(0, ArgumentListContext);
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public variable(): VariableContext {
-		return this.getTypedRuleContext(VariableContext, 0) as VariableContext;
-	}
-	public operator(): OperatorContext {
-		return this.getTypedRuleContext(OperatorContext, 0) as OperatorContext;
-	}
-	public value(): ValueContext {
-		return this.getTypedRuleContext(ValueContext, 0) as ValueContext;
-	}
-	public valueList(): ValueListContext {
-		return this.getTypedRuleContext(ValueListContext, 0) as ValueListContext;
-	}
-	public timeWindow(): TimeWindowContext {
-		return this.getTypedRuleContext(TimeWindowContext, 0) as TimeWindowContext;
-	}
-	public patternMatch(): PatternMatchContext {
-		return this.getTypedRuleContext(PatternMatchContext, 0) as PatternMatchContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_comparison;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_functionCall; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterComparison) {
-	 		listener.enterComparison(this);
+		if (listener.enterFunctionCall) {
+			listener.enterFunctionCall(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitComparison) {
-	 		listener.exitComparison(this);
+		if (listener.exitFunctionCall) {
+			listener.exitFunctionCall(this);
+		}
+	}
+	// @Override
+	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
+		if (visitor.visitFunctionCall) {
+			return visitor.visitFunctionCall(this);
+		} else {
+			return visitor.visitChildren(this);
+		}
+	}
+}
+
+
+export class ArgumentListContext extends ParserRuleContext {
+	public argument(): ArgumentContext[];
+	public argument(i: number): ArgumentContext;
+	public argument(i?: number): ArgumentContext | ArgumentContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(ArgumentContext);
+		} else {
+			return this.getRuleContext(i, ArgumentContext);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_argumentList; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterArgumentList) {
+			listener.enterArgumentList(this);
+		}
+	}
+	// @Override
+	public exitRule(listener: PolicyListener): void {
+		if (listener.exitArgumentList) {
+			listener.exitArgumentList(this);
+		}
+	}
+	// @Override
+	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
+		if (visitor.visitArgumentList) {
+			return visitor.visitArgumentList(this);
+		} else {
+			return visitor.visitChildren(this);
+		}
+	}
+}
+
+
+export class ArgumentContext extends ParserRuleContext {
+	public variable(): VariableContext | undefined {
+		return this.tryGetRuleContext(0, VariableContext);
+	}
+	public value(): ValueContext | undefined {
+		return this.tryGetRuleContext(0, ValueContext);
+	}
+	public valueList(): ValueListContext | undefined {
+		return this.tryGetRuleContext(0, ValueListContext);
+	}
+	public functionCall(): FunctionCallContext | undefined {
+		return this.tryGetRuleContext(0, FunctionCallContext);
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_argument; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterArgument) {
+			listener.enterArgument(this);
+		}
+	}
+	// @Override
+	public exitRule(listener: PolicyListener): void {
+		if (listener.exitArgument) {
+			listener.exitArgument(this);
+		}
+	}
+	// @Override
+	public accept<Result>(visitor: PolicyVisitor<Result>): Result {
+		if (visitor.visitArgument) {
+			return visitor.visitArgument(this);
+		} else {
+			return visitor.visitChildren(this);
+		}
+	}
+}
+
+
+export class ComparisonContext extends ParserRuleContext {
+	public variable(): VariableContext {
+		return this.getRuleContext(0, VariableContext);
+	}
+	public operator(): OperatorContext {
+		return this.getRuleContext(0, OperatorContext);
+	}
+	public value(): ValueContext | undefined {
+		return this.tryGetRuleContext(0, ValueContext);
+	}
+	public valueList(): ValueListContext | undefined {
+		return this.tryGetRuleContext(0, ValueListContext);
+	}
+	public timeWindow(): TimeWindowContext | undefined {
+		return this.tryGetRuleContext(0, TimeWindowContext);
+	}
+	public patternMatch(): PatternMatchContext | undefined {
+		return this.tryGetRuleContext(0, PatternMatchContext);
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_comparison; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterComparison) {
+			listener.enterComparison(this);
+		}
+	}
+	// @Override
+	public exitRule(listener: PolicyListener): void {
+		if (listener.exitComparison) {
+			listener.exitComparison(this);
 		}
 	}
 	// @Override
@@ -3521,33 +4044,39 @@ export class ComparisonContext extends ParserRuleContext {
 
 
 export class VariableContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public WORD_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.WORD);
-	}
-	public WORD(i: number): TerminalNode {
-		return this.getToken(PolicyParser.WORD, i);
-	}
-	public HCL_VAR_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.HCL_VAR);
-	}
-	public HCL_VAR(i: number): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, i);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_variable;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterVariable) {
-	 		listener.enterVariable(this);
+	public WORD(): TerminalNode[];
+	public WORD(i: number): TerminalNode;
+	public WORD(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.WORD);
+		} else {
+			return this.getToken(PolicyParser.WORD, i);
 		}
 	}
+	public HCL_VAR(): TerminalNode[];
+	public HCL_VAR(i: number): TerminalNode;
+	public HCL_VAR(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.HCL_VAR);
+		} else {
+			return this.getToken(PolicyParser.HCL_VAR, i);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_variable; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterVariable) {
+			listener.enterVariable(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitVariable) {
-	 		listener.exitVariable(this);
+		if (listener.exitVariable) {
+			listener.exitVariable(this);
 		}
 	}
 	// @Override
@@ -3562,33 +4091,24 @@ export class VariableContext extends ParserRuleContext {
 
 
 export class OperatorContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public BEFORE(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.BEFORE, 0); }
+	public IN(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.IN, 0); }
+	public BETWEEN(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.BETWEEN, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public BEFORE(): TerminalNode {
-		return this.getToken(PolicyParser.BEFORE, 0);
-	}
-	public IN(): TerminalNode {
-		return this.getToken(PolicyParser.IN, 0);
-	}
-	public NOT(): TerminalNode {
-		return this.getToken(PolicyParser.NOT, 0);
-	}
-	public BETWEEN(): TerminalNode {
-		return this.getToken(PolicyParser.BETWEEN, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_operator;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_operator; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterOperator) {
-	 		listener.enterOperator(this);
+		if (listener.enterOperator) {
+			listener.enterOperator(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitOperator) {
-	 		listener.exitOperator(this);
+		if (listener.exitOperator) {
+			listener.exitOperator(this);
 		}
 	}
 	// @Override
@@ -3603,39 +4123,41 @@ export class OperatorContext extends ParserRuleContext {
 
 
 export class ValueContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public WORD_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.WORD);
-	}
-	public WORD(i: number): TerminalNode {
-		return this.getToken(PolicyParser.WORD, i);
-	}
-	public QUOTED_STRING(): TerminalNode {
-		return this.getToken(PolicyParser.QUOTED_STRING, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-	public WS_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.WS);
-	}
-	public WS(i: number): TerminalNode {
-		return this.getToken(PolicyParser.WS, i);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_value;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterValue) {
-	 		listener.enterValue(this);
+	public WORD(): TerminalNode[];
+	public WORD(i: number): TerminalNode;
+	public WORD(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.WORD);
+		} else {
+			return this.getToken(PolicyParser.WORD, i);
 		}
 	}
+	public QUOTED_STRING(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.QUOTED_STRING, 0); }
+	public HCL_VAR(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.HCL_VAR, 0); }
+	public WS(): TerminalNode[];
+	public WS(i: number): TerminalNode;
+	public WS(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.WS);
+		} else {
+			return this.getToken(PolicyParser.WS, i);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_value; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterValue) {
+			listener.enterValue(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitValue) {
-	 		listener.exitValue(this);
+		if (listener.exitValue) {
+			listener.exitValue(this);
 		}
 	}
 	// @Override
@@ -3650,33 +4172,39 @@ export class ValueContext extends ParserRuleContext {
 
 
 export class ValueListContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public QUOTED_STRING_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.QUOTED_STRING);
-	}
-	public QUOTED_STRING(i: number): TerminalNode {
-		return this.getToken(PolicyParser.QUOTED_STRING, i);
-	}
-	public HCL_VAR_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.HCL_VAR);
-	}
-	public HCL_VAR(i: number): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, i);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_valueList;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterValueList) {
-	 		listener.enterValueList(this);
+	public QUOTED_STRING(): TerminalNode[];
+	public QUOTED_STRING(i: number): TerminalNode;
+	public QUOTED_STRING(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.QUOTED_STRING);
+		} else {
+			return this.getToken(PolicyParser.QUOTED_STRING, i);
 		}
 	}
+	public HCL_VAR(): TerminalNode[];
+	public HCL_VAR(i: number): TerminalNode;
+	public HCL_VAR(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.HCL_VAR);
+		} else {
+			return this.getToken(PolicyParser.HCL_VAR, i);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_valueList; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterValueList) {
+			listener.enterValueList(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitValueList) {
-	 		listener.exitValueList(this);
+		if (listener.exitValueList) {
+			listener.exitValueList(this);
 		}
 	}
 	// @Override
@@ -3691,36 +4219,40 @@ export class ValueListContext extends ParserRuleContext {
 
 
 export class TimeWindowContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
-	public AND(): TerminalNode {
-		return this.getToken(PolicyParser.AND, 0);
-	}
-	public QUOTED_STRING_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.QUOTED_STRING);
-	}
-	public QUOTED_STRING(i: number): TerminalNode {
-		return this.getToken(PolicyParser.QUOTED_STRING, i);
-	}
-	public HCL_VAR_list(): TerminalNode[] {
-	    	return this.getTokens(PolicyParser.HCL_VAR);
-	}
-	public HCL_VAR(i: number): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, i);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_timeWindow;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterTimeWindow) {
-	 		listener.enterTimeWindow(this);
+	public AND(): TerminalNode { return this.getToken(PolicyParser.AND, 0); }
+	public QUOTED_STRING(): TerminalNode[];
+	public QUOTED_STRING(i: number): TerminalNode;
+	public QUOTED_STRING(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.QUOTED_STRING);
+		} else {
+			return this.getToken(PolicyParser.QUOTED_STRING, i);
 		}
 	}
+	public HCL_VAR(): TerminalNode[];
+	public HCL_VAR(i: number): TerminalNode;
+	public HCL_VAR(i?: number): TerminalNode | TerminalNode[] {
+		if (i === undefined) {
+			return this.getTokens(PolicyParser.HCL_VAR);
+		} else {
+			return this.getToken(PolicyParser.HCL_VAR, i);
+		}
+	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_timeWindow; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterTimeWindow) {
+			listener.enterTimeWindow(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitTimeWindow) {
-	 		listener.exitTimeWindow(this);
+		if (listener.exitTimeWindow) {
+			listener.exitTimeWindow(this);
 		}
 	}
 	// @Override
@@ -3735,30 +4267,33 @@ export class TimeWindowContext extends ParserRuleContext {
 
 
 export class ComparisonListContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
-		super(parent, invokingState);
-    	this.parser = parser;
-	}
 	public logicalCombine(): LogicalCombineContext {
-		return this.getTypedRuleContext(LogicalCombineContext, 0) as LogicalCombineContext;
+		return this.getRuleContext(0, LogicalCombineContext);
 	}
-	public condition_list(): ConditionContext[] {
-		return this.getTypedRuleContexts(ConditionContext) as ConditionContext[];
-	}
-	public condition(i: number): ConditionContext {
-		return this.getTypedRuleContext(ConditionContext, i) as ConditionContext;
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_comparisonList;
-	}
-	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterComparisonList) {
-	 		listener.enterComparisonList(this);
+	public condition(): ConditionContext[];
+	public condition(i: number): ConditionContext;
+	public condition(i?: number): ConditionContext | ConditionContext[] {
+		if (i === undefined) {
+			return this.getRuleContexts(ConditionContext);
+		} else {
+			return this.getRuleContext(i, ConditionContext);
 		}
 	}
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
+		super(parent, invokingState);
+	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_comparisonList; }
+	// @Override
+	public enterRule(listener: PolicyListener): void {
+		if (listener.enterComparisonList) {
+			listener.enterComparisonList(this);
+		}
+	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitComparisonList) {
-	 		listener.exitComparisonList(this);
+		if (listener.exitComparisonList) {
+			listener.exitComparisonList(this);
 		}
 	}
 	// @Override
@@ -3773,27 +4308,23 @@ export class ComparisonListContext extends ParserRuleContext {
 
 
 export class LogicalCombineContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public ALL(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.ALL, 0); }
+	public ANY(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.ANY, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public ALL(): TerminalNode {
-		return this.getToken(PolicyParser.ALL, 0);
-	}
-	public ANY(): TerminalNode {
-		return this.getToken(PolicyParser.ANY, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_logicalCombine;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_logicalCombine; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterLogicalCombine) {
-	 		listener.enterLogicalCombine(this);
+		if (listener.enterLogicalCombine) {
+			listener.enterLogicalCombine(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitLogicalCombine) {
-	 		listener.exitLogicalCombine(this);
+		if (listener.exitLogicalCombine) {
+			listener.exitLogicalCombine(this);
 		}
 	}
 	// @Override
@@ -3808,27 +4339,22 @@ export class LogicalCombineContext extends ParserRuleContext {
 
 
 export class PatternMatchContext extends ParserRuleContext {
-	constructor(parser?: PolicyParser, parent?: ParserRuleContext, invokingState?: number) {
+	public WORD(): TerminalNode | undefined { return this.tryGetToken(PolicyParser.WORD, 0); }
+	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
-    	this.parser = parser;
 	}
-	public WORD(): TerminalNode {
-		return this.getToken(PolicyParser.WORD, 0);
-	}
-	public HCL_VAR(): TerminalNode {
-		return this.getToken(PolicyParser.HCL_VAR, 0);
-	}
-    public get ruleIndex(): number {
-    	return PolicyParser.RULE_patternMatch;
-	}
+	// @Override
+	public get ruleIndex(): number { return PolicyParser.RULE_patternMatch; }
+	// @Override
 	public enterRule(listener: PolicyListener): void {
-	    if(listener.enterPatternMatch) {
-	 		listener.enterPatternMatch(this);
+		if (listener.enterPatternMatch) {
+			listener.enterPatternMatch(this);
 		}
 	}
+	// @Override
 	public exitRule(listener: PolicyListener): void {
-	    if(listener.exitPatternMatch) {
-	 		listener.exitPatternMatch(this);
+		if (listener.exitPatternMatch) {
+			listener.exitPatternMatch(this);
 		}
 	}
 	// @Override
@@ -3840,3 +4366,5 @@ export class PatternMatchContext extends ParserRuleContext {
 		}
 	}
 }
+
+

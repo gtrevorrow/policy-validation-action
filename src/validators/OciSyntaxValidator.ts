@@ -1,4 +1,4 @@
-import { CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token } from 'antlr4';
+import { CharStreams, CommonTokenStream, RecognitionException, Recognizer, Token } from 'antlr4ts';
 import { Logger, ValidationOptions } from '../types';
 import {
   PolicyValidator,
@@ -8,8 +8,8 @@ import {
   getStatementsWithoutVariables,
   shouldPassWithValidatorConfig
 } from './PolicyValidator';
-import PolicyLexer from '../generated/PolicyLexer';
-import PolicyParser from '../generated/PolicyParser';
+import { PolicyLexer } from '../generated/PolicyLexer';
+import { PolicyParser } from '../generated/PolicyParser';
 
 /**
  * Validates OCI policy statements for syntactical correctness according to OCI IAM policy grammar
@@ -25,7 +25,7 @@ export class OciSyntaxValidator implements PolicyValidator {
       description: 'Ensures OCI IAM policy statements follow the correct syntax'
     }
   ];
-  
+
   constructor(logger?: Logger) {
     this.logger = logger;
   }
@@ -39,45 +39,45 @@ export class OciSyntaxValidator implements PolicyValidator {
     warn: (message: string) => this.logger?.warn(`${this.name()}: ${message}`),
     error: (message: string) => this.logger?.error(`${this.name()}: ${message}`)
   };
-  
+
   name(): string {
     return 'OCI Syntax Validator';
   }
-  
+
   description(): string {
     return 'Validates OCI IAM policy statements for syntactical correctness';
   }
-  
+
   getChecks(): ValidationCheck[] {
     return this.syntaxChecks;
   }
-  
+
   public async validate(statements: string[], options: ValidationOptions = {}): Promise<ValidationReport[]> {
     const issues: ValidationIssue[] = [];
-    
+
     this.log.debug(`Validating ${statements.length} policy statements for syntax correctness`);
-    
+
     if (statements.length === 0) {
       this.log.info(`No policy statements to validate`);
       return [];
     }
-    
+
     for (const statement of statements) {
       if (!statement || typeof statement !== 'string') continue;
       const trimmedStatement = statement.trim();
       if (!trimmedStatement) continue;
-      
+
       try {
         const inputStream = CharStreams.fromString(trimmedStatement);
         const lexer = new PolicyLexer(inputStream);
         const tokenStream = new CommonTokenStream(lexer);
         const parser = new PolicyParser(tokenStream);
-        
+
         // Use error handling strategy
         parser.removeErrorListeners();
         parser.addErrorListener({
           syntaxError: (
-            recognizer: Recognizer<Token>,
+            recognizer: Recognizer<Token, any>,
             offendingSymbol: Token | undefined,
             line: number,
             charPositionInLine: number,
@@ -87,8 +87,8 @@ export class OciSyntaxValidator implements PolicyValidator {
             // Reproduce the original detailed error logging format
             this.log.error('Failed to parse policy statement:');
             this.log.error(`Statement: "${trimmedStatement}"`);
-            this.log.error(`Position: ${' '.repeat(charPositionInLine+2)}^ ${msg}`);
-            
+            this.log.error(`Position: ${' '.repeat(charPositionInLine + 2)}^ ${msg}`);
+
             issues.push({
               checkId: OciSyntaxValidator.CHECK_ID,
               statement: trimmedStatement,
@@ -98,18 +98,18 @@ export class OciSyntaxValidator implements PolicyValidator {
             });
           }
         });
-        
+
         // Attempt to parse the policy
         parser.policy();
       } catch (error) {
         this.log.debug(`Exception while parsing statement: ${trimmedStatement}`);
         this.log.debug(`Error: ${error}`);
-        
+
         // Log the error in the same format as syntax errors
         this.log.error('Failed to parse policy statement:');
         this.log.error(`Statement: "${trimmedStatement}"`);
         this.log.error(`Position: ^ ${error instanceof Error ? error.message : String(error)}`);
-        
+
         issues.push({
           checkId: OciSyntaxValidator.CHECK_ID,
           statement: trimmedStatement,
@@ -119,7 +119,7 @@ export class OciSyntaxValidator implements PolicyValidator {
         });
       }
     }
-    
+
     const { passed, status, issues: updatedIssues } = shouldPassWithValidatorConfig(
       issues,
       this.name(),
@@ -135,7 +135,7 @@ export class OciSyntaxValidator implements PolicyValidator {
       status,
       issues: updatedIssues
     };
-    
+
     return [report];
   }
 }
