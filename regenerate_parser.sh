@@ -16,9 +16,10 @@ fi
 # Create output directory if it doesn't exist
 mkdir -p src/generated
 
-# Generate TypeScript parser with ANTLR 4.13.2
-echo "Generating TypeScript parser from Policy.g4 using ANTLR 4.13.2..."
-java -jar antlr4.jar -Dlanguage=TypeScript -visitor -o src/generated Policy.g4
+# Generate TypeScript parser with antlr4ts
+echo "Generating TypeScript parser from grammars using antlr4ts..."
+npx antlr4ts -visitor -o src/generated Policy.g4
+npx antlr4ts -visitor -o src/generated Terraform.g4
 
 # If you're using the npm package antlr4ts-cli, you can also use this command:
 # echo "Using antlr4ts-cli to generate TypeScript parser..."

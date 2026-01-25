@@ -87,7 +87,6 @@ export class OciCisBenchmarkValidator implements StatementFilteringValidator {
     }
 
     this.logger?.debug(`Validating ${applicableStatements.length} static policy statements against OCI CIS Benchmark`);
-
     try {
       // Use the ANTLR listener to analyze all applicable statements and gather findings.
       const results = this.analyzePolicy(applicableStatements);

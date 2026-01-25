@@ -54,14 +54,11 @@ export class OciCisListener implements PolicyListener {
   }
 
   exitVerb(ctx: any): void {
-    this.currentVerb = ctx?.getText()?.toLowerCase() || '';
+    this.currentVerb = ctx?.text?.toLowerCase() || '';
   }
 
   exitResource(ctx: any): void {
-    const resource = ctx?.getText()?.toLowerCase();
-
-    const statement = this.currentStatement.toLowerCase();
-
+    const resource = ctx?.text?.toLowerCase();
     this.currentResourceHasAllResources = !!(resource && resource.includes('all-resources'));
 
     // Check for network security group admin policies (require explicit manage verb)
@@ -82,7 +79,7 @@ export class OciCisListener implements PolicyListener {
   }
 
   exitCondition(ctx: any): void {
-    const condition = ctx?.getText()?.toLowerCase();
+    const condition = ctx?.text?.toLowerCase();
 
     // Check for MFA condition (support various MFA field names and true/!=false patterns)
     if (condition) {
@@ -104,7 +101,7 @@ export class OciCisListener implements PolicyListener {
   }
 
   exitScope(ctx: any): void {
-    this.currentScope = ctx?.getText()?.toLowerCase() || '';
+    this.currentScope = ctx?.text?.toLowerCase() || '';
 
     // Check for overly permissive policies (manage all-resources in tenancy)
     if (this.currentResourceHasAllResources && this.currentVerb === 'manage' && this.currentScope === 'tenancy') {
@@ -146,7 +143,7 @@ export class OciCisListener implements PolicyListener {
   exitServiceSubject(ctx: any): void { }
   enterGroupName(ctx: any): void { }
   exitGroupName(ctx: any): void {
-    const groupName = ctx?.getText();
+    const groupName = ctx?.text;
     if (groupName && groupName.includes('${')) {
       this.logger?.debug(`Found HCL variable in group name for statement: ${this.currentStatement}`);
       this.policiesWithHclVariablesInGroup.push(this.currentStatement);

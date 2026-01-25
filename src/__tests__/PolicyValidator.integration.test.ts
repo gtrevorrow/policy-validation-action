@@ -78,11 +78,20 @@ resource "oci_identity_policy" "broken" {
     # Missing closing bracket and other syntax errors
 `;
 
-// Helper function to extract policies from Terraform content
-function extractPoliciesFromTerraform(content: string): string[] {
+// Helper function to extract policies from Terraform content using regex
+function extractPoliciesUsingRegex(content: string): string[] {
   const extractor = ExtractorFactory.create('regex');
   return extractor.extract(content);
 }
+
+// Helper function to extract policies from Terraform content using ANTLR HCL parser
+function extractPoliciesUsingAntlr(content: string): string[] {
+  const extractor = ExtractorFactory.create('antlr-hcl');
+  return extractor.extract(content);
+}
+
+// Default helper uses regex for backward compatibility in existing tests
+const extractPoliciesFromTerraform = extractPoliciesUsingRegex;
 
 describe('Policy Validator Integration', () => {
   beforeEach(() => {
@@ -93,24 +102,24 @@ describe('Policy Validator Integration', () => {
     it('should run syntax and CIS validation in complete pipeline', async () => {
       const statements = extractPoliciesFromTerraform(complexTerraformContent);
       expect(statements.length).toBeGreaterThan(0);
-      
+
       // Create pipeline with both validators
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
-      
+
       const results = await pipeline.validate(statements);
-      
+
       expect(results).toHaveLength(2);
-      
+
       // Check syntax validator results
       const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
       expect(syntaxResults).toBeDefined();
-      
+
       // Check CIS validator results - may be empty if all statements have variables
       const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
       expect(cisResults).toBeDefined();
-      
+
       // CIS validator will only produce reports if there are statements without variables
       const statementsWithoutVariables = statements.filter(s => !s.includes('${'));
       if (statementsWithoutVariables.length > 0) {
@@ -127,25 +136,25 @@ describe('Policy Validator Integration', () => {
         'Allow group Developers to use instances in compartment dev',
         'BadSyntax manage something somewhere'
       ];
-      
+
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
-      
+
       const results = await pipeline.validate(statements);
-      
+
       // Syntax validator should catch syntax errors
       const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
       expect(syntaxResults?.reports[0].passed).toBeFalsy(); // Due to "BadSyntax manage something somewhere"
-      
+
       // CIS validator should still run and catch security issues
       const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
       expect(cisResults?.reports).toHaveLength(4);
-      
+
       // Check specifically for the CIS-OCI-1.2 check (least privilege)
       const leastPrivilegeCheck = cisResults?.reports.find(r => r.checkId === 'CIS-OCI-1.2');
       expect(leastPrivilegeCheck).toBeDefined();
-      
+
       // The check should fail because "Allow group NonAdministrators to manage all-resources in tenancy" 
       // violates the least privilege principle (only Administrators group should have this permission)
       expect(leastPrivilegeCheck?.passed).toBeFalsy();
@@ -153,16 +162,16 @@ describe('Policy Validator Integration', () => {
 
     it('should maintain validator independence in pipeline', async () => {
       const statements = ['BadSyntax policy here'];
-      
+
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
-      
+
       const results = await pipeline.validate(statements);
-      
+
       // Even if syntax validation fails, CIS validation should still run
       expect(results).toHaveLength(2);
-      
+
       // CIS validator should still produce its checks
       const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
       expect(cisResults?.reports).toHaveLength(4);
@@ -179,14 +188,14 @@ describe('Policy Validator Integration', () => {
           ]
         }
       `;
-      
+
       const statements = extractPoliciesFromTerraform(simpleContent);
       expect(statements.length).toBeGreaterThan(0);
-      
+
       // Validate extracted statements
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
-      
+
       const results = await pipeline.validate(statements);
       expect(results).toHaveLength(1);
     });
@@ -200,14 +209,14 @@ describe('Policy Validator Integration', () => {
           ]
         }
       `;
-      
+
       const statements = extractPoliciesFromTerraform(variableTerraform);
-      
+
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
-      
+
       const results = await pipeline.validate(statements);
-      
+
       // Should parse variables correctly
       expect(results[0].reports[0].passed).toBeTruthy();
     });
@@ -225,25 +234,25 @@ describe('Policy Validator Integration', () => {
           }
         `;
       }
-      
+
       const statements = extractPoliciesFromTerraform(largeTerraform);
       expect(statements.length).toBe(40); // 20 resources * 2 statements each
-      
+
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
-      
+
       const startTime = Date.now();
       const results = await pipeline.validate(statements);
       const duration = Date.now() - startTime;
-      
+
       expect(results).toHaveLength(2);
       expect(duration).toBeLessThan(3000); // Should complete within 3 seconds
-      
+
       // Verify all statements were processed
       const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
       expect(syntaxResults?.reports[0].passed).toBeTruthy();
-      
+
       // Verify CIS validation ran on all statements (none have variables)
       const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
       expect(cisResults?.reports).toHaveLength(4); // All 4 CIS checks should run
@@ -258,20 +267,20 @@ describe('Policy Validator Integration', () => {
         'Allow BadSyntax manage', // Invalid syntax
         'This is completely invalid' // Invalid syntax
       ];
-      
+
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
-      
+
       // Should not throw errors even with malformed input
       const results = await pipeline.validate(problematicStatements);
       expect(results).toHaveLength(2);
-      
+
       // Both validators should still produce reports
       const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
       expect(syntaxResults?.reports).toHaveLength(1);
       expect(syntaxResults?.reports[0].passed).toBeFalsy(); // Should fail due to invalid statements
-      
+
       // CIS validator should also run despite syntax errors
       const cisResults = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
       expect(cisResults?.reports).toHaveLength(4);
@@ -279,18 +288,18 @@ describe('Policy Validator Integration', () => {
 
     it('should provide comprehensive validation summary', async () => {
       const statements = extractPoliciesFromTerraform(complexTerraformContent);
-      
+
       const pipeline = new ValidationPipeline(mockLogger);
       pipeline.addValidator(new OciSyntaxValidator(mockLogger));
       pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
-      
+
       const results = await pipeline.validate(statements);
-      
+
       // Verify logging provides summary information
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringMatching(/Validator .* completed:/)
       );
-      
+
       // Verify all expected checks are present
       const allReports = results.flatMap(r => r.reports);
       const checkIds = allReports.map(r => r.checkId);
@@ -299,12 +308,79 @@ describe('Policy Validator Integration', () => {
       expect(checkIds).toContain('CIS-OCI-1.2');
       expect(checkIds).toContain('CIS-OCI-1.3');
       expect(checkIds).toContain('CIS-OCI-1.5');
-      
+
       // Verify both validators completed successfully
       const validatorNames = results.map(r => r.validatorName);
       expect(validatorNames).toContain('OCI Syntax Validator');
       expect(validatorNames).toContain('OCI CIS Benchmark Validator');
     });
+    describe('ANTLR HCL Extractor Integration', () => {
+      it('should extract and validate policies using the ANTLR HCL parser', async () => {
+        const statements = extractPoliciesUsingAntlr(complexTerraformContent);
+        expect(statements.length).toBeGreaterThan(0);
+
+        const pipeline = new ValidationPipeline(mockLogger);
+        pipeline.addValidator(new OciSyntaxValidator(mockLogger));
+
+        const results = await pipeline.validate(statements);
+
+        // The complexTerraformContent contains one statement with "BadSyntax"
+        const syntaxResults = results.find(r => r.validatorName === 'OCI Syntax Validator');
+        expect(syntaxResults?.reports[0].passed).toBeFalsy();
+      });
+
+      it('should handle complex HCL features like heredocs with the ANTLR extractor', async () => {
+        const heredocTerraform = `
+        resource "oci_identity_policy" "heredoc_test" {
+          statements = [
+            <<-EOT
+              Allow group Admins to manage all-resources in tenancy
+            EOT
+            ,
+            <<-EOF
+              Allow group Users to read all-resources in tenancy
+            EOF
+          ]
+        }
+      `;
+
+        const statements = extractPoliciesUsingAntlr(heredocTerraform);
+        expect(statements).toHaveLength(2);
+
+        const pipeline = new ValidationPipeline(mockLogger);
+        pipeline.addValidator(new OciSyntaxValidator(mockLogger));
+
+        const results = await pipeline.validate(statements);
+        expect(results[0].reports[0].passed).toBeTruthy();
+      });
+
+      it('should maintain pipeline validation integrity with ANTLR extracted statements', async () => {
+        const input = `
+        resource "oci_identity_policy" "mix" {
+          statements = [
+            "Allow group Admins to manage all-resources in tenancy",
+            "Allow group \${var.user_group} to read instances in tenancy"
+          ]
+        }
+      `;
+
+        const statements = extractPoliciesUsingAntlr(input);
+
+        const pipeline = new ValidationPipeline(mockLogger);
+        pipeline.addValidator(new OciSyntaxValidator(mockLogger));
+        pipeline.addValidator(new OciCisBenchmarkValidator(mockLogger));
+
+        const results = await pipeline.validate(statements);
+
+        expect(results).toHaveLength(2);
+        const syntaxResult = results.find(r => r.validatorName === 'OCI Syntax Validator');
+        const cisResult = results.find(r => r.validatorName === 'OCI CIS Benchmark Validator');
+
+        expect(syntaxResult?.reports[0].passed).toBeTruthy();
+        // cisResult reports might be empty or 4 depending on how many pass the filter
+        // but the pipeline should have executed it.
+      });
+    });
   });
 });
-     
+
