@@ -5,6 +5,7 @@ import { ExtractorFactory, ExtractorType } from './extractors/ExtractorFactory';
 import { ValidationPipeline } from './validators/ValidationPipeline';
 import { FileValidationResult } from './types';
 import { ValidatorFactory } from './validators/ValidatorFactory';
+import { ValidationContext } from './validators/context/ValidationContext';
 
 /**
  * Helper function to parse boolean inputs with explicit defaults
@@ -80,61 +81,65 @@ async function findPolicyFiles(
   options?: { fileNames?: string[]; fileExtension?: string },
   logger?: Logger
 ): Promise<string[]> {
+  let stats;
   try {
-    // First check if path exists and is accessible
-    await fs.promises.access(dir, fs.constants.R_OK)
+    // Fix #3: Just stat directly. Handles existence and permission checks in one go.
+    stats = await fs.promises.stat(dir);
   } catch (error) {
-    logger?.error(`Path ${dir} is not accessible: ${error}`)
-    return []
+    logger?.error(`Path ${dir} is not accessible: ${error}`);
+    return [];
   }
 
-  const stats = await fs.promises.stat(dir)
-  // If it's a file, apply name/extension filters
+  // Handle Input is File
   if (stats.isFile()) {
-    const base = path.basename(dir)
-    if (options?.fileNames?.length && !options.fileNames.includes(base)) {
-      return []
-    }
-    if (options?.fileExtension && !dir.endsWith(options.fileExtension)) {
-      return []
-    }
-    return [dir]
+    const base = path.basename(dir);
+    // Apply filters
+    if (options?.fileNames?.length && !options.fileNames.includes(base)) return [];
+    if (options?.fileExtension && !dir.endsWith(options.fileExtension)) return [];
+    return [dir];
   }
+
   if (!stats.isDirectory()) {
-    logger?.error(`Path ${dir} is neither a file nor a directory`)
-    return []
+    logger?.error(`Path ${dir} is neither a file nor a directory`);
+    return [];
   }
 
-  // If specific fileNames provided, pick those
-  if (options?.fileNames?.length) {
-    const found: string[] = []
-    for (const name of options.fileNames) {
-      const candidate = path.join(dir, name)
-      try {
-        const st = await fs.promises.stat(candidate)
-        if (st.isFile()) found.push(candidate)
-      } catch {
-        logger?.debug(`File ${name} not found in ${dir}`)
-      }
-    }
-    return found
+  // Handle Input is Directory (Recursive Scan)
+  const results: string[] = [];
+
+  // Validate reading directory
+  let entries;
+  try {
+    entries = await fs.promises.readdir(dir, { withFileTypes: true });
+  } catch (e) {
+    logger?.error(`Error reading directory ${dir}: ${e}`);
+    return [];
   }
 
-  // Otherwise recursively scan directory
-  const results: string[] = []
-  for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+
     if (entry.isDirectory()) {
-      results.push(...await findPolicyFiles(fullPath, options, logger))
+      // Recurse into subdirectories
+      results.push(...await findPolicyFiles(fullPath, options, logger));
     } else if (entry.isFile()) {
+      // Fix #2: Apply ALL filters inline here
+
+      // Filter by extension
       if (options?.fileExtension && !entry.name.endsWith(options.fileExtension)) {
-        continue
+        continue;
       }
-      results.push(fullPath)
+
+      // Filter by filename (Fixing the missing filter in the recursive loop)
+      if (options?.fileNames?.length && !options.fileNames.includes(entry.name)) {
+        continue;
+      }
+
+      results.push(fullPath);
     }
   }
 
-  return results
+  return results;
 }
 
 // Single export statement at the end of the file
@@ -164,7 +169,7 @@ export async function validatePolicies(
   scanPath: string,
   options: ValidationOptions,
   logger: Logger,
-  context?: import('./validators/context/ValidationContext').ValidationContext
+  context?: ValidationContext
 ): Promise<FileValidationResult[]> {
   // Find all policy files - findPolicyFiles already handles inaccessible paths
   const filesToProcess = await findPolicyFiles(scanPath, {
