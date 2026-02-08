@@ -13,8 +13,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { 
-    findPolicyFiles, 
+import {
+    findPolicyFiles,
     runAction,
     validatePolicies
 } from '../Main';
@@ -47,15 +47,60 @@ describe('Infrastructure Unit Tests', () => {
         { name: 'file3.tf', isFile: () => true, isDirectory: () => false }
     ] as unknown as fs.Dirent[];
 
-    const MOCK_DIRECTORY_STAT = { 
+    const MOCK_DIRECTORY_STAT = {
         isFile: () => false,
         isDirectory: () => true
     } as unknown as fs.Stats;
 
-    const MOCK_FILE_STAT = { 
+    const MOCK_FILE_STAT = {
         isFile: () => true,
         isDirectory: () => false
     } as unknown as fs.Stats;
+
+    // Helper to standardise mock behavior
+    const setupMocks = () => {
+        const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+        const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
+        const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+
+        mockAccess.mockImplementation(async (p) => {
+            const pa = p.toString();
+            if (pa.includes('inaccessible')) {
+                throw new Error('Access denied');
+            }
+            return undefined;
+        });
+
+        mockStat.mockImplementation(async (p) => {
+            const pa = p.toString();
+            if (pa.endsWith('.tf') || pa.endsWith('.txt') || pa.endsWith('.xml') || pa.endsWith('file')) {
+                return MOCK_FILE_STAT;
+            }
+            if (pa.includes('nonexistent')) {
+                throw new Error('ENOENT');
+            }
+            if (pa.includes('inaccessible')) {
+                throw new Error('Access denied');
+            }
+            // Assume everything else is a directory unless it's a specific file we test for
+            return MOCK_DIRECTORY_STAT;
+        });
+
+        mockReaddir.mockImplementation(async (p) => {
+            const pa = p.toString();
+            if (pa.endsWith('subdir')) {
+                return MOCK_SUBDIR_FILES;
+            }
+            if (pa === '/empty/dir') {
+                return [];
+            }
+            if (pa.includes('nonexistent')) {
+                throw new Error('ENOENT');
+            }
+            // Default directory listing
+            return MOCK_FILES;
+        });
+    };
 
     // Clear mocks between tests
     beforeEach(() => {
@@ -73,54 +118,48 @@ describe('Infrastructure Unit Tests', () => {
      */
     describe('findPolicyFiles', () => {
         it('should handle a single file path', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValue(MOCK_FILE_STAT);
-            
+            setupMocks();
+            // Override just for this test case if needed, or rely on general logic
+            // The general logic handles .tf as file, so this should work automatically
+
             const files = await findPolicyFiles('/test/dir/file.tf');
             expect(files).toEqual(['/test/dir/file.tf']);
         });
 
         it('should filter files when fileNames are provided', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
+            setupMocks();
             const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            
-            mockAccess.mockResolvedValue(undefined);
-            
-            // Check if dir is directory
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            
-            // Check policy1.tf
-            mockStat.mockResolvedValueOnce(MOCK_FILE_STAT);
-              
-            
-            // Check policy2.tf
-            mockStat.mockResolvedValueOnce(MOCK_FILE_STAT);
-            
+
+            // Override stat for specific files used in this test
+            mockStat.mockImplementation(async (p) => {
+                const pa = p.toString();
+                if (pa.endsWith('policy1.tf') || pa.endsWith('policy2.tf')) {
+                    return MOCK_FILE_STAT;
+                }
+                return MOCK_DIRECTORY_STAT;
+            });
+
+            // We need readdir to return these specific files
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            mockReaddir.mockResolvedValue([
+                { name: 'policy1.tf', isFile: () => true, isDirectory: () => false },
+                { name: 'policy2.tf', isFile: () => true, isDirectory: () => false },
+                { name: 'ignored.tf', isFile: () => true, isDirectory: () => false }
+            ] as unknown as fs.Dirent[]);
+
             const files = await findPolicyFiles('/test/dir', {
                 fileNames: ['policy1.tf', 'policy2.tf']
             });
-            
+
             expect(files).toEqual([
-                '/test/dir/policy1.tf', 
+                '/test/dir/policy1.tf',
                 '/test/dir/policy2.tf'
             ]);
         });
 
         it('should return all files by default (no filtering)', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            setupMocks();
 
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
-            // Subdir check
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
-            
             const files = await findPolicyFiles('/test/dir');
             expect(files).toEqual([
                 '/test/dir/file1.tf',
@@ -130,17 +169,8 @@ describe('Infrastructure Unit Tests', () => {
         });
 
         it('should filter files by extension when specified', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            setupMocks();
 
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_FILES);
-            // Subdir check
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(MOCK_SUBDIR_FILES);
-            
             const files = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
             expect(files).toEqual([
                 '/test/dir/file1.tf',
@@ -149,7 +179,7 @@ describe('Infrastructure Unit Tests', () => {
         });
 
         it('should handle edge cases in file extension filtering', async () => {
-            // Test with files that have edge case extensions
+            setupMocks();
             const edgeCaseFiles = [
                 { name: 'file.tf', isFile: () => true, isDirectory: () => false },
                 { name: 'file.', isFile: () => true, isDirectory: () => false }, // Empty extension
@@ -158,15 +188,10 @@ describe('Infrastructure Unit Tests', () => {
                 { name: 'file.TF', isFile: () => true, isDirectory: () => false }, // Case sensitivity
                 { name: 'file.tf.backup', isFile: () => true, isDirectory: () => false } // Multiple extensions
             ] as unknown as fs.Dirent[];
-            
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
 
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(edgeCaseFiles);
-            
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            mockReaddir.mockResolvedValue(edgeCaseFiles);
+
             // Test empty extension - should return all files (no filtering)
             const emptyExtFiles = await findPolicyFiles('/test/dir', { fileExtension: '' });
             expect(emptyExtFiles).toEqual([
@@ -177,13 +202,7 @@ describe('Infrastructure Unit Tests', () => {
                 '/test/dir/file.TF',
                 '/test/dir/file.tf.backup'
             ]);
-            
-            // Reset mocks for next test
-            jest.clearAllMocks();
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(edgeCaseFiles);
-            
+
             // Test case sensitivity - should only match exact case
             const caseFiles = await findPolicyFiles('/test/dir', { fileExtension: '.tf' });
             expect(caseFiles).toEqual(['/test/dir/file.tf']);
@@ -202,32 +221,30 @@ describe('Infrastructure Unit Tests', () => {
      */
     describe('validatePolicies', () => {
         it('should return empty array when no files match criteria', async () => {
-            // Setup mocks with only non-matching files
+            // Setup mocks
+            setupMocks();
+            // Override for this test
             const nonMatchingFiles = [
                 { name: 'readme.txt', isFile: () => true, isDirectory: () => false },
                 { name: 'config.json', isFile: () => true, isDirectory: () => false }
             ] as unknown as fs.Dirent[];
-            
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
 
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce(nonMatchingFiles);
-            
+            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            mockReaddir.mockResolvedValue(nonMatchingFiles);
+
+
             const options = {
                 extractorType: 'regex' as ExtractorType,
                 fileExtension: '.tf',
                 exitOnError: false
             };
-            
+
             const results = await validatePolicies('/test/dir', options, mockLogger);
-            
+
             // Should return empty array
             expect(Array.isArray(results)).toBe(true);
             expect(results.length).toBe(0);
-            
+
             // Should log the appropriate warning message
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 'No files matching criteria found in /test/dir'
@@ -235,26 +252,20 @@ describe('Infrastructure Unit Tests', () => {
         });
 
         it('should return empty array when directory has no files at all', async () => {
-            // Setup mocks with empty directory
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            const mockStat = fs.promises.stat as jest.MockedFunction<typeof fs.promises.stat>;
-            const mockReaddir = fs.promises.readdir as jest.MockedFunction<typeof fs.promises.readdir>;
+            setupMocks(); // Will return [] for /empty/dir based on setupMocks logic
 
-            mockAccess.mockResolvedValue(undefined);
-            mockStat.mockResolvedValueOnce(MOCK_DIRECTORY_STAT);
-            mockReaddir.mockResolvedValueOnce([]);
-            
+
             const options = {
                 extractorType: 'regex' as ExtractorType,
                 exitOnError: false
             };
-            
+
             const results = await validatePolicies('/empty/dir', options, mockLogger);
-            
+
             // Should return empty array
             expect(Array.isArray(results)).toBe(true);
             expect(results.length).toBe(0);
-            
+
             // Should log the general "no files found" message
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 'No files found in /empty/dir'
@@ -269,22 +280,19 @@ describe('Infrastructure Unit Tests', () => {
      */
     describe('Error Handling Unit Tests', () => {
         it('should handle empty directory', async () => {
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            mockAccess.mockRejectedValue(new Error('Directory not found'));
-            
+            setupMocks();
+
             const files = await findPolicyFiles('nonexistent', {}, mockLogger);
             expect(files).toEqual([]);
             expect(mockLogger.error).toHaveBeenCalled();
         });
 
         it('should handle path access errors correctly in findPolicyFiles', async () => {
-            // Mock fs.promises.access to simulate a path access error
-            const mockAccess = fs.promises.access as jest.MockedFunction<typeof fs.promises.access>;
-            mockAccess.mockRejectedValue(new Error('Access denied'));
-            
+            setupMocks();
+
             // Call findPolicyFiles with an inaccessible path
             const files = await findPolicyFiles('/inaccessible/path', {}, mockLogger);
-            
+
             // It should return an empty array and log the error
             expect(files).toEqual([]);
             expect(mockLogger.error).toHaveBeenCalledWith(
@@ -307,15 +315,15 @@ describe('Infrastructure Unit Tests', () => {
             accessMock = jest.spyOn(fs.promises, 'access').mockResolvedValue(undefined);
             statMock = jest.spyOn(fs.promises, 'stat').mockImplementation(async (p: string | Buffer | URL) => {
                 const pathStr = path.resolve(p.toString());
-                if (pathStr === resolvedDotPath) { 
+                if (pathStr === resolvedDotPath) {
                     return {
                         isFile: () => false, isDirectory: () => true, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
                         dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 0, blksize: 0, blocks: 0,
                         atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
                         atime: new Date(), mtime: new Date(), ctime: new Date(), birthtime: new Date()
                     } as fs.Stats;
-                } else if (pathStr === path.join(resolvedDotPath, 'dummy.tf')) { 
-                     return {
+                } else if (pathStr === path.join(resolvedDotPath, 'dummy.tf')) {
+                    return {
                         isFile: () => true, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
                         dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 100, blksize: 4096, blocks: 1,
                         atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
@@ -323,7 +331,7 @@ describe('Infrastructure Unit Tests', () => {
                     } as fs.Stats;
                 }
                 // Enhanced fallback for unhandled paths
-                return { 
+                return {
                     isFile: () => false, isDirectory: () => false, isBlockDevice: () => false, isCharacterDevice: () => false, isSymbolicLink: () => false, isFIFO: () => false, isSocket: () => false,
                     dev: 0, ino: 0, mode: 0, nlink: 0, uid: 0, gid: 0, rdev: 0, size: 0, blksize: 0, blocks: 0,
                     atimeMs: Date.now(), mtimeMs: Date.now(), ctimeMs: Date.now(), birthtimeMs: Date.now(),
@@ -358,14 +366,14 @@ describe('Infrastructure Unit Tests', () => {
                 warn: jest.fn(),
                 error: jest.fn()
             };
-            
+
             // Test with empty inputs to verify default values
             const mockGetInput = jest.fn((name) => {
                 if (name === 'path') return '.';
                 // Return empty for all other inputs to test default values
                 return '';
             });
-            
+
             const testPlatform = {
                 getInput: mockGetInput,
                 setOutput: jest.fn(),
@@ -376,15 +384,15 @@ describe('Infrastructure Unit Tests', () => {
                 error: jest.fn(),
                 createLogger: jest.fn().mockReturnValue(logger)
             };
-            
+
             await runAction(testPlatform);
-            
+
             // Verify the explicit default values for validator pipelines
             expect(logger.info.mock.calls.flat()).toContain("Exit on error: false");
             expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: true");
             expect(logger.info.mock.calls.flat()).toContain("Global validators enabled: false");
         });
-        
+
         it('should handle specific boolean values correctly', async () => {
             // Create a shared logger mock
             const logger = {
@@ -393,7 +401,7 @@ describe('Infrastructure Unit Tests', () => {
                 warn: jest.fn(),
                 error: jest.fn()
             };
-            
+
             // Test with specific boolean values
             const mockGetInput = jest.fn((name) => {
                 if (name === 'path') return '.';
@@ -402,7 +410,7 @@ describe('Infrastructure Unit Tests', () => {
                 if (name === 'validators-global') return 'true';
                 return '';
             });
-            
+
             const testPlatform = {
                 getInput: mockGetInput,
                 setOutput: jest.fn(),
@@ -413,9 +421,9 @@ describe('Infrastructure Unit Tests', () => {
                 error: jest.fn(),
                 createLogger: jest.fn().mockReturnValue(logger)
             };
-            
+
             await runAction(testPlatform);
-            
+
             // Verify all boolean values for validator pipelines are set correctly
             expect(logger.info.mock.calls.flat()).toContain("Exit on error: true");
             expect(logger.info.mock.calls.flat()).toContain("Local validators enabled: false");
