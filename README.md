@@ -446,8 +446,18 @@ The tool supports pluggable policy extractors for different file formats:
 
 ### Available Extractors
 
-- `regex` (default): Uses regular expressions to extract policies from HCL.
+- `regex` (default): Uses regular expressions to extract policies from HCL. Fast and effective for most standard formatted files.
+- `hcl` (ANTLR-based): Uses a full HCL parser to extract policies. This is more robust against complex formatting and comments. 
+    - **Variable Resolution**: The HCL extractor can resolve basic Terraform variables (`var.name`) when their `default` value is defined within the same file. This allows for validation of policies that use variables for their statements.
 - `json`: Planned feature for extracting policies from JSON format.
+
+### HCL Extractor (ANTLR)
+
+The `hcl` extractor uses a generated parser to understand the Terraform HCL syntax structure. 
+
+**Key Features:**
+*   **Robust Parsing:** Correctly handles comments, complex quoting, and multi-line strings (heredocs) that might confuse regex.
+*   **Local Variable Resolution:** If a policy references a variable (e.g., `statements = var.my_policies`) and that variable is defined with a default value in the same file, the extractor will use that default value for validation.
 
 ### Regex Policy Extractor Policy Statement Pattern 
 
