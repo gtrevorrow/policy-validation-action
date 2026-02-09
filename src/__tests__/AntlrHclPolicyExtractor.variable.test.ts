@@ -19,4 +19,24 @@ describe('AntlrHclPolicyExtractor Variable Resolution', () => {
         expect(statements).toContain("Allow group Administrators to manage all-resources in tenancy");
         expect(statements).toContain("Allow group Users to use all-resources in tenancy");
     });
+
+    it('should resolve variable traversal with index literal', () => {
+        const fixturePath = path.join(__dirname, 'fixtures', 'repro_variable_traversal.tf');
+        const content = fs.readFileSync(fixturePath, 'utf8');
+
+        const statements = extractor.extract(content);
+
+        expect(statements).toHaveLength(1);
+        expect(statements).toContain("Allow group Admins to manage all-resources in tenancy");
+    });
+
+    it('should resolve variable traversal with attribute access', () => {
+        const fixturePath = path.join(__dirname, 'fixtures', 'repro_variable_object.tf');
+        const content = fs.readFileSync(fixturePath, 'utf8');
+
+        const statements = extractor.extract(content);
+
+        expect(statements).toHaveLength(1);
+        expect(statements).toContain("Allow group Admins to manage all-resources in tenancy");
+    });
 });

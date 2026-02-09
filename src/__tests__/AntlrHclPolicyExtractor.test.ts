@@ -76,18 +76,25 @@ describe('AntlrHclPolicyExtractor', () => {
         expect(result[0]).toContain("Allow group Users to read instances in compartment \${var.comp}");
     });
 
-    it('should ignore other resources', () => {
+    it('should extract statements outside policy resources', () => {
         const input = `
             resource "oci_core_instance" "test" {
-                statements = ["this should be ignored"]
+                statements = ["this should be kept too"]
             }
-            resource "oci_identity_policy" "real" {
-                statements = ["this should be kept"]
+            locals {
+                statements = ["local statement"]
+            }
+            output "example" {
+                value = {
+                    statements = ["output statement"]
+                }
             }
         `;
         const result = extractor.extract(input);
-        expect(result).toHaveLength(1);
-        expect(result).toContain("this should be kept");
+        expect(result).toHaveLength(3);
+        expect(result).toContain("this should be kept too");
+        expect(result).toContain("local statement");
+        expect(result).toContain("output statement");
     });
 
     it('should handle multiple policy resources', () => {
@@ -103,6 +110,21 @@ describe('AntlrHclPolicyExtractor', () => {
         expect(result).toHaveLength(2);
         expect(result).toContain("s1");
         expect(result).toContain("s2");
+    });
+
+    it('should handle heredocs with custom delimiter', () => {
+        const input = `
+            resource "oci_identity_policy" "test" {
+                statements = [
+                    <<-POLICY
+                        Allow group Admins to manage all-resources in tenancy
+                    POLICY
+                ]
+            }
+        `;
+        const result = extractor.extract(input);
+        expect(result).toHaveLength(1);
+        expect(result[0]).toContain("Allow group Admins to manage all-resources in tenancy");
     });
 
     it('should handle HCL comments', () => {
