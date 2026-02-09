@@ -480,7 +480,7 @@ If no pattern is specified, the action will use a default pattern that handles:
 
 *   **Handling Newlines and Whitespace:** The pattern should handle newlines and varying amounts of whitespace within the policy statements block. The default pattern uses the `s` flag (dot matches newlines) and `\s*` to match optional whitespace.
 
-*   **Comments and Other Syntax:** While the regex pattern itself does not handle comments, the `DefaultExtractionStrategy` removes comments (e.g., `#` or `//`) during preprocessing. Ensure that your pattern focuses on extracting valid statements and relies on preprocessing to handle comments.
+*   **Comments and Other Syntax:** While the regex pattern itself does not handle comments, the `DefaultStatementListPostProcessor` removes comments (e.g., `#` or `//`) during preprocessing. Ensure that your pattern focuses on extracting the full statements block and relies on preprocessing to handle comments.
 
 *   **Matching the Entire Block:** The regex should match the entire block of policy statements. For example:
     ```terraform
@@ -508,23 +508,13 @@ resource "oci_identity_policy" "test" {
 }
 ```
 
-As discussed above regex pattern should captures everything between the square brackets ( in the example), including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to the DefaultExtractionStrategy.ts for processing.
+As discussed above, the regex pattern should capture everything between the square brackets (in the example), including policy statements, newlines, comments, and variable interpolations. The captured group is then passed to `DefaultStatementListPostProcessor` for processing.
 
-**Processing Steps:**
-1. **Remove comments:**
-   Removes any lines starting with `#`.
-2. **Split into lines:**
-   Splits the captured group into individual lines.
-3. **Trim whitespace:**  
-   Removes leading and trailing spaces.
-4. **Split by commas:**  
-   Breaks lines into separate policy statements.
-5. **Remove quotes:**  
-   Strips surrounding quotes from each statement.
-6. **Handle escaped quotes:**  
-   Processes any escaped quotes.
-7. **Filter empty strings:**  
-   Discards any empty elements.
+**Processing Steps (DefaultStatementListPostProcessor):**
+1. **Preprocess:** Fixes common Terraform string-concatenation artifacts.
+2. **Remove comments:** Removes `#` and `//` comments while respecting quoted content.
+3. **Split by commas:** Splits into statements while respecting quotes and `${...}` interpolation blocks.
+4. **Normalize:** Trims whitespace, removes surrounding quotes, and filters empty strings.
 
 *Illustrative Example:*
 

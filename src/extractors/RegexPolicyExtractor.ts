@@ -1,6 +1,6 @@
 import { PolicyExtractor } from './PolicyExtractor';
-import { ExtractionStrategy } from './ExtractionStrategy';
-import { DefaultExtractionStrategy } from './DefaultExtractionStrategy';
+import { DefaultStatementListPostProcessor } from './DefaultStatementListPostProcessor';
+import { StatementListPostProcessor } from './StatementListPostProcessor';
 import { POLICY_STATEMENTS_REGEX } from '../types';
 
 interface RegexExtractorConfig {
@@ -12,12 +12,18 @@ interface RegexExtractorConfig {
 
 export class RegexPolicyExtractor implements PolicyExtractor {
     private pattern: RegExp;
-    private extractionStrategy: ExtractionStrategy;
+    private statementListPostProcessor: StatementListPostProcessor;
     private config: Required<RegexExtractorConfig>;
 
+    /**
+     * @param pattern Regex pattern (string form) used to locate policy statement blocks.
+     * Must contain a capturing group at index 1 that yields the raw "statement list" text.
+     * @param statementListPostProcessor Parses/normalizes the captured statement-list text into individual statements.
+     * This is intentionally separate from the regex itself, since splitting/cleanup is more readable as code than regex.
+     */
     constructor(
         pattern?: string, 
-        extractionStrategy?: ExtractionStrategy,
+        statementListPostProcessor?: StatementListPostProcessor,
         config?: RegexExtractorConfig
     ) {
         // Use existing pattern from types.ts or build a new one from the provided pattern
@@ -25,7 +31,7 @@ export class RegexPolicyExtractor implements PolicyExtractor {
             ? new RegExp(pattern, 'sgi')
             : POLICY_STATEMENTS_REGEX;
         
-        this.extractionStrategy = extractionStrategy || new DefaultExtractionStrategy();
+        this.statementListPostProcessor = statementListPostProcessor || new DefaultStatementListPostProcessor();
         
         // Set configurable limits with sensible defaults
         this.config = {
@@ -57,11 +63,11 @@ export class RegexPolicyExtractor implements PolicyExtractor {
                 return [];
             }
 
-            // Get raw statements from regex matches and delegate all processing to the strategy
+            // Extract capture group 1 and delegate statement list parsing/normalization to the post-processor.
             return matches
                 .map((match: RegExpMatchArray) => match[1])  // Get capturing group from each match
                 .filter(Boolean)         // Remove any undefined/null matches
-                .flatMap((statement: string) => this.extractionStrategy.extractStatements(statement))
+                .flatMap((statement: string) => this.statementListPostProcessor.extractStatements(statement))
                 .filter((s: string) => s && s.trim() !== '');
         } catch (error) {
             if (error instanceof Error) {

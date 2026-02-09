@@ -117,55 +117,54 @@ async function processFile(filePath, pattern, extractor = 'regex', logger) {
 */
 async function findPolicyFiles(dir, options, logger) {
     var _a, _b;
+    let stats;
     try {
-        // First check if path exists and is accessible
-        await fs.promises.access(dir, fs.constants.R_OK);
+        // Fix #3: Just stat directly. Handles existence and permission checks in one go.
+        stats = await fs.promises.stat(dir);
     }
     catch (error) {
         logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is not accessible: ${error}`);
         return [];
     }
-    const stats = await fs.promises.stat(dir);
-    // If it's a file, apply name/extension filters
+    // Handle Input is File
     if (stats.isFile()) {
         const base = path.basename(dir);
-        if (((_a = options === null || options === void 0 ? void 0 : options.fileNames) === null || _a === void 0 ? void 0 : _a.length) && !options.fileNames.includes(base)) {
+        // Apply filters
+        if (((_a = options === null || options === void 0 ? void 0 : options.fileNames) === null || _a === void 0 ? void 0 : _a.length) && !options.fileNames.includes(base))
             return [];
-        }
-        if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !dir.endsWith(options.fileExtension)) {
+        if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !dir.endsWith(options.fileExtension))
             return [];
-        }
         return [dir];
     }
     if (!stats.isDirectory()) {
         logger === null || logger === void 0 ? void 0 : logger.error(`Path ${dir} is neither a file nor a directory`);
         return [];
     }
-    // If specific fileNames provided, pick those
-    if ((_b = options === null || options === void 0 ? void 0 : options.fileNames) === null || _b === void 0 ? void 0 : _b.length) {
-        const found = [];
-        for (const name of options.fileNames) {
-            const candidate = path.join(dir, name);
-            try {
-                const st = await fs.promises.stat(candidate);
-                if (st.isFile())
-                    found.push(candidate);
-            }
-            catch (_c) {
-                logger === null || logger === void 0 ? void 0 : logger.debug(`File ${name} not found in ${dir}`);
-            }
-        }
-        return found;
-    }
-    // Otherwise recursively scan directory
+    // Handle Input is Directory (Recursive Scan)
     const results = [];
-    for (const entry of await fs.promises.readdir(dir, { withFileTypes: true })) {
+    // Validate reading directory
+    let entries;
+    try {
+        entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    }
+    catch (e) {
+        logger === null || logger === void 0 ? void 0 : logger.error(`Error reading directory ${dir}: ${e}`);
+        return [];
+    }
+    for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
+            // Recurse into subdirectories
             results.push(...await findPolicyFiles(fullPath, options, logger));
         }
         else if (entry.isFile()) {
+            // Fix #2: Apply ALL filters inline here
+            // Filter by extension
             if ((options === null || options === void 0 ? void 0 : options.fileExtension) && !entry.name.endsWith(options.fileExtension)) {
+                continue;
+            }
+            // Filter by filename (Fixing the missing filter in the recursive loop)
+            if (((_b = options === null || options === void 0 ? void 0 : options.fileNames) === null || _b === void 0 ? void 0 : _b.length) && !options.fileNames.includes(entry.name)) {
                 continue;
             }
             results.push(fullPath);
@@ -458,17 +457,421 @@ if (process.argv.length < 3) {
 
 /***/ }),
 
-/***/ 25675:
+/***/ 70026:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AntlrHclPolicyExtractor = void 0;
+const antlr4ts_1 = __nccwpck_require__(11127);
+const TerraformLexer_1 = __nccwpck_require__(34224);
+const TerraformParser_1 = __nccwpck_require__(1580);
+const AbstractParseTreeVisitor_1 = __nccwpck_require__(57474);
+/**
+ * Visitor to extract policy statements from Terraform HCL AST.
+ *
+ * Semantics:
+ * - Collects variable defaults and locals defined in the same file.
+ * - Extracts `statements` arguments anywhere in the file, not only policy resources.
+ * - Resolves `var.*` / `local.*` references with static traversals (attribute and literal index).
+ * - Ignores dynamic traversals (e.g., `count.index`) and non-literal expressions.
+ * - Normalizes heredocs with any delimiter and returns trimmed strings.
+ */
+class PolicyStatementVisitor extends AbstractParseTreeVisitor_1.AbstractParseTreeVisitor {
+    constructor() {
+        super(...arguments);
+        this.variableDefaults = new Map();
+        this.localValues = new Map();
+    }
+    defaultResult() {
+        return [];
+    }
+    aggregateResult(aggregate, nextResult) {
+        return [...aggregate, ...nextResult];
+    }
+    visitFile_(ctx) {
+        // First pass: collect variable defaults
+        // We manually iterate children because we want to populate the map before visiting resources
+        for (let i = 0; i < ctx.childCount; i++) {
+            const child = ctx.getChild(i);
+            // Check if it's a variable block
+            // In the parser rule: file_ : (local | module | output | provider | variable | data | resource | terraform)* EOF
+            // We can check if the child is a VariableContext by checking its rule index or instanceof
+            // However, the visitor pattern usually visits children automatically. 
+            // Attempting to "pre-scan" by iterating children manually is one way.
+            // Another way is to just visit everything, but Variable blocks appear at top level same as Resource blocks.
+            // The order in the file matters if we just rely on standard visitation order.
+            // But usually variables are defined before or after resources. 
+            // To be safe, we should scan variables first.
+            if (child instanceof TerraformParser_1.VariableContext) {
+                this.extractVariableDefault(child);
+            }
+            else if (child instanceof TerraformParser_1.LocalContext) {
+                this.extractLocalValue(child);
+            }
+        }
+        // Second pass: visit everything else (resources)
+        // We use the default implementation or just iterate again
+        // Note: calling super.visitChildren(ctx) would re-visit variables which returns [] anyway.
+        return this.visitChildren(ctx);
+    }
+    extractVariableDefault(ctx) {
+        const varName = ctx.name().text.replace(/^"|"$/g, '');
+        const body = ctx.blockbody();
+        // Find 'default' argument
+        for (let i = 0; i < body.childCount; i++) {
+            const child = body.getChild(i);
+            if (child instanceof TerraformParser_1.ArgumentContext) {
+                const argName = child.identifier().text;
+                if (argName === 'default') {
+                    this.variableDefaults.set(varName, child.expression());
+                }
+            }
+        }
+    }
+    extractLocalValue(ctx) {
+        // Locals block contains multiple arguments: locals { name1 = val1, name2 = val2 }
+        // The structure is local -> blockbody -> argument*
+        const body = ctx.blockbody();
+        for (let i = 0; i < body.childCount; i++) {
+            const child = body.getChild(i);
+            if (child instanceof TerraformParser_1.ArgumentContext) {
+                const localName = child.identifier().text;
+                this.localValues.set(localName, child.expression());
+            }
+        }
+    }
+    visitResource(ctx) {
+        return this.visitChildren(ctx);
+    }
+    visitArgument(ctx) {
+        const identifier = ctx.identifier().text;
+        if (identifier === 'statements') {
+            const expression = ctx.expression();
+            return this.extractStatementsFromExpression(expression);
+        }
+        return this.visitChildren(ctx);
+    }
+    extractStatementsFromExpression(ctx) {
+        const results = [];
+        const findStrings = (node) => {
+            // Check for TerminalNodes (leaves)
+            if (node.symbol) {
+                const type = node.symbol.type;
+                // TerraformLexer.STRING or TerraformLexer.MULTILINESTRING
+                // Note: we might need to check the exact type IDs from the generated Lexer
+                if (type === TerraformLexer_1.TerraformLexer.STRING || type === TerraformLexer_1.TerraformLexer.MULTILINESTRING) {
+                    const normalized = this.normalizeStringLiteral(node.text);
+                    results.push(normalized.trim());
+                }
+            }
+            else {
+                // If it's an interior node, check if it's an identifier referencing a variable
+                if (node instanceof TerraformParser_1.IdentifierContext) {
+                    const resolved = this.resolveIdentifierReference(node);
+                    if (resolved.handled) {
+                        results.push(...resolved.values);
+                        return; // Don't recurse into children of this identifier
+                    }
+                }
+                for (let i = 0; i < node.childCount; i++) {
+                    findStrings(node.getChild(i));
+                }
+            }
+        };
+        findStrings(ctx);
+        return results;
+    }
+    normalizeStringLiteral(text) {
+        if (text.startsWith('"') && text.endsWith('"')) {
+            return text.substring(1, text.length - 1);
+        }
+        if (text.startsWith('<<')) {
+            const match = text.match(/^<<-?([A-Za-z0-9_-]+)\n?/);
+            if (match) {
+                const delimiter = match[1];
+                let body = text.slice(match[0].length);
+                const endRegex = new RegExp(`\\n?\\s*${delimiter}\\s*$`);
+                body = body.replace(endRegex, '');
+                return body;
+            }
+        }
+        return text;
+    }
+    resolveIdentifierReference(ctx) {
+        const reference = this.parseIdentifierReference(ctx);
+        if (!reference) {
+            return { handled: false, values: [] };
+        }
+        if (reference.root !== 'var' && reference.root !== 'local') {
+            return { handled: false, values: [] };
+        }
+        const store = reference.root === 'var' ? this.variableDefaults : this.localValues;
+        const expression = store.get(reference.base);
+        if (!expression) {
+            return { handled: true, values: [] };
+        }
+        if (reference.dynamic) {
+            return { handled: true, values: [] };
+        }
+        const value = this.evaluateLiteralExpression(expression);
+        if (reference.path.length === 0) {
+            return { handled: true, values: this.valueToStrings(value) };
+        }
+        const resolved = this.resolvePath(value, reference.path);
+        return { handled: true, values: this.valueToStrings(resolved) };
+    }
+    parseIdentifierReference(ctx) {
+        var _a;
+        const children = (_a = ctx.children) !== null && _a !== void 0 ? _a : [];
+        let root = null;
+        if (children.length >= 3) {
+            const firstText = children[0].text;
+            if (firstText === 'var' || firstText === 'local' || firstText === 'data' || firstText === 'module') {
+                root = firstText;
+            }
+        }
+        const chainContext = ctx.identifierchain();
+        const chain = this.collectIdentifierChain(chainContext);
+        if (!chain || chain.segments.length === 0) {
+            return null;
+        }
+        const base = chain.segments[0];
+        if (typeof base !== 'string') {
+            return null;
+        }
+        return {
+            root,
+            base,
+            path: chain.segments.slice(1),
+            dynamic: chain.dynamic,
+        };
+    }
+    // Flattens a traversal like `local.policy_map["main"]` into segments ["policy_map", "main"].
+    // Dynamic indices (e.g. `local.list[count.index]`) set `dynamic=true` so resolution is skipped.
+    collectIdentifierChain(ctx) {
+        const segments = [];
+        let dynamic = false;
+        if (ctx.IDENTIFIER()) {
+            segments.push(ctx.IDENTIFIER().text);
+        }
+        else if (ctx.IN()) {
+            segments.push(ctx.IN().text);
+        }
+        else if (ctx.VARIABLE()) {
+            segments.push(ctx.VARIABLE().text);
+        }
+        else if (ctx.PROVIDER()) {
+            segments.push(ctx.PROVIDER().text);
+        }
+        else if (ctx.STAR()) {
+            dynamic = true;
+            segments.push('*');
+        }
+        else if (ctx.inline_index()) {
+            const indexText = ctx.inline_index().NATURAL_NUMBER().text;
+            segments.push(Number(indexText));
+        }
+        if (ctx.index()) {
+            const indexValue = this.evaluateIndex(ctx.index());
+            if (indexValue === undefined) {
+                dynamic = true;
+            }
+            else {
+                segments.push(indexValue);
+            }
+        }
+        const children = ctx.identifierchain();
+        for (const child of children) {
+            const result = this.collectIdentifierChain(child);
+            if (result.dynamic) {
+                dynamic = true;
+            }
+            segments.push(...result.segments);
+        }
+        return { segments, dynamic };
+    }
+    evaluateIndex(ctx) {
+        const expression = ctx.expression();
+        const value = this.evaluateLiteralExpression(expression);
+        if (typeof value === 'string' || typeof value === 'number') {
+            return value;
+        }
+        return undefined;
+    }
+    evaluateLiteralExpression(ctx) {
+        if (!ctx) {
+            return undefined;
+        }
+        const section = ctx.section();
+        if (section) {
+            return this.evaluateSection(section);
+        }
+        if (ctx.LPAREN() && ctx.expression().length === 1) {
+            return this.evaluateLiteralExpression(ctx.expression(0));
+        }
+        return undefined;
+    }
+    evaluateSection(ctx) {
+        if (ctx.list_()) {
+            return this.evaluateList(ctx.list_());
+        }
+        if (ctx.map_()) {
+            return this.evaluateMap(ctx.map_());
+        }
+        if (ctx.val()) {
+            return this.evaluateVal(ctx.val());
+        }
+        return undefined;
+    }
+    evaluateList(ctx) {
+        const expressions = ctx.expression();
+        if (!expressions || expressions.length === 0) {
+            return [];
+        }
+        const items = [];
+        for (const expression of expressions) {
+            const value = this.evaluateLiteralExpression(expression);
+            if (value === undefined) {
+                return undefined;
+            }
+            items.push(value);
+        }
+        return items;
+    }
+    evaluateMap(ctx) {
+        const argumentsList = ctx.argument();
+        const map = {};
+        for (const argument of argumentsList) {
+            const key = argument.identifier().text;
+            const value = this.evaluateLiteralExpression(argument.expression());
+            if (value === undefined) {
+                return undefined;
+            }
+            map[key] = value;
+        }
+        return map;
+    }
+    evaluateVal(ctx) {
+        const stringContext = ctx.string();
+        if (stringContext) {
+            return this.normalizeStringLiteral(stringContext.text);
+        }
+        const numberContext = ctx.signed_number();
+        if (numberContext) {
+            const value = Number(numberContext.text);
+            return Number.isNaN(value) ? undefined : value;
+        }
+        if (ctx.NULL_()) {
+            return null;
+        }
+        if (ctx.BOOL()) {
+            return ctx.BOOL().text === 'true';
+        }
+        return undefined;
+    }
+    resolvePath(value, path) {
+        let current = value;
+        for (const segment of path) {
+            if (current === undefined || current === null) {
+                return undefined;
+            }
+            if (typeof segment === 'number') {
+                if (!Array.isArray(current)) {
+                    return undefined;
+                }
+                current = current[segment];
+            }
+            else {
+                if (Array.isArray(current) || typeof current !== 'object') {
+                    return undefined;
+                }
+                current = current[segment];
+            }
+        }
+        return current;
+    }
+    valueToStrings(value) {
+        if (value === undefined || value === null) {
+            return [];
+        }
+        if (typeof value === 'string') {
+            return [value];
+        }
+        if (Array.isArray(value)) {
+            return value.flatMap((item) => this.valueToStrings(item));
+        }
+        if (typeof value === 'object') {
+            return Object.values(value).flatMap((item) => this.valueToStrings(item));
+        }
+        return [];
+    }
+}
+class AntlrHclPolicyExtractor {
+    extract(text) {
+        if (!text || text.trim() === '') {
+            return [];
+        }
+        try {
+            const normalizedText = this.normalizeHeredocs(text);
+            const inputStream = antlr4ts_1.CharStreams.fromString(normalizedText);
+            const lexer = new TerraformLexer_1.TerraformLexer(inputStream);
+            const tokenStream = new antlr4ts_1.CommonTokenStream(lexer);
+            const parser = new TerraformParser_1.TerraformParser(tokenStream);
+            const tree = parser.file_();
+            const visitor = new PolicyStatementVisitor();
+            return visitor.visit(tree);
+        }
+        catch (error) {
+            console.error('Error parsing HCL:', error);
+            return [];
+        }
+    }
+    normalizeHeredocs(text) {
+        const lines = text.split(/\n/);
+        for (let i = 0; i < lines.length; i++) {
+            const match = lines[i].match(/<<-?([A-Za-z0-9_-]+)/);
+            if (!match) {
+                continue;
+            }
+            const delimiter = match[1];
+            lines[i] = lines[i].replace(match[0], match[0].replace(delimiter, 'EOF'));
+            for (let j = i + 1; j < lines.length; j++) {
+                if (lines[j].trim() === delimiter) {
+                    lines[j] = lines[j].replace(delimiter, 'EOF');
+                    i = j;
+                    break;
+                }
+            }
+        }
+        return lines.join('\n');
+    }
+    name() {
+        return 'antlr-hcl';
+    }
+}
+exports.AntlrHclPolicyExtractor = AntlrHclPolicyExtractor;
+
+
+/***/ }),
+
+/***/ 62776:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DefaultExtractionStrategy = void 0;
-class DefaultExtractionStrategy {
-    /**
-     * Extract policy statements from raw text
-     */
+exports.DefaultStatementListPostProcessor = void 0;
+/**
+ * Default implementation for turning a raw statement-list representation into individual statements.
+ *
+ * Notes:
+ * - Removes HCL-style line comments (`#` and `//`) while respecting quoted content.
+ * - Splits on commas while respecting quotes and `${...}` interpolation blocks.
+ * - Removes surrounding quotes and trims whitespace.
+ */
+class DefaultStatementListPostProcessor {
     extractStatements(raw) {
         if (!raw || raw.trim() === '') {
             return [];
@@ -481,35 +884,36 @@ class DefaultExtractionStrategy {
         const statements = this.splitStatements(uncommentedText);
         // Clean and filter each statement
         return statements
-            .map(statement => this.cleanStatement(statement))
-            .filter(statement => statement && statement.trim() !== '');
+            .map((statement) => this.cleanStatement(statement))
+            .filter((statement) => statement && statement.trim() !== '');
     }
     /**
-     * Preprocesses statement to fix common issues before extraction
+     * Preprocesses statement to fix common issues before extraction.
      */
     preprocessStatement(statement) {
         let result = statement;
-        // Fix common issues with Terraform string concatenation
+        // Fix common issues with Terraform string concatenation.
         result = result.replace(/"\s*\+\s*"/g, '');
-        // Remove extraneous commas inside variable interpolation
+        // Remove extraneous commas inside variable interpolation.
         result = result.replace(/(\${[^}]*),\s*([^}]*})/g, '$1 $2');
         return result;
     }
     /**
-     * Remove HCL comments (# and //) from the text
+     * Remove HCL comments (# and //) from the text.
      */
     removeHclComments(text) {
-        // Process line by line to properly handle comments
-        return text.split('\n')
-            .map(line => {
-            // Find comment position, but ignore inside quotes
+        // Process line by line to properly handle comments.
+        return text
+            .split('\n')
+            .map((line) => {
+            // Find comment position, but ignore inside quotes.
             let inQuote = false;
             let quoteChar = '';
             let commentPos = -1;
             for (let i = 0; i < line.length; i++) {
                 const char = line[i];
                 const nextChar = i < line.length - 1 ? line[i + 1] : '';
-                // Toggle quote state (handling escaped quotes)
+                // Toggle quote state (handling escaped quotes).
                 if ((char === '"' || char === "'") && (i === 0 || line[i - 1] !== '\\')) {
                     if (!inQuote) {
                         inQuote = true;
@@ -519,23 +923,23 @@ class DefaultExtractionStrategy {
                         inQuote = false;
                     }
                 }
-                // Find comment start (but not inside quotes)
+                // Find comment start (but not inside quotes).
                 if (!inQuote && (char === '#' || (char === '/' && nextChar === '/'))) {
                     commentPos = i;
                     break;
                 }
             }
-            // Remove comment if found
+            // Remove comment if found.
             return commentPos >= 0 ? line.substring(0, commentPos).trim() : line;
         })
-            .filter(line => line.trim() !== '') // Remove empty lines
+            .filter((line) => line.trim() !== '') // Remove empty lines
             .join(' '); // Join with spaces instead of newlines
     }
     /**
-     * Split a statement string by commas, properly handling quoted content and interpolation
+     * Split a statement string by commas, properly handling quoted content and interpolation.
      */
     splitStatements(text) {
-        // If there are no commas, return the whole text as a single statement
+        // If there are no commas, return the whole text as a single statement.
         if (!text.includes(',')) {
             return [text];
         }
@@ -546,7 +950,7 @@ class DefaultExtractionStrategy {
         let braceLevel = 0;
         for (let i = 0; i < text.length; i++) {
             const char = text.charAt(i);
-            // Handle quotes
+            // Handle quotes.
             if ((char === '"' || char === "'") && (i === 0 || text.charAt(i - 1) !== '\\')) {
                 if (!inQuote) {
                     inQuote = true;
@@ -556,14 +960,14 @@ class DefaultExtractionStrategy {
                     inQuote = false;
                 }
             }
-            // Track interpolation blocks ${...}
+            // Track interpolation blocks ${...}.
             if (char === '{' && i > 0 && text.charAt(i - 1) === '$') {
                 braceLevel++;
             }
             else if (char === '}' && braceLevel > 0) {
                 braceLevel--;
             }
-            // Only split on commas outside of quotes and interpolation blocks
+            // Only split on commas outside of quotes and interpolation blocks.
             if (char === ',' && !inQuote && braceLevel === 0) {
                 results.push(current.trim());
                 current = '';
@@ -572,28 +976,27 @@ class DefaultExtractionStrategy {
                 current += char;
             }
         }
-        // Add the final segment
+        // Add the final segment.
         if (current.trim()) {
             results.push(current.trim());
         }
         return results;
     }
     /**
-     * Clean a statement by removing quotes and extra whitespace
+     * Clean a statement by removing quotes and extra whitespace.
      */
     cleanStatement(statement) {
         if (!statement)
             return '';
         let result = statement.trim();
-        // Remove surrounding quotes if present
-        if ((result.startsWith('"') && result.endsWith('"')) ||
-            (result.startsWith("'") && result.endsWith("'"))) {
+        // Remove surrounding quotes if present.
+        if ((result.startsWith('"') && result.endsWith('"')) || (result.startsWith("'") && result.endsWith("'"))) {
             result = result.substring(1, result.length - 1).trim();
         }
         return result;
     }
 }
-exports.DefaultExtractionStrategy = DefaultExtractionStrategy;
+exports.DefaultStatementListPostProcessor = DefaultStatementListPostProcessor;
 
 
 /***/ }),
@@ -606,11 +1009,14 @@ exports.DefaultExtractionStrategy = DefaultExtractionStrategy;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExtractorFactory = void 0;
 const RegexPolicyExtractor_1 = __nccwpck_require__(27307);
+const AntlrHclPolicyExtractor_1 = __nccwpck_require__(70026);
 class ExtractorFactory {
     static create(type = 'regex', options) {
         switch (type) {
             case 'regex':
-                return new RegexPolicyExtractor_1.RegexPolicyExtractor(options === null || options === void 0 ? void 0 : options.pattern, options === null || options === void 0 ? void 0 : options.extractionStrategy);
+                return new RegexPolicyExtractor_1.RegexPolicyExtractor(options === null || options === void 0 ? void 0 : options.pattern, options === null || options === void 0 ? void 0 : options.statementListPostProcessor);
+            case 'antlr-hcl':
+                return new AntlrHclPolicyExtractor_1.AntlrHclPolicyExtractor();
             default:
                 throw new Error(`Unsupported extractor type: ${type}`);
         }
@@ -628,16 +1034,16 @@ exports.ExtractorFactory = ExtractorFactory;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RegexPolicyExtractor = void 0;
-const DefaultExtractionStrategy_1 = __nccwpck_require__(25675);
+const DefaultStatementListPostProcessor_1 = __nccwpck_require__(62776);
 const types_1 = __nccwpck_require__(88164);
 class RegexPolicyExtractor {
-    constructor(pattern, extractionStrategy, config) {
+    constructor(pattern, statementListPostProcessor, config) {
         var _a, _b, _c, _d;
         // Use existing pattern from types.ts or build a new one from the provided pattern
         this.pattern = pattern
             ? new RegExp(pattern, 'sgi')
             : types_1.POLICY_STATEMENTS_REGEX;
-        this.extractionStrategy = extractionStrategy || new DefaultExtractionStrategy_1.DefaultExtractionStrategy();
+        this.statementListPostProcessor = statementListPostProcessor || new DefaultStatementListPostProcessor_1.DefaultStatementListPostProcessor();
         // Set configurable limits with sensible defaults
         this.config = {
             timeoutMs: (_a = config === null || config === void 0 ? void 0 : config.timeoutMs) !== null && _a !== void 0 ? _a : 5000, // 5 second timeout
@@ -666,7 +1072,7 @@ class RegexPolicyExtractor {
             return matches
                 .map((match) => match[1]) // Get capturing group from each match
                 .filter(Boolean) // Remove any undefined/null matches
-                .flatMap((statement) => this.extractionStrategy.extractStatements(statement))
+                .flatMap((statement) => this.statementListPostProcessor.extractStatements(statement))
                 .filter((s) => s && s.trim() !== '');
         }
         catch (error) {
@@ -5486,6 +5892,3596 @@ exports.PatternMatchContext = PatternMatchContext;
 
 /***/ }),
 
+/***/ 34224:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// Generated from Terraform.g4 by ANTLR 4.9.0-SNAPSHOT
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TerraformLexer = void 0;
+const ATNDeserializer_1 = __nccwpck_require__(16027);
+const Lexer_1 = __nccwpck_require__(51740);
+const LexerATNSimulator_1 = __nccwpck_require__(63262);
+const VocabularyImpl_1 = __nccwpck_require__(87847);
+const Utils = __importStar(__nccwpck_require__(12925));
+class TerraformLexer extends Lexer_1.Lexer {
+    // @Override
+    // @NotNull
+    get vocabulary() {
+        return TerraformLexer.VOCABULARY;
+    }
+    // tslint:enable:no-trailing-whitespace
+    constructor(input) {
+        super(input);
+        this._interp = new LexerATNSimulator_1.LexerATNSimulator(TerraformLexer._ATN, this);
+    }
+    // @Override
+    get grammarFileName() { return "Terraform.g4"; }
+    // @Override
+    get ruleNames() { return TerraformLexer.ruleNames; }
+    // @Override
+    get serializedATN() { return TerraformLexer._serializedATN; }
+    // @Override
+    get channelNames() { return TerraformLexer.channelNames; }
+    // @Override
+    get modeNames() { return TerraformLexer.modeNames; }
+    static get _ATN() {
+        if (!TerraformLexer.__ATN) {
+            TerraformLexer.__ATN = new ATNDeserializer_1.ATNDeserializer().deserialize(Utils.toCharArray(TerraformLexer._serializedATN));
+        }
+        return TerraformLexer.__ATN;
+    }
+}
+exports.TerraformLexer = TerraformLexer;
+TerraformLexer.T__0 = 1;
+TerraformLexer.T__1 = 2;
+TerraformLexer.T__2 = 3;
+TerraformLexer.T__3 = 4;
+TerraformLexer.T__4 = 5;
+TerraformLexer.T__5 = 6;
+TerraformLexer.T__6 = 7;
+TerraformLexer.T__7 = 8;
+TerraformLexer.T__8 = 9;
+TerraformLexer.T__9 = 10;
+TerraformLexer.T__10 = 11;
+TerraformLexer.T__11 = 12;
+TerraformLexer.T__12 = 13;
+TerraformLexer.T__13 = 14;
+TerraformLexer.T__14 = 15;
+TerraformLexer.T__15 = 16;
+TerraformLexer.T__16 = 17;
+TerraformLexer.T__17 = 18;
+TerraformLexer.T__18 = 19;
+TerraformLexer.T__19 = 20;
+TerraformLexer.T__20 = 21;
+TerraformLexer.T__21 = 22;
+TerraformLexer.T__22 = 23;
+TerraformLexer.T__23 = 24;
+TerraformLexer.T__24 = 25;
+TerraformLexer.T__25 = 26;
+TerraformLexer.T__26 = 27;
+TerraformLexer.T__27 = 28;
+TerraformLexer.T__28 = 29;
+TerraformLexer.VARIABLE = 30;
+TerraformLexer.PROVIDER = 31;
+TerraformLexer.IN = 32;
+TerraformLexer.STAR = 33;
+TerraformLexer.DOT = 34;
+TerraformLexer.LCURL = 35;
+TerraformLexer.RCURL = 36;
+TerraformLexer.LPAREN = 37;
+TerraformLexer.RPAREN = 38;
+TerraformLexer.EOF_ = 39;
+TerraformLexer.NULL_ = 40;
+TerraformLexer.NATURAL_NUMBER = 41;
+TerraformLexer.BOOL = 42;
+TerraformLexer.DESCRIPTION = 43;
+TerraformLexer.MULTILINESTRING = 44;
+TerraformLexer.STRING = 45;
+TerraformLexer.IDENTIFIER = 46;
+TerraformLexer.COMMENT = 47;
+TerraformLexer.BLOCKCOMMENT = 48;
+TerraformLexer.WS = 49;
+// tslint:disable:no-trailing-whitespace
+TerraformLexer.channelNames = [
+    "DEFAULT_TOKEN_CHANNEL", "HIDDEN",
+];
+// tslint:disable:no-trailing-whitespace
+TerraformLexer.modeNames = [
+    "DEFAULT_MODE",
+];
+TerraformLexer.ruleNames = [
+    "T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8",
+    "T__9", "T__10", "T__11", "T__12", "T__13", "T__14", "T__15", "T__16",
+    "T__17", "T__18", "T__19", "T__20", "T__21", "T__22", "T__23", "T__24",
+    "T__25", "T__26", "T__27", "T__28", "DIGIT", "VARIABLE", "PROVIDER", "IN",
+    "STAR", "DOT", "LCURL", "RCURL", "LPAREN", "RPAREN", "EOF_", "NULL_",
+    "NATURAL_NUMBER", "BOOL", "DESCRIPTION", "MULTILINESTRING", "STRING",
+    "IDENTIFIER", "COMMENT", "BLOCKCOMMENT", "WS",
+];
+TerraformLexer._LITERAL_NAMES = [
+    undefined, "'terraform'", "'resource'", "'data'", "'output'", "'locals'",
+    "'module'", "'='", "'local'", "'var'", "'?'", "':'", "'for'", "'jsonencode'",
+    "','", "'['", "']'", "'file'", "'+'", "'-'", "'/'", "'%'", "'>'", "'>='",
+    "'<'", "'<='", "'=='", "'!='", "'&&'", "'||'", "'variable'", "'provider'",
+    "'in'", "'*'", "'.'", "'{'", "'}'", "'('", "')'", undefined, "'nul'",
+];
+TerraformLexer._SYMBOLIC_NAMES = [
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, "VARIABLE", "PROVIDER", "IN", "STAR", "DOT", "LCURL",
+    "RCURL", "LPAREN", "RPAREN", "EOF_", "NULL_", "NATURAL_NUMBER", "BOOL",
+    "DESCRIPTION", "MULTILINESTRING", "STRING", "IDENTIFIER", "COMMENT", "BLOCKCOMMENT",
+    "WS",
+];
+TerraformLexer.VOCABULARY = new VocabularyImpl_1.VocabularyImpl(TerraformLexer._LITERAL_NAMES, TerraformLexer._SYMBOLIC_NAMES, []);
+TerraformLexer._serializedATN = "\x03\uC91D\uCABA\u058D\uAFBA\u4F53\u0607\uEA8B\uC241\x023\u0199\b\x01" +
+    "\x04\x02\t\x02\x04\x03\t\x03\x04\x04\t\x04\x04\x05\t\x05\x04\x06\t\x06" +
+    "\x04\x07\t\x07\x04\b\t\b\x04\t\t\t\x04\n\t\n\x04\v\t\v\x04\f\t\f\x04\r" +
+    "\t\r\x04\x0E\t\x0E\x04\x0F\t\x0F\x04\x10\t\x10\x04\x11\t\x11\x04\x12\t" +
+    "\x12\x04\x13\t\x13\x04\x14\t\x14\x04\x15\t\x15\x04\x16\t\x16\x04\x17\t" +
+    "\x17\x04\x18\t\x18\x04\x19\t\x19\x04\x1A\t\x1A\x04\x1B\t\x1B\x04\x1C\t" +
+    "\x1C\x04\x1D\t\x1D\x04\x1E\t\x1E\x04\x1F\t\x1F\x04 \t \x04!\t!\x04\"\t" +
+    "\"\x04#\t#\x04$\t$\x04%\t%\x04&\t&\x04\'\t\'\x04(\t(\x04)\t)\x04*\t*\x04" +
+    "+\t+\x04,\t,\x04-\t-\x04.\t.\x04/\t/\x040\t0\x041\t1\x042\t2\x043\t3\x03" +
+    "\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03" +
+    "\x02\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03" +
+    "\x03\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x05\x03\x05\x03\x05\x03" +
+    "\x05\x03\x05\x03\x05\x03\x05\x03\x06\x03\x06\x03\x06\x03\x06\x03\x06\x03" +
+    "\x06\x03\x06\x03\x07\x03\x07\x03\x07\x03\x07\x03\x07\x03\x07\x03\x07\x03" +
+    "\b\x03\b\x03\t\x03\t\x03\t\x03\t\x03\t\x03\t\x03\n\x03\n\x03\n\x03\n\x03" +
+    "\v\x03\v\x03\f\x03\f\x03\r\x03\r\x03\r\x03\r\x03\x0E\x03\x0E\x03\x0E\x03" +
+    "\x0E\x03\x0E\x03\x0E\x03\x0E\x03\x0E\x03\x0E\x03\x0E\x03\x0E\x03\x0F\x03" +
+    "\x0F\x03\x10\x03\x10\x03\x11\x03\x11\x03\x12\x03\x12\x03\x12\x03\x12\x03" +
+    "\x12\x03\x13\x03\x13\x03\x14\x03\x14\x03\x15\x03\x15\x03\x16\x03\x16\x03" +
+    "\x17\x03\x17\x03\x18\x03\x18\x03\x18\x03\x19\x03\x19\x03\x1A\x03\x1A\x03" +
+    "\x1A\x03\x1B\x03\x1B\x03\x1B\x03\x1C\x03\x1C\x03\x1C\x03\x1D\x03\x1D\x03" +
+    "\x1D\x03\x1E\x03\x1E\x03\x1E\x03\x1F\x03\x1F\x03 \x03 \x03 \x03 \x03 " +
+    "\x03 \x03 \x03 \x03 \x03!\x03!\x03!\x03!\x03!\x03!\x03!\x03!\x03!\x03" +
+    "\"\x03\"\x03\"\x03#\x03#\x03$\x03$\x03%\x03%\x03&\x03&\x03\'\x03\'\x03" +
+    "(\x03(\x03)\x03)\x03)\x03)\x03)\x03)\x03)\x07)\u0107\n)\f)\x0E)\u010A" +
+    "\v)\x03)\x03)\x03)\x03)\x03*\x03*\x03*\x03*\x03+\x06+\u0115\n+\r+\x0E" +
+    "+\u0116\x03,\x03,\x03,\x03,\x03,\x03,\x03,\x03,\x03,\x05,\u0122\n,\x03" +
+    "-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03" +
+    "-\x07-\u0133\n-\f-\x0E-\u0136\v-\x03-\x03-\x03-\x03-\x03-\x03-\x03-\x03" +
+    "-\x03-\x03-\x03-\x03-\x03.\x03.\x03.\x03.\x03.\x03.\x03.\x03.\x07.\u014C" +
+    "\n.\f.\x0E.\u014F\v.\x03.\x03.\x03.\x03.\x03.\x03.\x03.\x03.\x03.\x03" +
+    ".\x03.\x07.\u015C\n.\f.\x0E.\u015F\v.\x03.\x03.\x03.\x05.\u0164\n.\x03" +
+    "/\x03/\x03/\x03/\x07/\u016A\n/\f/\x0E/\u016D\v/\x03/\x03/\x030\x030\x07" +
+    "0\u0173\n0\f0\x0E0\u0176\v0\x031\x031\x031\x051\u017B\n1\x031\x071\u017E" +
+    "\n1\f1\x0E1\u0181\v1\x031\x031\x032\x032\x032\x032\x072\u0189\n2\f2\x0E" +
+    "2\u018C\v2\x032\x032\x032\x032\x032\x033\x063\u0194\n3\r3\x0E3\u0195\x03" +
+    "3\x033\x07\u0108\u0134\u014D\u015D\u018A\x02\x024\x03\x02\x03\x05\x02" +
+    "\x04\x07\x02\x05\t\x02\x06\v\x02\x07\r\x02\b\x0F\x02\t\x11\x02\n\x13\x02" +
+    "\v\x15\x02\f\x17\x02\r\x19\x02\x0E\x1B\x02\x0F\x1D\x02\x10\x1F\x02\x11" +
+    "!\x02\x12#\x02\x13%\x02\x14\'\x02\x15)\x02\x16+\x02\x17-\x02\x18/\x02" +
+    "\x191\x02\x1A3\x02\x1B5\x02\x1C7\x02\x1D9\x02\x1E;\x02\x1F=\x02\x02?\x02" +
+    " A\x02!C\x02\"E\x02#G\x02$I\x02%K\x02&M\x02\'O\x02(Q\x02)S\x02*U\x02+" +
+    "W\x02,Y\x02-[\x02.]\x02/_\x020a\x021c\x022e\x023\x03\x02\b\x03\x022;\x05" +
+    "\x02\f\f\x0F\x0F$$\x04\x02C\\c|\x07\x02//2;C\\aac|\x04\x02\f\f\x0F\x0F" +
+    "\x05\x02\v\f\x0F\x0F\"\"\x02\u01A5\x02\x03\x03\x02\x02\x02\x02\x05\x03" +
+    "\x02\x02\x02\x02\x07\x03\x02\x02\x02\x02\t\x03\x02\x02\x02\x02\v\x03\x02" +
+    "\x02\x02\x02\r\x03\x02\x02\x02\x02\x0F\x03\x02\x02\x02\x02\x11\x03\x02" +
+    "\x02\x02\x02\x13\x03\x02\x02\x02\x02\x15\x03\x02\x02\x02\x02\x17\x03\x02" +
+    "\x02\x02\x02\x19\x03\x02\x02\x02\x02\x1B\x03\x02\x02\x02\x02\x1D\x03\x02" +
+    "\x02\x02\x02\x1F\x03\x02\x02\x02\x02!\x03\x02\x02\x02\x02#\x03\x02\x02" +
+    "\x02\x02%\x03\x02\x02\x02\x02\'\x03\x02\x02\x02\x02)\x03\x02\x02\x02\x02" +
+    "+\x03\x02\x02\x02\x02-\x03\x02\x02\x02\x02/\x03\x02\x02\x02\x021\x03\x02" +
+    "\x02\x02\x023\x03\x02\x02\x02\x025\x03\x02\x02\x02\x027\x03\x02\x02\x02" +
+    "\x029\x03\x02\x02\x02\x02;\x03\x02\x02\x02\x02?\x03\x02\x02\x02\x02A\x03" +
+    "\x02\x02\x02\x02C\x03\x02\x02\x02\x02E\x03\x02\x02\x02\x02G\x03\x02\x02" +
+    "\x02\x02I\x03\x02\x02\x02\x02K\x03\x02\x02\x02\x02M\x03\x02\x02\x02\x02" +
+    "O\x03\x02\x02\x02\x02Q\x03\x02\x02\x02\x02S\x03\x02\x02\x02\x02U\x03\x02" +
+    "\x02\x02\x02W\x03\x02\x02\x02\x02Y\x03\x02\x02\x02\x02[\x03\x02\x02\x02" +
+    "\x02]\x03\x02\x02\x02\x02_\x03\x02\x02\x02\x02a\x03\x02\x02\x02\x02c\x03" +
+    "\x02\x02\x02\x02e\x03\x02\x02\x02\x03g\x03\x02\x02\x02\x05q\x03\x02\x02" +
+    "\x02\x07z\x03\x02\x02\x02\t\x7F\x03\x02\x02\x02\v\x86\x03\x02\x02\x02" +
+    "\r\x8D\x03\x02\x02\x02\x0F\x94\x03\x02\x02\x02\x11\x96\x03\x02\x02\x02" +
+    "\x13\x9C\x03\x02\x02\x02\x15\xA0\x03\x02\x02\x02\x17\xA2\x03\x02\x02\x02" +
+    "\x19\xA4\x03\x02\x02\x02\x1B\xA8\x03\x02\x02\x02\x1D\xB3\x03\x02\x02\x02" +
+    "\x1F\xB5\x03\x02\x02\x02!\xB7\x03\x02\x02\x02#\xB9\x03\x02\x02\x02%\xBE" +
+    "\x03\x02\x02\x02\'\xC0\x03\x02\x02\x02)\xC2\x03\x02\x02\x02+\xC4\x03\x02" +
+    "\x02\x02-\xC6\x03\x02\x02\x02/\xC8\x03\x02\x02\x021\xCB\x03\x02\x02\x02" +
+    "3\xCD\x03\x02\x02\x025\xD0\x03\x02\x02\x027\xD3\x03\x02\x02\x029\xD6\x03" +
+    "\x02\x02\x02;\xD9\x03\x02\x02\x02=\xDC\x03\x02\x02\x02?\xDE\x03\x02\x02" +
+    "\x02A\xE7\x03\x02\x02\x02C\xF0\x03\x02\x02\x02E\xF3\x03\x02\x02\x02G\xF5" +
+    "\x03\x02\x02\x02I\xF7\x03\x02\x02\x02K\xF9\x03\x02\x02\x02M\xFB\x03\x02" +
+    "\x02\x02O\xFD\x03\x02\x02\x02Q\xFF\x03\x02\x02\x02S\u010F\x03\x02\x02" +
+    "\x02U\u0114\x03\x02\x02\x02W\u0121\x03\x02\x02\x02Y\u0123\x03\x02\x02" +
+    "\x02[\u0163\x03\x02\x02\x02]\u0165\x03\x02\x02\x02_\u0170\x03\x02\x02" +
+    "\x02a\u017A\x03\x02\x02\x02c\u0184\x03\x02\x02\x02e\u0193\x03\x02\x02" +
+    "\x02gh\x07v\x02\x02hi\x07g\x02\x02ij\x07t\x02\x02jk\x07t\x02\x02kl\x07" +
+    "c\x02\x02lm\x07h\x02\x02mn\x07q\x02\x02no\x07t\x02\x02op\x07o\x02\x02" +
+    "p\x04\x03\x02\x02\x02qr\x07t\x02\x02rs\x07g\x02\x02st\x07u\x02\x02tu\x07" +
+    "q\x02\x02uv\x07w\x02\x02vw\x07t\x02\x02wx\x07e\x02\x02xy\x07g\x02\x02" +
+    "y\x06\x03\x02\x02\x02z{\x07f\x02\x02{|\x07c\x02\x02|}\x07v\x02\x02}~\x07" +
+    "c\x02\x02~\b\x03\x02\x02\x02\x7F\x80\x07q\x02\x02\x80\x81\x07w\x02\x02" +
+    "\x81\x82\x07v\x02\x02\x82\x83\x07r\x02\x02\x83\x84\x07w\x02\x02\x84\x85" +
+    "\x07v\x02\x02\x85\n\x03\x02\x02\x02\x86\x87\x07n\x02\x02\x87\x88\x07q" +
+    "\x02\x02\x88\x89\x07e\x02\x02\x89\x8A\x07c\x02\x02\x8A\x8B\x07n\x02\x02" +
+    "\x8B\x8C\x07u\x02\x02\x8C\f\x03\x02\x02\x02\x8D\x8E\x07o\x02\x02\x8E\x8F" +
+    "\x07q\x02\x02\x8F\x90\x07f\x02\x02\x90\x91\x07w\x02\x02\x91\x92\x07n\x02" +
+    "\x02\x92\x93\x07g\x02\x02\x93\x0E\x03\x02\x02\x02\x94\x95\x07?\x02\x02" +
+    "\x95\x10\x03\x02\x02\x02\x96\x97\x07n\x02\x02\x97\x98\x07q\x02\x02\x98" +
+    "\x99\x07e\x02\x02\x99\x9A\x07c\x02\x02\x9A\x9B\x07n\x02\x02\x9B\x12\x03" +
+    "\x02\x02\x02\x9C\x9D\x07x\x02\x02\x9D\x9E\x07c\x02\x02\x9E\x9F\x07t\x02" +
+    "\x02\x9F\x14\x03\x02\x02\x02\xA0\xA1\x07A\x02\x02\xA1\x16\x03\x02\x02" +
+    "\x02\xA2\xA3\x07<\x02\x02\xA3\x18\x03\x02\x02\x02\xA4\xA5\x07h\x02\x02" +
+    "\xA5\xA6\x07q\x02\x02\xA6\xA7\x07t\x02\x02\xA7\x1A\x03\x02\x02\x02\xA8" +
+    "\xA9\x07l\x02\x02\xA9\xAA\x07u\x02\x02\xAA\xAB\x07q\x02\x02\xAB\xAC\x07" +
+    "p\x02\x02\xAC\xAD\x07g\x02\x02\xAD\xAE\x07p\x02\x02\xAE\xAF\x07e\x02\x02" +
+    "\xAF\xB0\x07q\x02\x02\xB0\xB1\x07f\x02\x02\xB1\xB2\x07g\x02\x02\xB2\x1C" +
+    "\x03\x02\x02\x02\xB3\xB4\x07.\x02\x02\xB4\x1E\x03\x02\x02\x02\xB5\xB6" +
+    "\x07]\x02\x02\xB6 \x03\x02\x02\x02\xB7\xB8\x07_\x02\x02\xB8\"\x03\x02" +
+    "\x02\x02\xB9\xBA\x07h\x02\x02\xBA\xBB\x07k\x02\x02\xBB\xBC\x07n\x02\x02" +
+    "\xBC\xBD\x07g\x02\x02\xBD$\x03\x02\x02\x02\xBE\xBF\x07-\x02\x02\xBF&\x03" +
+    "\x02\x02\x02\xC0\xC1\x07/\x02\x02\xC1(\x03\x02\x02\x02\xC2\xC3\x071\x02" +
+    "\x02\xC3*\x03\x02\x02\x02\xC4\xC5\x07\'\x02\x02\xC5,\x03\x02\x02\x02\xC6" +
+    "\xC7\x07@\x02\x02\xC7.\x03\x02\x02\x02\xC8\xC9\x07@\x02\x02\xC9\xCA\x07" +
+    "?\x02\x02\xCA0\x03\x02\x02\x02\xCB\xCC\x07>\x02\x02\xCC2\x03\x02\x02\x02" +
+    "\xCD\xCE\x07>\x02\x02\xCE\xCF\x07?\x02\x02\xCF4\x03\x02\x02\x02\xD0\xD1" +
+    "\x07?\x02\x02\xD1\xD2\x07?\x02\x02\xD26\x03\x02\x02\x02\xD3\xD4\x07#\x02" +
+    "\x02\xD4\xD5\x07?\x02\x02\xD58\x03\x02\x02\x02\xD6\xD7\x07(\x02\x02\xD7" +
+    "\xD8\x07(\x02\x02\xD8:\x03\x02\x02\x02\xD9\xDA\x07~\x02\x02\xDA\xDB\x07" +
+    "~\x02\x02\xDB<\x03\x02\x02\x02\xDC\xDD\t\x02\x02\x02\xDD>\x03\x02\x02" +
+    "\x02\xDE\xDF\x07x\x02\x02\xDF\xE0\x07c\x02\x02\xE0\xE1\x07t\x02\x02\xE1" +
+    "\xE2\x07k\x02\x02\xE2\xE3\x07c\x02\x02\xE3\xE4\x07d\x02\x02\xE4\xE5\x07" +
+    "n\x02\x02\xE5\xE6\x07g\x02\x02\xE6@\x03\x02\x02\x02\xE7\xE8\x07r\x02\x02" +
+    "\xE8\xE9\x07t\x02\x02\xE9\xEA\x07q\x02\x02\xEA\xEB\x07x\x02\x02\xEB\xEC" +
+    "\x07k\x02\x02\xEC\xED\x07f\x02\x02\xED\xEE\x07g\x02\x02\xEE\xEF\x07t\x02" +
+    "\x02\xEFB\x03\x02\x02\x02\xF0\xF1\x07k\x02\x02\xF1\xF2\x07p\x02\x02\xF2" +
+    "D\x03\x02\x02\x02\xF3\xF4\x07,\x02\x02\xF4F\x03\x02\x02\x02\xF5\xF6\x07" +
+    "0\x02\x02\xF6H\x03\x02\x02\x02\xF7\xF8\x07}\x02\x02\xF8J\x03\x02\x02\x02" +
+    "\xF9\xFA\x07\x7F\x02\x02\xFAL\x03\x02\x02\x02\xFB\xFC\x07*\x02\x02\xFC" +
+    "N\x03\x02\x02\x02\xFD\xFE\x07+\x02\x02\xFEP\x03\x02\x02\x02\xFF\u0100" +
+    "\x07>\x02\x02\u0100\u0101\x07>\x02\x02\u0101\u0102\x07G\x02\x02\u0102" +
+    "\u0103\x07Q\x02\x02\u0103\u0104\x07H\x02\x02\u0104\u0108\x03\x02\x02\x02" +
+    "\u0105\u0107\v\x02\x02\x02\u0106\u0105\x03\x02\x02\x02\u0107\u010A\x03" +
+    "\x02\x02\x02\u0108\u0109\x03\x02\x02\x02\u0108\u0106\x03\x02\x02\x02\u0109" +
+    "\u010B\x03\x02\x02\x02\u010A\u0108\x03\x02\x02\x02\u010B\u010C\x07G\x02" +
+    "\x02\u010C\u010D\x07Q\x02\x02\u010D\u010E\x07H\x02\x02\u010ER\x03\x02" +
+    "\x02\x02\u010F\u0110\x07p\x02\x02\u0110\u0111\x07w\x02\x02\u0111\u0112" +
+    "\x07n\x02\x02\u0112T\x03\x02\x02\x02\u0113\u0115\x05=\x1F\x02\u0114\u0113" +
+    "\x03\x02\x02\x02\u0115\u0116\x03\x02\x02\x02\u0116\u0114\x03\x02\x02\x02" +
+    "\u0116\u0117\x03\x02\x02\x02\u0117V\x03\x02\x02\x02\u0118\u0119\x07v\x02" +
+    "\x02\u0119\u011A\x07t\x02\x02\u011A\u011B\x07w\x02\x02\u011B\u0122\x07" +
+    "g\x02\x02\u011C\u011D\x07h\x02\x02\u011D\u011E\x07c\x02\x02\u011E\u011F" +
+    "\x07n\x02\x02\u011F\u0120\x07u\x02\x02\u0120\u0122\x07g\x02\x02\u0121" +
+    "\u0118\x03\x02\x02\x02\u0121\u011C\x03\x02\x02\x02\u0122X\x03\x02\x02" +
+    "\x02\u0123\u0124\x07>\x02\x02\u0124\u0125\x07>\x02\x02\u0125\u0126\x07" +
+    "F\x02\x02\u0126\u0127\x07G\x02\x02\u0127\u0128\x07U\x02\x02\u0128\u0129" +
+    "\x07E\x02\x02\u0129\u012A\x07T\x02\x02\u012A\u012B\x07K\x02\x02\u012B" +
+    "\u012C\x07R\x02\x02\u012C\u012D\x07V\x02\x02\u012D\u012E\x07K\x02\x02" +
+    "\u012E\u012F\x07Q\x02\x02\u012F\u0130\x07P\x02\x02\u0130\u0134\x03\x02" +
+    "\x02\x02\u0131\u0133\v\x02\x02\x02\u0132\u0131\x03\x02\x02\x02\u0133\u0136" +
+    "\x03\x02\x02\x02\u0134\u0135\x03\x02\x02\x02\u0134\u0132\x03\x02\x02\x02" +
+    "\u0135\u0137\x03\x02\x02\x02\u0136\u0134\x03\x02\x02\x02\u0137\u0138\x07" +
+    "F\x02\x02\u0138\u0139\x07G\x02\x02\u0139\u013A\x07U\x02\x02\u013A\u013B" +
+    "\x07E\x02\x02\u013B\u013C\x07T\x02\x02\u013C\u013D\x07K\x02\x02\u013D" +
+    "\u013E\x07R\x02\x02\u013E\u013F\x07V\x02\x02\u013F\u0140\x07K\x02\x02" +
+    "\u0140\u0141\x07Q\x02\x02\u0141\u0142\x07P\x02\x02\u0142Z\x03\x02\x02" +
+    "\x02\u0143\u0144\x07>\x02\x02\u0144\u0145\x07>\x02\x02\u0145\u0146\x07" +
+    "/\x02\x02\u0146\u0147\x07G\x02\x02\u0147\u0148\x07Q\x02\x02\u0148\u0149" +
+    "\x07H\x02\x02\u0149\u014D\x03\x02\x02\x02\u014A\u014C\v\x02\x02\x02\u014B" +
+    "\u014A\x03\x02\x02\x02\u014C\u014F\x03\x02\x02\x02\u014D\u014E\x03\x02" +
+    "\x02\x02\u014D\u014B\x03\x02\x02\x02\u014E\u0150\x03\x02\x02\x02\u014F" +
+    "\u014D\x03\x02\x02\x02\u0150\u0151\x07G\x02\x02\u0151\u0152\x07Q\x02\x02" +
+    "\u0152\u0164\x07H\x02\x02\u0153\u0154\x07>\x02\x02\u0154\u0155\x07>\x02" +
+    "\x02\u0155\u0156\x07/\x02\x02\u0156\u0157\x07G\x02\x02\u0157\u0158\x07" +
+    "Q\x02\x02\u0158\u0159\x07V\x02\x02\u0159\u015D\x03\x02\x02\x02\u015A\u015C" +
+    "\v\x02\x02\x02\u015B\u015A\x03\x02\x02\x02\u015C\u015F\x03\x02\x02\x02" +
+    "\u015D\u015E\x03\x02\x02\x02\u015D\u015B\x03\x02\x02\x02\u015E\u0160\x03" +
+    "\x02\x02\x02\u015F\u015D\x03\x02\x02\x02\u0160\u0161\x07G\x02\x02\u0161" +
+    "\u0162\x07Q\x02\x02\u0162\u0164\x07V\x02\x02\u0163\u0143\x03\x02\x02\x02" +
+    "\u0163\u0153\x03\x02\x02\x02\u0164\\\x03\x02\x02\x02\u0165\u016B\x07$" +
+    "\x02\x02\u0166\u0167\x07^\x02\x02\u0167\u016A\x07$\x02\x02\u0168\u016A" +
+    "\n\x03\x02\x02\u0169\u0166\x03\x02\x02\x02\u0169\u0168\x03\x02\x02\x02" +
+    "\u016A\u016D\x03\x02\x02\x02\u016B\u0169\x03\x02\x02\x02\u016B\u016C\x03" +
+    "\x02\x02\x02\u016C\u016E\x03\x02\x02\x02\u016D\u016B\x03\x02\x02\x02\u016E" +
+    "\u016F\x07$\x02\x02\u016F^\x03\x02\x02\x02\u0170\u0174\t\x04\x02\x02\u0171" +
+    "\u0173\t\x05\x02\x02\u0172\u0171\x03\x02\x02\x02\u0173\u0176\x03\x02\x02" +
+    "\x02\u0174\u0172\x03\x02\x02\x02\u0174\u0175\x03\x02\x02\x02\u0175`\x03" +
+    "\x02\x02\x02\u0176\u0174\x03\x02\x02\x02\u0177\u017B\x07%\x02\x02\u0178" +
+    "\u0179\x071\x02\x02\u0179\u017B\x071\x02\x02\u017A\u0177\x03\x02\x02\x02" +
+    "\u017A\u0178\x03\x02\x02\x02\u017B\u017F\x03\x02\x02\x02\u017C\u017E\n" +
+    "\x06\x02\x02\u017D\u017C\x03\x02\x02\x02\u017E\u0181\x03\x02\x02\x02\u017F" +
+    "\u017D\x03\x02\x02\x02\u017F\u0180\x03\x02\x02\x02\u0180\u0182\x03\x02" +
+    "\x02\x02\u0181\u017F\x03\x02\x02\x02\u0182\u0183\b1\x02\x02\u0183b\x03" +
+    "\x02\x02\x02\u0184\u0185\x071\x02\x02\u0185\u0186\x07,\x02\x02\u0186\u018A" +
+    "\x03\x02\x02\x02\u0187\u0189\v\x02\x02\x02\u0188\u0187\x03\x02\x02\x02" +
+    "\u0189\u018C\x03\x02\x02\x02\u018A\u018B\x03\x02\x02\x02\u018A\u0188\x03" +
+    "\x02\x02\x02\u018B\u018D\x03\x02\x02\x02\u018C\u018A\x03\x02\x02\x02\u018D" +
+    "\u018E\x07,\x02\x02\u018E\u018F\x071\x02\x02\u018F\u0190\x03\x02\x02\x02" +
+    "\u0190\u0191\b2\x02\x02\u0191d\x03\x02\x02\x02\u0192\u0194\t\x07\x02\x02" +
+    "\u0193\u0192\x03\x02\x02\x02\u0194\u0195\x03\x02\x02\x02\u0195\u0193\x03" +
+    "\x02\x02\x02\u0195\u0196\x03\x02\x02\x02\u0196\u0197\x03\x02\x02\x02\u0197" +
+    "\u0198\b3\x03\x02\u0198f\x03\x02\x02\x02\x11\x02\u0108\u0116\u0121\u0134" +
+    "\u014D\u015D\u0163\u0169\u016B\u0174\u017A\u017F\u018A\u0195\x04\x02\x03" +
+    "\x02\b\x02\x02";
+
+
+/***/ }),
+
+/***/ 1580:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// Generated from Terraform.g4 by ANTLR 4.9.0-SNAPSHOT
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NumberContext = exports.Operator_Context = exports.Signed_numberContext = exports.StringContext = exports.Map_Context = exports.List_Context = exports.FiledeclContext = exports.IndexContext = exports.FunctionargumentsContext = exports.FunctionnameContext = exports.FunctioncallContext = exports.ValContext = exports.SectionContext = exports.ForloopContext = exports.ExpressionContext = exports.Inline_indexContext = exports.IdentifierchainContext = exports.IdentifierContext = exports.ArgumentContext = exports.BlockbodyContext = exports.LabelContext = exports.NameContext = exports.ResourcetypeContext = exports.BlocktypeContext = exports.BlockContext = exports.VariableContext = exports.ModuleContext = exports.LocalContext = exports.OutputContext = exports.ProviderContext = exports.DataContext = exports.ResourceContext = exports.TerraformContext = exports.File_Context = exports.TerraformParser = void 0;
+const ATN_1 = __nccwpck_require__(37747);
+const ATNDeserializer_1 = __nccwpck_require__(16027);
+const FailedPredicateException_1 = __nccwpck_require__(55575);
+const NoViableAltException_1 = __nccwpck_require__(51914);
+const Parser_1 = __nccwpck_require__(98871);
+const ParserRuleContext_1 = __nccwpck_require__(19562);
+const ParserATNSimulator_1 = __nccwpck_require__(99851);
+const RecognitionException_1 = __nccwpck_require__(8145);
+const Token_1 = __nccwpck_require__(57528);
+const VocabularyImpl_1 = __nccwpck_require__(87847);
+const Utils = __importStar(__nccwpck_require__(12925));
+class TerraformParser extends Parser_1.Parser {
+    // @Override
+    // @NotNull
+    get vocabulary() {
+        return TerraformParser.VOCABULARY;
+    }
+    // tslint:enable:no-trailing-whitespace
+    // @Override
+    get grammarFileName() { return "Terraform.g4"; }
+    // @Override
+    get ruleNames() { return TerraformParser.ruleNames; }
+    // @Override
+    get serializedATN() { return TerraformParser._serializedATN; }
+    createFailedPredicateException(predicate, message) {
+        return new FailedPredicateException_1.FailedPredicateException(this, predicate, message);
+    }
+    constructor(input) {
+        super(input);
+        this._interp = new ParserATNSimulator_1.ParserATNSimulator(TerraformParser._ATN, this);
+    }
+    // @RuleVersion(0)
+    file_() {
+        let _localctx = new File_Context(this._ctx, this.state);
+        this.enterRule(_localctx, 0, TerraformParser.RULE_file_);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 76;
+                this._errHandler.sync(this);
+                _la = this._input.LA(1);
+                do {
+                    {
+                        this.state = 76;
+                        this._errHandler.sync(this);
+                        switch (this._input.LA(1)) {
+                            case TerraformParser.T__4:
+                                {
+                                    this.state = 68;
+                                    this.local();
+                                }
+                                break;
+                            case TerraformParser.T__5:
+                                {
+                                    this.state = 69;
+                                    this.module();
+                                }
+                                break;
+                            case TerraformParser.T__3:
+                                {
+                                    this.state = 70;
+                                    this.output();
+                                }
+                                break;
+                            case TerraformParser.PROVIDER:
+                                {
+                                    this.state = 71;
+                                    this.provider();
+                                }
+                                break;
+                            case TerraformParser.VARIABLE:
+                                {
+                                    this.state = 72;
+                                    this.variable();
+                                }
+                                break;
+                            case TerraformParser.T__2:
+                                {
+                                    this.state = 73;
+                                    this.data();
+                                }
+                                break;
+                            case TerraformParser.T__1:
+                                {
+                                    this.state = 74;
+                                    this.resource();
+                                }
+                                break;
+                            case TerraformParser.T__0:
+                                {
+                                    this.state = 75;
+                                    this.terraform();
+                                }
+                                break;
+                            default:
+                                throw new NoViableAltException_1.NoViableAltException(this);
+                        }
+                    }
+                    this.state = 78;
+                    this._errHandler.sync(this);
+                    _la = this._input.LA(1);
+                } while ((((_la) & ~0x1F) === 0 && ((1 << _la) & ((1 << TerraformParser.T__0) | (1 << TerraformParser.T__1) | (1 << TerraformParser.T__2) | (1 << TerraformParser.T__3) | (1 << TerraformParser.T__4) | (1 << TerraformParser.T__5) | (1 << TerraformParser.VARIABLE) | (1 << TerraformParser.PROVIDER))) !== 0));
+                this.state = 80;
+                this.match(TerraformParser.EOF);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    terraform() {
+        let _localctx = new TerraformContext(this._ctx, this.state);
+        this.enterRule(_localctx, 2, TerraformParser.RULE_terraform);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 82;
+                this.match(TerraformParser.T__0);
+                this.state = 83;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    resource() {
+        let _localctx = new ResourceContext(this._ctx, this.state);
+        this.enterRule(_localctx, 4, TerraformParser.RULE_resource);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 85;
+                this.match(TerraformParser.T__1);
+                this.state = 86;
+                this.resourcetype();
+                this.state = 87;
+                this.name();
+                this.state = 88;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    data() {
+        let _localctx = new DataContext(this._ctx, this.state);
+        this.enterRule(_localctx, 6, TerraformParser.RULE_data);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 90;
+                this.match(TerraformParser.T__2);
+                this.state = 91;
+                this.resourcetype();
+                this.state = 92;
+                this.name();
+                this.state = 93;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    provider() {
+        let _localctx = new ProviderContext(this._ctx, this.state);
+        this.enterRule(_localctx, 8, TerraformParser.RULE_provider);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 95;
+                this.match(TerraformParser.PROVIDER);
+                this.state = 96;
+                this.resourcetype();
+                this.state = 97;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    output() {
+        let _localctx = new OutputContext(this._ctx, this.state);
+        this.enterRule(_localctx, 10, TerraformParser.RULE_output);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 99;
+                this.match(TerraformParser.T__3);
+                this.state = 100;
+                this.name();
+                this.state = 101;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    local() {
+        let _localctx = new LocalContext(this._ctx, this.state);
+        this.enterRule(_localctx, 12, TerraformParser.RULE_local);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 103;
+                this.match(TerraformParser.T__4);
+                this.state = 104;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    module() {
+        let _localctx = new ModuleContext(this._ctx, this.state);
+        this.enterRule(_localctx, 14, TerraformParser.RULE_module);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 106;
+                this.match(TerraformParser.T__5);
+                this.state = 107;
+                this.name();
+                this.state = 108;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    variable() {
+        let _localctx = new VariableContext(this._ctx, this.state);
+        this.enterRule(_localctx, 16, TerraformParser.RULE_variable);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 110;
+                this.match(TerraformParser.VARIABLE);
+                this.state = 111;
+                this.name();
+                this.state = 112;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    block() {
+        let _localctx = new BlockContext(this._ctx, this.state);
+        this.enterRule(_localctx, 18, TerraformParser.RULE_block);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 114;
+                this.blocktype();
+                this.state = 118;
+                this._errHandler.sync(this);
+                _la = this._input.LA(1);
+                while (_la === TerraformParser.STRING) {
+                    {
+                        {
+                            this.state = 115;
+                            this.label();
+                        }
+                    }
+                    this.state = 120;
+                    this._errHandler.sync(this);
+                    _la = this._input.LA(1);
+                }
+                this.state = 121;
+                this.blockbody();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    blocktype() {
+        let _localctx = new BlocktypeContext(this._ctx, this.state);
+        this.enterRule(_localctx, 20, TerraformParser.RULE_blocktype);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 123;
+                this.match(TerraformParser.IDENTIFIER);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    resourcetype() {
+        let _localctx = new ResourcetypeContext(this._ctx, this.state);
+        this.enterRule(_localctx, 22, TerraformParser.RULE_resourcetype);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 125;
+                this.match(TerraformParser.STRING);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    name() {
+        let _localctx = new NameContext(this._ctx, this.state);
+        this.enterRule(_localctx, 24, TerraformParser.RULE_name);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 127;
+                this.match(TerraformParser.STRING);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    label() {
+        let _localctx = new LabelContext(this._ctx, this.state);
+        this.enterRule(_localctx, 26, TerraformParser.RULE_label);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 129;
+                this.match(TerraformParser.STRING);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    blockbody() {
+        let _localctx = new BlockbodyContext(this._ctx, this.state);
+        this.enterRule(_localctx, 28, TerraformParser.RULE_blockbody);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 131;
+                this.match(TerraformParser.LCURL);
+                this.state = 136;
+                this._errHandler.sync(this);
+                _la = this._input.LA(1);
+                while ((((_la) & ~0x1F) === 0 && ((1 << _la) & ((1 << TerraformParser.T__2) | (1 << TerraformParser.T__5) | (1 << TerraformParser.T__7) | (1 << TerraformParser.T__8) | (1 << TerraformParser.VARIABLE) | (1 << TerraformParser.PROVIDER))) !== 0) || ((((_la - 32)) & ~0x1F) === 0 && ((1 << (_la - 32)) & ((1 << (TerraformParser.IN - 32)) | (1 << (TerraformParser.STAR - 32)) | (1 << (TerraformParser.NATURAL_NUMBER - 32)) | (1 << (TerraformParser.IDENTIFIER - 32)))) !== 0)) {
+                    {
+                        this.state = 134;
+                        this._errHandler.sync(this);
+                        switch (this.interpreter.adaptivePredict(this._input, 3, this._ctx)) {
+                            case 1:
+                                {
+                                    this.state = 132;
+                                    this.argument();
+                                }
+                                break;
+                            case 2:
+                                {
+                                    this.state = 133;
+                                    this.block();
+                                }
+                                break;
+                        }
+                    }
+                    this.state = 138;
+                    this._errHandler.sync(this);
+                    _la = this._input.LA(1);
+                }
+                this.state = 139;
+                this.match(TerraformParser.RCURL);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    argument() {
+        let _localctx = new ArgumentContext(this._ctx, this.state);
+        this.enterRule(_localctx, 30, TerraformParser.RULE_argument);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 141;
+                this.identifier();
+                this.state = 142;
+                this.match(TerraformParser.T__6);
+                this.state = 143;
+                this.expression(0);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    identifier() {
+        let _localctx = new IdentifierContext(this._ctx, this.state);
+        this.enterRule(_localctx, 32, TerraformParser.RULE_identifier);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 147;
+                this._errHandler.sync(this);
+                _la = this._input.LA(1);
+                if ((((_la) & ~0x1F) === 0 && ((1 << _la) & ((1 << TerraformParser.T__2) | (1 << TerraformParser.T__5) | (1 << TerraformParser.T__7) | (1 << TerraformParser.T__8))) !== 0)) {
+                    {
+                        this.state = 145;
+                        _la = this._input.LA(1);
+                        if (!((((_la) & ~0x1F) === 0 && ((1 << _la) & ((1 << TerraformParser.T__2) | (1 << TerraformParser.T__5) | (1 << TerraformParser.T__7) | (1 << TerraformParser.T__8))) !== 0))) {
+                            this._errHandler.recoverInline(this);
+                        }
+                        else {
+                            if (this._input.LA(1) === Token_1.Token.EOF) {
+                                this.matchedEOF = true;
+                            }
+                            this._errHandler.reportMatch(this);
+                            this.consume();
+                        }
+                        this.state = 146;
+                        this.match(TerraformParser.DOT);
+                    }
+                }
+                this.state = 149;
+                this.identifierchain();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    identifierchain() {
+        let _localctx = new IdentifierchainContext(this._ctx, this.state);
+        this.enterRule(_localctx, 34, TerraformParser.RULE_identifierchain);
+        let _la;
+        try {
+            let _alt;
+            this.state = 178;
+            this._errHandler.sync(this);
+            switch (this._input.LA(1)) {
+                case TerraformParser.VARIABLE:
+                case TerraformParser.PROVIDER:
+                case TerraformParser.IN:
+                case TerraformParser.IDENTIFIER:
+                    this.enterOuterAlt(_localctx, 1);
+                    {
+                        this.state = 151;
+                        _la = this._input.LA(1);
+                        if (!(((((_la - 30)) & ~0x1F) === 0 && ((1 << (_la - 30)) & ((1 << (TerraformParser.VARIABLE - 30)) | (1 << (TerraformParser.PROVIDER - 30)) | (1 << (TerraformParser.IN - 30)) | (1 << (TerraformParser.IDENTIFIER - 30)))) !== 0))) {
+                            this._errHandler.recoverInline(this);
+                        }
+                        else {
+                            if (this._input.LA(1) === Token_1.Token.EOF) {
+                                this.matchedEOF = true;
+                            }
+                            this._errHandler.reportMatch(this);
+                            this.consume();
+                        }
+                        this.state = 153;
+                        this._errHandler.sync(this);
+                        switch (this.interpreter.adaptivePredict(this._input, 6, this._ctx)) {
+                            case 1:
+                                {
+                                    this.state = 152;
+                                    this.index();
+                                }
+                                break;
+                        }
+                        this.state = 159;
+                        this._errHandler.sync(this);
+                        _alt = this.interpreter.adaptivePredict(this._input, 7, this._ctx);
+                        while (_alt !== 2 && _alt !== ATN_1.ATN.INVALID_ALT_NUMBER) {
+                            if (_alt === 1) {
+                                {
+                                    {
+                                        this.state = 155;
+                                        this.match(TerraformParser.DOT);
+                                        this.state = 156;
+                                        this.identifierchain();
+                                    }
+                                }
+                            }
+                            this.state = 161;
+                            this._errHandler.sync(this);
+                            _alt = this.interpreter.adaptivePredict(this._input, 7, this._ctx);
+                        }
+                    }
+                    break;
+                case TerraformParser.STAR:
+                    this.enterOuterAlt(_localctx, 2);
+                    {
+                        this.state = 162;
+                        this.match(TerraformParser.STAR);
+                        this.state = 167;
+                        this._errHandler.sync(this);
+                        _alt = this.interpreter.adaptivePredict(this._input, 8, this._ctx);
+                        while (_alt !== 2 && _alt !== ATN_1.ATN.INVALID_ALT_NUMBER) {
+                            if (_alt === 1) {
+                                {
+                                    {
+                                        this.state = 163;
+                                        this.match(TerraformParser.DOT);
+                                        this.state = 164;
+                                        this.identifierchain();
+                                    }
+                                }
+                            }
+                            this.state = 169;
+                            this._errHandler.sync(this);
+                            _alt = this.interpreter.adaptivePredict(this._input, 8, this._ctx);
+                        }
+                    }
+                    break;
+                case TerraformParser.NATURAL_NUMBER:
+                    this.enterOuterAlt(_localctx, 3);
+                    {
+                        this.state = 170;
+                        this.inline_index();
+                        this.state = 175;
+                        this._errHandler.sync(this);
+                        _alt = this.interpreter.adaptivePredict(this._input, 9, this._ctx);
+                        while (_alt !== 2 && _alt !== ATN_1.ATN.INVALID_ALT_NUMBER) {
+                            if (_alt === 1) {
+                                {
+                                    {
+                                        this.state = 171;
+                                        this.match(TerraformParser.DOT);
+                                        this.state = 172;
+                                        this.identifierchain();
+                                    }
+                                }
+                            }
+                            this.state = 177;
+                            this._errHandler.sync(this);
+                            _alt = this.interpreter.adaptivePredict(this._input, 9, this._ctx);
+                        }
+                    }
+                    break;
+                default:
+                    throw new NoViableAltException_1.NoViableAltException(this);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    inline_index() {
+        let _localctx = new Inline_indexContext(this._ctx, this.state);
+        this.enterRule(_localctx, 36, TerraformParser.RULE_inline_index);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 180;
+                this.match(TerraformParser.NATURAL_NUMBER);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    expression(_p) {
+        if (_p === undefined) {
+            _p = 0;
+        }
+        let _parentctx = this._ctx;
+        let _parentState = this.state;
+        let _localctx = new ExpressionContext(this._ctx, _parentState);
+        let _prevctx = _localctx;
+        let _startState = 38;
+        this.enterRecursionRule(_localctx, 38, TerraformParser.RULE_expression, _p);
+        try {
+            let _alt;
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 189;
+                this._errHandler.sync(this);
+                switch (this._input.LA(1)) {
+                    case TerraformParser.T__2:
+                    case TerraformParser.T__5:
+                    case TerraformParser.T__7:
+                    case TerraformParser.T__8:
+                    case TerraformParser.T__12:
+                    case TerraformParser.T__14:
+                    case TerraformParser.T__16:
+                    case TerraformParser.T__17:
+                    case TerraformParser.T__18:
+                    case TerraformParser.VARIABLE:
+                    case TerraformParser.PROVIDER:
+                    case TerraformParser.IN:
+                    case TerraformParser.STAR:
+                    case TerraformParser.LCURL:
+                    case TerraformParser.EOF_:
+                    case TerraformParser.NULL_:
+                    case TerraformParser.NATURAL_NUMBER:
+                    case TerraformParser.BOOL:
+                    case TerraformParser.DESCRIPTION:
+                    case TerraformParser.MULTILINESTRING:
+                    case TerraformParser.STRING:
+                    case TerraformParser.IDENTIFIER:
+                        {
+                            this.state = 183;
+                            this.section();
+                        }
+                        break;
+                    case TerraformParser.LPAREN:
+                        {
+                            this.state = 184;
+                            this.match(TerraformParser.LPAREN);
+                            this.state = 185;
+                            this.expression(0);
+                            this.state = 186;
+                            this.match(TerraformParser.RPAREN);
+                        }
+                        break;
+                    case TerraformParser.T__11:
+                        {
+                            this.state = 188;
+                            this.forloop();
+                        }
+                        break;
+                    default:
+                        throw new NoViableAltException_1.NoViableAltException(this);
+                }
+                this._ctx._stop = this._input.tryLT(-1);
+                this.state = 203;
+                this._errHandler.sync(this);
+                _alt = this.interpreter.adaptivePredict(this._input, 13, this._ctx);
+                while (_alt !== 2 && _alt !== ATN_1.ATN.INVALID_ALT_NUMBER) {
+                    if (_alt === 1) {
+                        if (this._parseListeners != null) {
+                            this.triggerExitRuleEvent();
+                        }
+                        _prevctx = _localctx;
+                        {
+                            this.state = 201;
+                            this._errHandler.sync(this);
+                            switch (this.interpreter.adaptivePredict(this._input, 12, this._ctx)) {
+                                case 1:
+                                    {
+                                        _localctx = new ExpressionContext(_parentctx, _parentState);
+                                        this.pushNewRecursionContext(_localctx, _startState, TerraformParser.RULE_expression);
+                                        this.state = 191;
+                                        if (!(this.precpred(this._ctx, 4))) {
+                                            throw this.createFailedPredicateException("this.precpred(this._ctx, 4)");
+                                        }
+                                        this.state = 192;
+                                        this.operator_();
+                                        this.state = 193;
+                                        this.expression(5);
+                                    }
+                                    break;
+                                case 2:
+                                    {
+                                        _localctx = new ExpressionContext(_parentctx, _parentState);
+                                        this.pushNewRecursionContext(_localctx, _startState, TerraformParser.RULE_expression);
+                                        this.state = 195;
+                                        if (!(this.precpred(this._ctx, 2))) {
+                                            throw this.createFailedPredicateException("this.precpred(this._ctx, 2)");
+                                        }
+                                        this.state = 196;
+                                        this.match(TerraformParser.T__9);
+                                        this.state = 197;
+                                        this.expression(0);
+                                        this.state = 198;
+                                        this.match(TerraformParser.T__10);
+                                        this.state = 199;
+                                        this.expression(3);
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                    this.state = 205;
+                    this._errHandler.sync(this);
+                    _alt = this.interpreter.adaptivePredict(this._input, 13, this._ctx);
+                }
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.unrollRecursionContexts(_parentctx);
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    forloop() {
+        let _localctx = new ForloopContext(this._ctx, this.state);
+        this.enterRule(_localctx, 40, TerraformParser.RULE_forloop);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 206;
+                this.match(TerraformParser.T__11);
+                this.state = 207;
+                this.identifier();
+                this.state = 208;
+                this.match(TerraformParser.IN);
+                this.state = 209;
+                this.expression(0);
+                this.state = 210;
+                this.match(TerraformParser.T__10);
+                this.state = 211;
+                this.expression(0);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    section() {
+        let _localctx = new SectionContext(this._ctx, this.state);
+        this.enterRule(_localctx, 42, TerraformParser.RULE_section);
+        try {
+            this.state = 216;
+            this._errHandler.sync(this);
+            switch (this._input.LA(1)) {
+                case TerraformParser.T__14:
+                    this.enterOuterAlt(_localctx, 1);
+                    {
+                        this.state = 213;
+                        this.list_();
+                    }
+                    break;
+                case TerraformParser.LCURL:
+                    this.enterOuterAlt(_localctx, 2);
+                    {
+                        this.state = 214;
+                        this.map_();
+                    }
+                    break;
+                case TerraformParser.T__2:
+                case TerraformParser.T__5:
+                case TerraformParser.T__7:
+                case TerraformParser.T__8:
+                case TerraformParser.T__12:
+                case TerraformParser.T__16:
+                case TerraformParser.T__17:
+                case TerraformParser.T__18:
+                case TerraformParser.VARIABLE:
+                case TerraformParser.PROVIDER:
+                case TerraformParser.IN:
+                case TerraformParser.STAR:
+                case TerraformParser.EOF_:
+                case TerraformParser.NULL_:
+                case TerraformParser.NATURAL_NUMBER:
+                case TerraformParser.BOOL:
+                case TerraformParser.DESCRIPTION:
+                case TerraformParser.MULTILINESTRING:
+                case TerraformParser.STRING:
+                case TerraformParser.IDENTIFIER:
+                    this.enterOuterAlt(_localctx, 3);
+                    {
+                        this.state = 215;
+                        this.val();
+                    }
+                    break;
+                default:
+                    throw new NoViableAltException_1.NoViableAltException(this);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    val() {
+        let _localctx = new ValContext(this._ctx, this.state);
+        this.enterRule(_localctx, 44, TerraformParser.RULE_val);
+        try {
+            this.state = 227;
+            this._errHandler.sync(this);
+            switch (this.interpreter.adaptivePredict(this._input, 15, this._ctx)) {
+                case 1:
+                    this.enterOuterAlt(_localctx, 1);
+                    {
+                        this.state = 218;
+                        this.match(TerraformParser.NULL_);
+                    }
+                    break;
+                case 2:
+                    this.enterOuterAlt(_localctx, 2);
+                    {
+                        this.state = 219;
+                        this.signed_number();
+                    }
+                    break;
+                case 3:
+                    this.enterOuterAlt(_localctx, 3);
+                    {
+                        this.state = 220;
+                        this.string();
+                    }
+                    break;
+                case 4:
+                    this.enterOuterAlt(_localctx, 4);
+                    {
+                        this.state = 221;
+                        this.identifier();
+                    }
+                    break;
+                case 5:
+                    this.enterOuterAlt(_localctx, 5);
+                    {
+                        this.state = 222;
+                        this.match(TerraformParser.BOOL);
+                    }
+                    break;
+                case 6:
+                    this.enterOuterAlt(_localctx, 6);
+                    {
+                        this.state = 223;
+                        this.match(TerraformParser.DESCRIPTION);
+                    }
+                    break;
+                case 7:
+                    this.enterOuterAlt(_localctx, 7);
+                    {
+                        this.state = 224;
+                        this.filedecl();
+                    }
+                    break;
+                case 8:
+                    this.enterOuterAlt(_localctx, 8);
+                    {
+                        this.state = 225;
+                        this.functioncall();
+                    }
+                    break;
+                case 9:
+                    this.enterOuterAlt(_localctx, 9);
+                    {
+                        this.state = 226;
+                        this.match(TerraformParser.EOF_);
+                    }
+                    break;
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    functioncall() {
+        let _localctx = new FunctioncallContext(this._ctx, this.state);
+        this.enterRule(_localctx, 46, TerraformParser.RULE_functioncall);
+        try {
+            let _alt;
+            this.state = 243;
+            this._errHandler.sync(this);
+            switch (this._input.LA(1)) {
+                case TerraformParser.IDENTIFIER:
+                    this.enterOuterAlt(_localctx, 1);
+                    {
+                        this.state = 229;
+                        this.functionname();
+                        this.state = 230;
+                        this.match(TerraformParser.LPAREN);
+                        this.state = 231;
+                        this.functionarguments();
+                        this.state = 232;
+                        this.match(TerraformParser.RPAREN);
+                    }
+                    break;
+                case TerraformParser.T__12:
+                    this.enterOuterAlt(_localctx, 2);
+                    {
+                        this.state = 234;
+                        this.match(TerraformParser.T__12);
+                        this.state = 235;
+                        this.match(TerraformParser.LPAREN);
+                        this.state = 239;
+                        this._errHandler.sync(this);
+                        _alt = this.interpreter.adaptivePredict(this._input, 16, this._ctx);
+                        while (_alt !== 1 && _alt !== ATN_1.ATN.INVALID_ALT_NUMBER) {
+                            if (_alt === 1 + 1) {
+                                {
+                                    {
+                                        this.state = 236;
+                                        this.matchWildcard();
+                                    }
+                                }
+                            }
+                            this.state = 241;
+                            this._errHandler.sync(this);
+                            _alt = this.interpreter.adaptivePredict(this._input, 16, this._ctx);
+                        }
+                        this.state = 242;
+                        this.match(TerraformParser.RPAREN);
+                    }
+                    break;
+                default:
+                    throw new NoViableAltException_1.NoViableAltException(this);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    functionname() {
+        let _localctx = new FunctionnameContext(this._ctx, this.state);
+        this.enterRule(_localctx, 48, TerraformParser.RULE_functionname);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 245;
+                this.match(TerraformParser.IDENTIFIER);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    functionarguments() {
+        let _localctx = new FunctionargumentsContext(this._ctx, this.state);
+        this.enterRule(_localctx, 50, TerraformParser.RULE_functionarguments);
+        let _la;
+        try {
+            this.state = 256;
+            this._errHandler.sync(this);
+            switch (this._input.LA(1)) {
+                case TerraformParser.RPAREN:
+                    this.enterOuterAlt(_localctx, 1);
+                    // tslint:disable-next-line:no-empty
+                    {
+                    }
+                    break;
+                case TerraformParser.T__2:
+                case TerraformParser.T__5:
+                case TerraformParser.T__7:
+                case TerraformParser.T__8:
+                case TerraformParser.T__11:
+                case TerraformParser.T__12:
+                case TerraformParser.T__14:
+                case TerraformParser.T__16:
+                case TerraformParser.T__17:
+                case TerraformParser.T__18:
+                case TerraformParser.VARIABLE:
+                case TerraformParser.PROVIDER:
+                case TerraformParser.IN:
+                case TerraformParser.STAR:
+                case TerraformParser.LCURL:
+                case TerraformParser.LPAREN:
+                case TerraformParser.EOF_:
+                case TerraformParser.NULL_:
+                case TerraformParser.NATURAL_NUMBER:
+                case TerraformParser.BOOL:
+                case TerraformParser.DESCRIPTION:
+                case TerraformParser.MULTILINESTRING:
+                case TerraformParser.STRING:
+                case TerraformParser.IDENTIFIER:
+                    this.enterOuterAlt(_localctx, 2);
+                    {
+                        this.state = 248;
+                        this.expression(0);
+                        this.state = 253;
+                        this._errHandler.sync(this);
+                        _la = this._input.LA(1);
+                        while (_la === TerraformParser.T__13) {
+                            {
+                                {
+                                    this.state = 249;
+                                    this.match(TerraformParser.T__13);
+                                    this.state = 250;
+                                    this.expression(0);
+                                }
+                            }
+                            this.state = 255;
+                            this._errHandler.sync(this);
+                            _la = this._input.LA(1);
+                        }
+                    }
+                    break;
+                default:
+                    throw new NoViableAltException_1.NoViableAltException(this);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    index() {
+        let _localctx = new IndexContext(this._ctx, this.state);
+        this.enterRule(_localctx, 52, TerraformParser.RULE_index);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 258;
+                this.match(TerraformParser.T__14);
+                this.state = 259;
+                this.expression(0);
+                this.state = 260;
+                this.match(TerraformParser.T__15);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    filedecl() {
+        let _localctx = new FiledeclContext(this._ctx, this.state);
+        this.enterRule(_localctx, 54, TerraformParser.RULE_filedecl);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 262;
+                this.match(TerraformParser.T__16);
+                this.state = 263;
+                this.match(TerraformParser.LPAREN);
+                this.state = 264;
+                this.expression(0);
+                this.state = 265;
+                this.match(TerraformParser.RPAREN);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    list_() {
+        let _localctx = new List_Context(this._ctx, this.state);
+        this.enterRule(_localctx, 56, TerraformParser.RULE_list_);
+        let _la;
+        try {
+            let _alt;
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 267;
+                this.match(TerraformParser.T__14);
+                this.state = 279;
+                this._errHandler.sync(this);
+                _la = this._input.LA(1);
+                if ((((_la) & ~0x1F) === 0 && ((1 << _la) & ((1 << TerraformParser.T__2) | (1 << TerraformParser.T__5) | (1 << TerraformParser.T__7) | (1 << TerraformParser.T__8) | (1 << TerraformParser.T__11) | (1 << TerraformParser.T__12) | (1 << TerraformParser.T__14) | (1 << TerraformParser.T__16) | (1 << TerraformParser.T__17) | (1 << TerraformParser.T__18) | (1 << TerraformParser.VARIABLE) | (1 << TerraformParser.PROVIDER))) !== 0) || ((((_la - 32)) & ~0x1F) === 0 && ((1 << (_la - 32)) & ((1 << (TerraformParser.IN - 32)) | (1 << (TerraformParser.STAR - 32)) | (1 << (TerraformParser.LCURL - 32)) | (1 << (TerraformParser.LPAREN - 32)) | (1 << (TerraformParser.EOF_ - 32)) | (1 << (TerraformParser.NULL_ - 32)) | (1 << (TerraformParser.NATURAL_NUMBER - 32)) | (1 << (TerraformParser.BOOL - 32)) | (1 << (TerraformParser.DESCRIPTION - 32)) | (1 << (TerraformParser.MULTILINESTRING - 32)) | (1 << (TerraformParser.STRING - 32)) | (1 << (TerraformParser.IDENTIFIER - 32)))) !== 0)) {
+                    {
+                        this.state = 268;
+                        this.expression(0);
+                        this.state = 273;
+                        this._errHandler.sync(this);
+                        _alt = this.interpreter.adaptivePredict(this._input, 20, this._ctx);
+                        while (_alt !== 2 && _alt !== ATN_1.ATN.INVALID_ALT_NUMBER) {
+                            if (_alt === 1) {
+                                {
+                                    {
+                                        this.state = 269;
+                                        this.match(TerraformParser.T__13);
+                                        this.state = 270;
+                                        this.expression(0);
+                                    }
+                                }
+                            }
+                            this.state = 275;
+                            this._errHandler.sync(this);
+                            _alt = this.interpreter.adaptivePredict(this._input, 20, this._ctx);
+                        }
+                        this.state = 277;
+                        this._errHandler.sync(this);
+                        _la = this._input.LA(1);
+                        if (_la === TerraformParser.T__13) {
+                            {
+                                this.state = 276;
+                                this.match(TerraformParser.T__13);
+                            }
+                        }
+                    }
+                }
+                this.state = 281;
+                this.match(TerraformParser.T__15);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    map_() {
+        let _localctx = new Map_Context(this._ctx, this.state);
+        this.enterRule(_localctx, 58, TerraformParser.RULE_map_);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 283;
+                this.match(TerraformParser.LCURL);
+                this.state = 290;
+                this._errHandler.sync(this);
+                _la = this._input.LA(1);
+                while ((((_la) & ~0x1F) === 0 && ((1 << _la) & ((1 << TerraformParser.T__2) | (1 << TerraformParser.T__5) | (1 << TerraformParser.T__7) | (1 << TerraformParser.T__8) | (1 << TerraformParser.VARIABLE) | (1 << TerraformParser.PROVIDER))) !== 0) || ((((_la - 32)) & ~0x1F) === 0 && ((1 << (_la - 32)) & ((1 << (TerraformParser.IN - 32)) | (1 << (TerraformParser.STAR - 32)) | (1 << (TerraformParser.NATURAL_NUMBER - 32)) | (1 << (TerraformParser.IDENTIFIER - 32)))) !== 0)) {
+                    {
+                        {
+                            this.state = 284;
+                            this.argument();
+                            this.state = 286;
+                            this._errHandler.sync(this);
+                            _la = this._input.LA(1);
+                            if (_la === TerraformParser.T__13) {
+                                {
+                                    this.state = 285;
+                                    this.match(TerraformParser.T__13);
+                                }
+                            }
+                        }
+                    }
+                    this.state = 292;
+                    this._errHandler.sync(this);
+                    _la = this._input.LA(1);
+                }
+                this.state = 293;
+                this.match(TerraformParser.RCURL);
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    string() {
+        let _localctx = new StringContext(this._ctx, this.state);
+        this.enterRule(_localctx, 60, TerraformParser.RULE_string);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 295;
+                _la = this._input.LA(1);
+                if (!(_la === TerraformParser.MULTILINESTRING || _la === TerraformParser.STRING)) {
+                    this._errHandler.recoverInline(this);
+                }
+                else {
+                    if (this._input.LA(1) === Token_1.Token.EOF) {
+                        this.matchedEOF = true;
+                    }
+                    this._errHandler.reportMatch(this);
+                    this.consume();
+                }
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    signed_number() {
+        let _localctx = new Signed_numberContext(this._ctx, this.state);
+        this.enterRule(_localctx, 62, TerraformParser.RULE_signed_number);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 298;
+                this._errHandler.sync(this);
+                _la = this._input.LA(1);
+                if (_la === TerraformParser.T__17 || _la === TerraformParser.T__18) {
+                    {
+                        this.state = 297;
+                        _la = this._input.LA(1);
+                        if (!(_la === TerraformParser.T__17 || _la === TerraformParser.T__18)) {
+                            this._errHandler.recoverInline(this);
+                        }
+                        else {
+                            if (this._input.LA(1) === Token_1.Token.EOF) {
+                                this.matchedEOF = true;
+                            }
+                            this._errHandler.reportMatch(this);
+                            this.consume();
+                        }
+                    }
+                }
+                this.state = 300;
+                this.number();
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    operator_() {
+        let _localctx = new Operator_Context(this._ctx, this.state);
+        this.enterRule(_localctx, 64, TerraformParser.RULE_operator_);
+        let _la;
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 302;
+                _la = this._input.LA(1);
+                if (!(((((_la - 18)) & ~0x1F) === 0 && ((1 << (_la - 18)) & ((1 << (TerraformParser.T__17 - 18)) | (1 << (TerraformParser.T__18 - 18)) | (1 << (TerraformParser.T__19 - 18)) | (1 << (TerraformParser.T__20 - 18)) | (1 << (TerraformParser.T__21 - 18)) | (1 << (TerraformParser.T__22 - 18)) | (1 << (TerraformParser.T__23 - 18)) | (1 << (TerraformParser.T__24 - 18)) | (1 << (TerraformParser.T__25 - 18)) | (1 << (TerraformParser.T__26 - 18)) | (1 << (TerraformParser.T__27 - 18)) | (1 << (TerraformParser.T__28 - 18)) | (1 << (TerraformParser.STAR - 18)))) !== 0))) {
+                    this._errHandler.recoverInline(this);
+                }
+                else {
+                    if (this._input.LA(1) === Token_1.Token.EOF) {
+                        this.matchedEOF = true;
+                    }
+                    this._errHandler.reportMatch(this);
+                    this.consume();
+                }
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    // @RuleVersion(0)
+    number() {
+        let _localctx = new NumberContext(this._ctx, this.state);
+        this.enterRule(_localctx, 66, TerraformParser.RULE_number);
+        try {
+            this.enterOuterAlt(_localctx, 1);
+            {
+                this.state = 304;
+                this.match(TerraformParser.NATURAL_NUMBER);
+                this.state = 307;
+                this._errHandler.sync(this);
+                switch (this.interpreter.adaptivePredict(this._input, 26, this._ctx)) {
+                    case 1:
+                        {
+                            this.state = 305;
+                            this.match(TerraformParser.DOT);
+                            this.state = 306;
+                            this.match(TerraformParser.NATURAL_NUMBER);
+                        }
+                        break;
+                }
+            }
+        }
+        catch (re) {
+            if (re instanceof RecognitionException_1.RecognitionException) {
+                _localctx.exception = re;
+                this._errHandler.reportError(this, re);
+                this._errHandler.recover(this, re);
+            }
+            else {
+                throw re;
+            }
+        }
+        finally {
+            this.exitRule();
+        }
+        return _localctx;
+    }
+    sempred(_localctx, ruleIndex, predIndex) {
+        switch (ruleIndex) {
+            case 19:
+                return this.expression_sempred(_localctx, predIndex);
+        }
+        return true;
+    }
+    expression_sempred(_localctx, predIndex) {
+        switch (predIndex) {
+            case 0:
+                return this.precpred(this._ctx, 4);
+            case 1:
+                return this.precpred(this._ctx, 2);
+        }
+        return true;
+    }
+    static get _ATN() {
+        if (!TerraformParser.__ATN) {
+            TerraformParser.__ATN = new ATNDeserializer_1.ATNDeserializer().deserialize(Utils.toCharArray(TerraformParser._serializedATN));
+        }
+        return TerraformParser.__ATN;
+    }
+}
+exports.TerraformParser = TerraformParser;
+TerraformParser.T__0 = 1;
+TerraformParser.T__1 = 2;
+TerraformParser.T__2 = 3;
+TerraformParser.T__3 = 4;
+TerraformParser.T__4 = 5;
+TerraformParser.T__5 = 6;
+TerraformParser.T__6 = 7;
+TerraformParser.T__7 = 8;
+TerraformParser.T__8 = 9;
+TerraformParser.T__9 = 10;
+TerraformParser.T__10 = 11;
+TerraformParser.T__11 = 12;
+TerraformParser.T__12 = 13;
+TerraformParser.T__13 = 14;
+TerraformParser.T__14 = 15;
+TerraformParser.T__15 = 16;
+TerraformParser.T__16 = 17;
+TerraformParser.T__17 = 18;
+TerraformParser.T__18 = 19;
+TerraformParser.T__19 = 20;
+TerraformParser.T__20 = 21;
+TerraformParser.T__21 = 22;
+TerraformParser.T__22 = 23;
+TerraformParser.T__23 = 24;
+TerraformParser.T__24 = 25;
+TerraformParser.T__25 = 26;
+TerraformParser.T__26 = 27;
+TerraformParser.T__27 = 28;
+TerraformParser.T__28 = 29;
+TerraformParser.VARIABLE = 30;
+TerraformParser.PROVIDER = 31;
+TerraformParser.IN = 32;
+TerraformParser.STAR = 33;
+TerraformParser.DOT = 34;
+TerraformParser.LCURL = 35;
+TerraformParser.RCURL = 36;
+TerraformParser.LPAREN = 37;
+TerraformParser.RPAREN = 38;
+TerraformParser.EOF_ = 39;
+TerraformParser.NULL_ = 40;
+TerraformParser.NATURAL_NUMBER = 41;
+TerraformParser.BOOL = 42;
+TerraformParser.DESCRIPTION = 43;
+TerraformParser.MULTILINESTRING = 44;
+TerraformParser.STRING = 45;
+TerraformParser.IDENTIFIER = 46;
+TerraformParser.COMMENT = 47;
+TerraformParser.BLOCKCOMMENT = 48;
+TerraformParser.WS = 49;
+TerraformParser.RULE_file_ = 0;
+TerraformParser.RULE_terraform = 1;
+TerraformParser.RULE_resource = 2;
+TerraformParser.RULE_data = 3;
+TerraformParser.RULE_provider = 4;
+TerraformParser.RULE_output = 5;
+TerraformParser.RULE_local = 6;
+TerraformParser.RULE_module = 7;
+TerraformParser.RULE_variable = 8;
+TerraformParser.RULE_block = 9;
+TerraformParser.RULE_blocktype = 10;
+TerraformParser.RULE_resourcetype = 11;
+TerraformParser.RULE_name = 12;
+TerraformParser.RULE_label = 13;
+TerraformParser.RULE_blockbody = 14;
+TerraformParser.RULE_argument = 15;
+TerraformParser.RULE_identifier = 16;
+TerraformParser.RULE_identifierchain = 17;
+TerraformParser.RULE_inline_index = 18;
+TerraformParser.RULE_expression = 19;
+TerraformParser.RULE_forloop = 20;
+TerraformParser.RULE_section = 21;
+TerraformParser.RULE_val = 22;
+TerraformParser.RULE_functioncall = 23;
+TerraformParser.RULE_functionname = 24;
+TerraformParser.RULE_functionarguments = 25;
+TerraformParser.RULE_index = 26;
+TerraformParser.RULE_filedecl = 27;
+TerraformParser.RULE_list_ = 28;
+TerraformParser.RULE_map_ = 29;
+TerraformParser.RULE_string = 30;
+TerraformParser.RULE_signed_number = 31;
+TerraformParser.RULE_operator_ = 32;
+TerraformParser.RULE_number = 33;
+// tslint:disable:no-trailing-whitespace
+TerraformParser.ruleNames = [
+    "file_", "terraform", "resource", "data", "provider", "output", "local",
+    "module", "variable", "block", "blocktype", "resourcetype", "name", "label",
+    "blockbody", "argument", "identifier", "identifierchain", "inline_index",
+    "expression", "forloop", "section", "val", "functioncall", "functionname",
+    "functionarguments", "index", "filedecl", "list_", "map_", "string", "signed_number",
+    "operator_", "number",
+];
+TerraformParser._LITERAL_NAMES = [
+    undefined, "'terraform'", "'resource'", "'data'", "'output'", "'locals'",
+    "'module'", "'='", "'local'", "'var'", "'?'", "':'", "'for'", "'jsonencode'",
+    "','", "'['", "']'", "'file'", "'+'", "'-'", "'/'", "'%'", "'>'", "'>='",
+    "'<'", "'<='", "'=='", "'!='", "'&&'", "'||'", "'variable'", "'provider'",
+    "'in'", "'*'", "'.'", "'{'", "'}'", "'('", "')'", undefined, "'nul'",
+];
+TerraformParser._SYMBOLIC_NAMES = [
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, "VARIABLE", "PROVIDER", "IN", "STAR", "DOT", "LCURL",
+    "RCURL", "LPAREN", "RPAREN", "EOF_", "NULL_", "NATURAL_NUMBER", "BOOL",
+    "DESCRIPTION", "MULTILINESTRING", "STRING", "IDENTIFIER", "COMMENT", "BLOCKCOMMENT",
+    "WS",
+];
+TerraformParser.VOCABULARY = new VocabularyImpl_1.VocabularyImpl(TerraformParser._LITERAL_NAMES, TerraformParser._SYMBOLIC_NAMES, []);
+TerraformParser._serializedATN = "\x03\uC91D\uCABA\u058D\uAFBA\u4F53\u0607\uEA8B\uC241\x033\u0138\x04\x02" +
+    "\t\x02\x04\x03\t\x03\x04\x04\t\x04\x04\x05\t\x05\x04\x06\t\x06\x04\x07" +
+    "\t\x07\x04\b\t\b\x04\t\t\t\x04\n\t\n\x04\v\t\v\x04\f\t\f\x04\r\t\r\x04" +
+    "\x0E\t\x0E\x04\x0F\t\x0F\x04\x10\t\x10\x04\x11\t\x11\x04\x12\t\x12\x04" +
+    "\x13\t\x13\x04\x14\t\x14\x04\x15\t\x15\x04\x16\t\x16\x04\x17\t\x17\x04" +
+    "\x18\t\x18\x04\x19\t\x19\x04\x1A\t\x1A\x04\x1B\t\x1B\x04\x1C\t\x1C\x04" +
+    "\x1D\t\x1D\x04\x1E\t\x1E\x04\x1F\t\x1F\x04 \t \x04!\t!\x04\"\t\"\x04#" +
+    "\t#\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x03\x02\x06" +
+    "\x02O\n\x02\r\x02\x0E\x02P\x03\x02\x03\x02\x03\x03\x03\x03\x03\x03\x03" +
+    "\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x05\x03\x05\x03\x05\x03\x05\x03" +
+    "\x05\x03\x06\x03\x06\x03\x06\x03\x06\x03\x07\x03\x07\x03\x07\x03\x07\x03" +
+    "\b\x03\b\x03\b\x03\t\x03\t\x03\t\x03\t\x03\n\x03\n\x03\n\x03\n\x03\v\x03" +
+    "\v\x07\vw\n\v\f\v\x0E\vz\v\v\x03\v\x03\v\x03\f\x03\f\x03\r\x03\r\x03\x0E" +
+    "\x03\x0E\x03\x0F\x03\x0F\x03\x10\x03\x10\x03\x10\x07\x10\x89\n\x10\f\x10" +
+    "\x0E\x10\x8C\v\x10\x03\x10\x03\x10\x03\x11\x03\x11\x03\x11\x03\x11\x03" +
+    "\x12\x03\x12\x05\x12\x96\n\x12\x03\x12\x03\x12\x03\x13\x03\x13\x05\x13" +
+    "\x9C\n\x13\x03\x13\x03\x13\x07\x13\xA0\n\x13\f\x13\x0E\x13\xA3\v\x13\x03" +
+    "\x13\x03\x13\x03\x13\x07\x13\xA8\n\x13\f\x13\x0E\x13\xAB\v\x13\x03\x13" +
+    "\x03\x13\x03\x13\x07\x13\xB0\n\x13\f\x13\x0E\x13\xB3\v\x13\x05\x13\xB5" +
+    "\n\x13\x03\x14\x03\x14\x03\x15\x03\x15\x03\x15\x03\x15\x03\x15\x03\x15" +
+    "\x03\x15\x05\x15\xC0\n\x15\x03\x15\x03\x15\x03\x15\x03\x15\x03\x15\x03" +
+    "\x15\x03\x15\x03\x15\x03\x15\x03\x15\x07\x15\xCC\n\x15\f\x15\x0E\x15\xCF" +
+    "\v\x15\x03\x16\x03\x16\x03\x16\x03\x16\x03\x16\x03\x16\x03\x16\x03\x17" +
+    "\x03\x17\x03\x17\x05\x17\xDB\n\x17\x03\x18\x03\x18\x03\x18\x03\x18\x03" +
+    "\x18\x03\x18\x03\x18\x03\x18\x03\x18\x05\x18\xE6\n\x18\x03\x19\x03\x19" +
+    "\x03\x19\x03\x19\x03\x19\x03\x19\x03\x19\x03\x19\x07\x19\xF0\n\x19\f\x19" +
+    "\x0E\x19\xF3\v\x19\x03\x19\x05\x19\xF6\n\x19\x03\x1A\x03\x1A\x03\x1B\x03" +
+    "\x1B\x03\x1B\x03\x1B\x07\x1B\xFE\n\x1B\f\x1B\x0E\x1B\u0101\v\x1B\x05\x1B" +
+    "\u0103\n\x1B\x03\x1C\x03\x1C\x03\x1C\x03\x1C\x03\x1D\x03\x1D\x03\x1D\x03" +
+    "\x1D\x03\x1D\x03\x1E\x03\x1E\x03\x1E\x03\x1E\x07\x1E\u0112\n\x1E\f\x1E" +
+    "\x0E\x1E\u0115\v\x1E\x03\x1E\x05\x1E\u0118\n\x1E\x05\x1E\u011A\n\x1E\x03" +
+    "\x1E\x03\x1E\x03\x1F\x03\x1F\x03\x1F\x05\x1F\u0121\n\x1F\x07\x1F\u0123" +
+    "\n\x1F\f\x1F\x0E\x1F\u0126\v\x1F\x03\x1F\x03\x1F\x03 \x03 \x03!\x05!\u012D" +
+    "\n!\x03!\x03!\x03\"\x03\"\x03#\x03#\x03#\x05#\u0136\n#\x03#\x03\xF1\x02" +
+    "\x03($\x02\x02\x04\x02\x06\x02\b\x02\n\x02\f\x02\x0E\x02\x10\x02\x12\x02" +
+    "\x14\x02\x16\x02\x18\x02\x1A\x02\x1C\x02\x1E\x02 \x02\"\x02$\x02&\x02" +
+    "(\x02*\x02,\x02.\x020\x022\x024\x026\x028\x02:\x02<\x02>\x02@\x02B\x02" +
+    "D\x02\x02\x07\x05\x02\x05\x05\b\b\n\v\x04\x02 \"00\x03\x02./\x03\x02\x14" +
+    "\x15\x04\x02\x14\x1F##\x02\u0140\x02N\x03\x02\x02\x02\x04T\x03\x02\x02" +
+    "\x02\x06W\x03\x02\x02\x02\b\\\x03\x02\x02\x02\na\x03\x02\x02\x02\fe\x03" +
+    "\x02\x02\x02\x0Ei\x03\x02\x02\x02\x10l\x03\x02\x02\x02\x12p\x03\x02\x02" +
+    "\x02\x14t\x03\x02\x02\x02\x16}\x03\x02\x02\x02\x18\x7F\x03\x02\x02\x02" +
+    "\x1A\x81\x03\x02\x02\x02\x1C\x83\x03\x02\x02\x02\x1E\x85\x03\x02\x02\x02" +
+    " \x8F\x03\x02\x02\x02\"\x95\x03\x02\x02\x02$\xB4\x03\x02\x02\x02&\xB6" +
+    "\x03\x02\x02\x02(\xBF\x03\x02\x02\x02*\xD0\x03\x02\x02\x02,\xDA\x03\x02" +
+    "\x02\x02.\xE5\x03\x02\x02\x020\xF5\x03\x02\x02\x022\xF7\x03\x02\x02\x02" +
+    "4\u0102\x03\x02\x02\x026\u0104\x03\x02\x02\x028\u0108\x03\x02\x02\x02" +
+    ":\u010D\x03\x02\x02\x02<\u011D\x03\x02\x02\x02>\u0129\x03\x02\x02\x02" +
+    "@\u012C\x03\x02\x02\x02B\u0130\x03\x02\x02\x02D\u0132\x03\x02\x02\x02" +
+    "FO\x05\x0E\b\x02GO\x05\x10\t\x02HO\x05\f\x07\x02IO\x05\n\x06\x02JO\x05" +
+    "\x12\n\x02KO\x05\b\x05\x02LO\x05\x06\x04\x02MO\x05\x04\x03\x02NF\x03\x02" +
+    "\x02\x02NG\x03\x02\x02\x02NH\x03\x02\x02\x02NI\x03\x02\x02\x02NJ\x03\x02" +
+    "\x02\x02NK\x03\x02\x02\x02NL\x03\x02\x02\x02NM\x03\x02\x02\x02OP\x03\x02" +
+    "\x02\x02PN\x03\x02\x02\x02PQ\x03\x02\x02\x02QR\x03\x02\x02\x02RS\x07\x02" +
+    "\x02\x03S\x03\x03\x02\x02\x02TU\x07\x03\x02\x02UV\x05\x1E\x10\x02V\x05" +
+    "\x03\x02\x02\x02WX\x07\x04\x02\x02XY\x05\x18\r\x02YZ\x05\x1A\x0E\x02Z" +
+    "[\x05\x1E\x10\x02[\x07\x03\x02\x02\x02\\]\x07\x05\x02\x02]^\x05\x18\r" +
+    "\x02^_\x05\x1A\x0E\x02_`\x05\x1E\x10\x02`\t\x03\x02\x02\x02ab\x07!\x02" +
+    "\x02bc\x05\x18\r\x02cd\x05\x1E\x10\x02d\v\x03\x02\x02\x02ef\x07\x06\x02" +
+    "\x02fg\x05\x1A\x0E\x02gh\x05\x1E\x10\x02h\r\x03\x02\x02\x02ij\x07\x07" +
+    "\x02\x02jk\x05\x1E\x10\x02k\x0F\x03\x02\x02\x02lm\x07\b\x02\x02mn\x05" +
+    "\x1A\x0E\x02no\x05\x1E\x10\x02o\x11\x03\x02\x02\x02pq\x07 \x02\x02qr\x05" +
+    "\x1A\x0E\x02rs\x05\x1E\x10\x02s\x13\x03\x02\x02\x02tx\x05\x16\f\x02uw" +
+    "\x05\x1C\x0F\x02vu\x03\x02\x02\x02wz\x03\x02\x02\x02xv\x03\x02\x02\x02" +
+    "xy\x03\x02\x02\x02y{\x03\x02\x02\x02zx\x03\x02\x02\x02{|\x05\x1E\x10\x02" +
+    "|\x15\x03\x02\x02\x02}~\x070\x02\x02~\x17\x03\x02\x02\x02\x7F\x80\x07" +
+    "/\x02\x02\x80\x19\x03\x02\x02\x02\x81\x82\x07/\x02\x02\x82\x1B\x03\x02" +
+    "\x02\x02\x83\x84\x07/\x02\x02\x84\x1D\x03\x02\x02\x02\x85\x8A\x07%\x02" +
+    "\x02\x86\x89\x05 \x11\x02\x87\x89\x05\x14\v\x02\x88\x86\x03\x02\x02\x02" +
+    "\x88\x87\x03\x02\x02\x02\x89\x8C\x03\x02\x02\x02\x8A\x88\x03\x02\x02\x02" +
+    "\x8A\x8B\x03\x02\x02\x02\x8B\x8D\x03\x02\x02\x02\x8C\x8A\x03\x02\x02\x02" +
+    "\x8D\x8E\x07&\x02\x02\x8E\x1F\x03\x02\x02\x02\x8F\x90\x05\"\x12\x02\x90" +
+    "\x91\x07\t\x02\x02\x91\x92\x05(\x15\x02\x92!\x03\x02\x02\x02\x93\x94\t" +
+    "\x02\x02\x02\x94\x96\x07$\x02\x02\x95\x93\x03\x02\x02\x02\x95\x96\x03" +
+    "\x02\x02\x02\x96\x97\x03\x02\x02\x02\x97\x98\x05$\x13\x02\x98#\x03\x02" +
+    "\x02\x02\x99\x9B\t\x03\x02\x02\x9A\x9C\x056\x1C\x02\x9B\x9A\x03\x02\x02" +
+    "\x02\x9B\x9C\x03\x02\x02\x02\x9C\xA1\x03\x02\x02\x02\x9D\x9E\x07$\x02" +
+    "\x02\x9E\xA0\x05$\x13\x02\x9F\x9D\x03\x02\x02\x02\xA0\xA3\x03\x02\x02" +
+    "\x02\xA1\x9F\x03\x02\x02\x02\xA1\xA2\x03\x02\x02\x02\xA2\xB5\x03\x02\x02" +
+    "\x02\xA3\xA1\x03\x02\x02\x02\xA4\xA9\x07#\x02\x02\xA5\xA6\x07$\x02\x02" +
+    "\xA6\xA8\x05$\x13\x02\xA7\xA5\x03\x02\x02\x02\xA8\xAB\x03\x02\x02\x02" +
+    "\xA9\xA7\x03\x02\x02\x02\xA9\xAA\x03\x02\x02\x02\xAA\xB5\x03\x02\x02\x02" +
+    "\xAB\xA9\x03\x02\x02\x02\xAC\xB1\x05&\x14\x02\xAD\xAE\x07$\x02\x02\xAE" +
+    "\xB0\x05$\x13\x02\xAF\xAD\x03\x02\x02\x02\xB0\xB3\x03\x02\x02\x02\xB1" +
+    "\xAF\x03\x02\x02\x02\xB1\xB2\x03\x02\x02\x02\xB2\xB5\x03\x02\x02\x02\xB3" +
+    "\xB1\x03\x02\x02\x02\xB4\x99\x03\x02\x02\x02\xB4\xA4\x03\x02\x02\x02\xB4" +
+    "\xAC\x03\x02\x02\x02\xB5%\x03\x02\x02\x02\xB6\xB7\x07+\x02\x02\xB7\'\x03" +
+    "\x02\x02\x02\xB8\xB9\b\x15\x01\x02\xB9\xC0\x05,\x17\x02\xBA\xBB\x07\'" +
+    "\x02\x02\xBB\xBC\x05(\x15\x02\xBC\xBD\x07(\x02\x02\xBD\xC0\x03\x02\x02" +
+    "\x02\xBE\xC0\x05*\x16\x02\xBF\xB8\x03\x02\x02\x02\xBF\xBA\x03\x02\x02" +
+    "\x02\xBF\xBE\x03\x02\x02\x02\xC0\xCD\x03\x02\x02\x02\xC1\xC2\f\x06\x02" +
+    "\x02\xC2\xC3\x05B\"\x02\xC3\xC4\x05(\x15\x07\xC4\xCC\x03\x02\x02\x02\xC5" +
+    "\xC6\f\x04\x02\x02\xC6\xC7\x07\f\x02\x02\xC7\xC8\x05(\x15\x02\xC8\xC9" +
+    "\x07\r\x02\x02\xC9\xCA\x05(\x15\x05\xCA\xCC\x03\x02\x02\x02\xCB\xC1\x03" +
+    "\x02\x02\x02\xCB\xC5\x03\x02\x02\x02\xCC\xCF\x03\x02\x02\x02\xCD\xCB\x03" +
+    "\x02\x02\x02\xCD\xCE\x03\x02\x02\x02\xCE)\x03\x02\x02\x02\xCF\xCD\x03" +
+    "\x02\x02\x02\xD0\xD1\x07\x0E\x02\x02\xD1\xD2\x05\"\x12\x02\xD2\xD3\x07" +
+    "\"\x02\x02\xD3\xD4\x05(\x15\x02\xD4\xD5\x07\r\x02\x02\xD5\xD6\x05(\x15" +
+    "\x02\xD6+\x03\x02\x02\x02\xD7\xDB\x05:\x1E\x02\xD8\xDB\x05<\x1F\x02\xD9" +
+    "\xDB\x05.\x18\x02\xDA\xD7\x03\x02\x02\x02\xDA\xD8\x03\x02\x02\x02\xDA" +
+    "\xD9\x03\x02\x02\x02\xDB-\x03\x02\x02\x02\xDC\xE6\x07*\x02\x02\xDD\xE6" +
+    "\x05@!\x02\xDE\xE6\x05> \x02\xDF\xE6\x05\"\x12\x02\xE0\xE6\x07,\x02\x02" +
+    "\xE1\xE6\x07-\x02\x02\xE2\xE6\x058\x1D\x02\xE3\xE6\x050\x19\x02\xE4\xE6" +
+    "\x07)\x02\x02\xE5\xDC\x03\x02\x02\x02\xE5\xDD\x03\x02\x02\x02\xE5\xDE" +
+    "\x03\x02\x02\x02\xE5\xDF\x03\x02\x02\x02\xE5\xE0\x03\x02\x02\x02\xE5\xE1" +
+    "\x03\x02\x02\x02\xE5\xE2\x03\x02\x02\x02\xE5\xE3\x03\x02\x02\x02\xE5\xE4" +
+    "\x03\x02\x02\x02\xE6/\x03\x02\x02\x02\xE7\xE8\x052\x1A\x02\xE8\xE9\x07" +
+    "\'\x02\x02\xE9\xEA\x054\x1B\x02\xEA\xEB\x07(\x02\x02\xEB\xF6\x03\x02\x02" +
+    "\x02\xEC\xED\x07\x0F\x02\x02\xED\xF1\x07\'\x02\x02\xEE\xF0\v\x02\x02\x02" +
+    "\xEF\xEE\x03\x02\x02\x02\xF0\xF3\x03\x02\x02\x02\xF1\xF2\x03\x02\x02\x02" +
+    "\xF1\xEF\x03\x02\x02\x02\xF2\xF4\x03\x02\x02\x02\xF3\xF1\x03\x02\x02\x02" +
+    "\xF4\xF6\x07(\x02\x02\xF5\xE7\x03\x02\x02\x02\xF5\xEC\x03\x02\x02\x02" +
+    "\xF61\x03\x02\x02\x02\xF7\xF8\x070\x02\x02\xF83\x03\x02\x02\x02\xF9\u0103" +
+    "\x03\x02\x02\x02\xFA\xFF\x05(\x15\x02\xFB\xFC\x07\x10\x02\x02\xFC\xFE" +
+    "\x05(\x15\x02\xFD\xFB\x03\x02\x02\x02\xFE\u0101\x03\x02\x02\x02\xFF\xFD" +
+    "\x03\x02\x02\x02\xFF\u0100\x03\x02\x02\x02\u0100\u0103\x03\x02\x02\x02" +
+    "\u0101\xFF\x03\x02\x02\x02\u0102\xF9\x03\x02\x02\x02\u0102\xFA\x03\x02" +
+    "\x02\x02\u01035\x03\x02\x02\x02\u0104\u0105\x07\x11\x02\x02\u0105\u0106" +
+    "\x05(\x15\x02\u0106\u0107\x07\x12\x02\x02\u01077\x03\x02\x02\x02\u0108" +
+    "\u0109\x07\x13\x02\x02\u0109\u010A\x07\'\x02\x02\u010A\u010B\x05(\x15" +
+    "\x02\u010B\u010C\x07(\x02\x02\u010C9\x03\x02\x02\x02\u010D\u0119\x07\x11" +
+    "\x02\x02\u010E\u0113\x05(\x15\x02\u010F\u0110\x07\x10\x02\x02\u0110\u0112" +
+    "\x05(\x15\x02\u0111\u010F\x03\x02\x02\x02\u0112\u0115\x03\x02\x02\x02" +
+    "\u0113\u0111\x03\x02\x02\x02\u0113\u0114\x03\x02\x02\x02\u0114\u0117\x03" +
+    "\x02\x02\x02\u0115\u0113\x03\x02\x02\x02\u0116\u0118\x07\x10\x02\x02\u0117" +
+    "\u0116\x03\x02\x02\x02\u0117\u0118\x03\x02\x02\x02\u0118\u011A\x03\x02" +
+    "\x02\x02\u0119\u010E\x03\x02\x02\x02\u0119\u011A\x03\x02\x02\x02\u011A" +
+    "\u011B\x03\x02\x02\x02\u011B\u011C\x07\x12\x02\x02\u011C;\x03\x02\x02" +
+    "\x02\u011D\u0124\x07%\x02\x02\u011E\u0120\x05 \x11\x02\u011F\u0121\x07" +
+    "\x10\x02\x02\u0120\u011F\x03\x02\x02\x02\u0120\u0121\x03\x02\x02\x02\u0121" +
+    "\u0123\x03\x02\x02\x02\u0122\u011E\x03\x02\x02\x02\u0123\u0126\x03\x02" +
+    "\x02\x02\u0124\u0122\x03\x02\x02\x02\u0124\u0125\x03\x02\x02\x02\u0125" +
+    "\u0127\x03\x02\x02\x02\u0126\u0124\x03\x02\x02\x02\u0127\u0128\x07&\x02" +
+    "\x02\u0128=\x03\x02\x02\x02\u0129\u012A\t\x04\x02\x02\u012A?\x03\x02\x02" +
+    "\x02\u012B\u012D\t\x05\x02\x02\u012C\u012B\x03\x02\x02\x02\u012C\u012D" +
+    "\x03\x02\x02\x02\u012D\u012E\x03\x02\x02\x02\u012E\u012F\x05D#\x02\u012F" +
+    "A\x03\x02\x02\x02\u0130\u0131\t\x06\x02\x02\u0131C\x03\x02\x02\x02\u0132" +
+    "\u0135\x07+\x02\x02\u0133\u0134\x07$\x02\x02\u0134\u0136\x07+\x02\x02" +
+    "\u0135\u0133\x03\x02\x02\x02\u0135\u0136\x03\x02\x02\x02\u0136E\x03\x02" +
+    "\x02\x02\x1DNPx\x88\x8A\x95\x9B\xA1\xA9\xB1\xB4\xBF\xCB\xCD\xDA\xE5\xF1" +
+    "\xF5\xFF\u0102\u0113\u0117\u0119\u0120\u0124\u012C\u0135";
+class File_Context extends ParserRuleContext_1.ParserRuleContext {
+    EOF() { return this.getToken(TerraformParser.EOF, 0); }
+    local(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(LocalContext);
+        }
+        else {
+            return this.getRuleContext(i, LocalContext);
+        }
+    }
+    module(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ModuleContext);
+        }
+        else {
+            return this.getRuleContext(i, ModuleContext);
+        }
+    }
+    output(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(OutputContext);
+        }
+        else {
+            return this.getRuleContext(i, OutputContext);
+        }
+    }
+    provider(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ProviderContext);
+        }
+        else {
+            return this.getRuleContext(i, ProviderContext);
+        }
+    }
+    variable(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(VariableContext);
+        }
+        else {
+            return this.getRuleContext(i, VariableContext);
+        }
+    }
+    data(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(DataContext);
+        }
+        else {
+            return this.getRuleContext(i, DataContext);
+        }
+    }
+    resource(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ResourceContext);
+        }
+        else {
+            return this.getRuleContext(i, ResourceContext);
+        }
+    }
+    terraform(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(TerraformContext);
+        }
+        else {
+            return this.getRuleContext(i, TerraformContext);
+        }
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_file_; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterFile_) {
+            listener.enterFile_(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitFile_) {
+            listener.exitFile_(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitFile_) {
+            return visitor.visitFile_(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.File_Context = File_Context;
+class TerraformContext extends ParserRuleContext_1.ParserRuleContext {
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_terraform; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterTerraform) {
+            listener.enterTerraform(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitTerraform) {
+            listener.exitTerraform(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitTerraform) {
+            return visitor.visitTerraform(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.TerraformContext = TerraformContext;
+class ResourceContext extends ParserRuleContext_1.ParserRuleContext {
+    resourcetype() {
+        return this.getRuleContext(0, ResourcetypeContext);
+    }
+    name() {
+        return this.getRuleContext(0, NameContext);
+    }
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_resource; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterResource) {
+            listener.enterResource(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitResource) {
+            listener.exitResource(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitResource) {
+            return visitor.visitResource(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ResourceContext = ResourceContext;
+class DataContext extends ParserRuleContext_1.ParserRuleContext {
+    resourcetype() {
+        return this.getRuleContext(0, ResourcetypeContext);
+    }
+    name() {
+        return this.getRuleContext(0, NameContext);
+    }
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_data; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterData) {
+            listener.enterData(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitData) {
+            listener.exitData(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitData) {
+            return visitor.visitData(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.DataContext = DataContext;
+class ProviderContext extends ParserRuleContext_1.ParserRuleContext {
+    PROVIDER() { return this.getToken(TerraformParser.PROVIDER, 0); }
+    resourcetype() {
+        return this.getRuleContext(0, ResourcetypeContext);
+    }
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_provider; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterProvider) {
+            listener.enterProvider(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitProvider) {
+            listener.exitProvider(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitProvider) {
+            return visitor.visitProvider(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ProviderContext = ProviderContext;
+class OutputContext extends ParserRuleContext_1.ParserRuleContext {
+    name() {
+        return this.getRuleContext(0, NameContext);
+    }
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_output; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterOutput) {
+            listener.enterOutput(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitOutput) {
+            listener.exitOutput(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitOutput) {
+            return visitor.visitOutput(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.OutputContext = OutputContext;
+class LocalContext extends ParserRuleContext_1.ParserRuleContext {
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_local; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterLocal) {
+            listener.enterLocal(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitLocal) {
+            listener.exitLocal(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitLocal) {
+            return visitor.visitLocal(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.LocalContext = LocalContext;
+class ModuleContext extends ParserRuleContext_1.ParserRuleContext {
+    name() {
+        return this.getRuleContext(0, NameContext);
+    }
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_module; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterModule) {
+            listener.enterModule(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitModule) {
+            listener.exitModule(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitModule) {
+            return visitor.visitModule(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ModuleContext = ModuleContext;
+class VariableContext extends ParserRuleContext_1.ParserRuleContext {
+    VARIABLE() { return this.getToken(TerraformParser.VARIABLE, 0); }
+    name() {
+        return this.getRuleContext(0, NameContext);
+    }
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_variable; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterVariable) {
+            listener.enterVariable(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitVariable) {
+            listener.exitVariable(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitVariable) {
+            return visitor.visitVariable(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.VariableContext = VariableContext;
+class BlockContext extends ParserRuleContext_1.ParserRuleContext {
+    blocktype() {
+        return this.getRuleContext(0, BlocktypeContext);
+    }
+    blockbody() {
+        return this.getRuleContext(0, BlockbodyContext);
+    }
+    label(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(LabelContext);
+        }
+        else {
+            return this.getRuleContext(i, LabelContext);
+        }
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_block; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterBlock) {
+            listener.enterBlock(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitBlock) {
+            listener.exitBlock(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitBlock) {
+            return visitor.visitBlock(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.BlockContext = BlockContext;
+class BlocktypeContext extends ParserRuleContext_1.ParserRuleContext {
+    IDENTIFIER() { return this.getToken(TerraformParser.IDENTIFIER, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_blocktype; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterBlocktype) {
+            listener.enterBlocktype(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitBlocktype) {
+            listener.exitBlocktype(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitBlocktype) {
+            return visitor.visitBlocktype(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.BlocktypeContext = BlocktypeContext;
+class ResourcetypeContext extends ParserRuleContext_1.ParserRuleContext {
+    STRING() { return this.getToken(TerraformParser.STRING, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_resourcetype; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterResourcetype) {
+            listener.enterResourcetype(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitResourcetype) {
+            listener.exitResourcetype(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitResourcetype) {
+            return visitor.visitResourcetype(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ResourcetypeContext = ResourcetypeContext;
+class NameContext extends ParserRuleContext_1.ParserRuleContext {
+    STRING() { return this.getToken(TerraformParser.STRING, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_name; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterName) {
+            listener.enterName(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitName) {
+            listener.exitName(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitName) {
+            return visitor.visitName(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.NameContext = NameContext;
+class LabelContext extends ParserRuleContext_1.ParserRuleContext {
+    STRING() { return this.getToken(TerraformParser.STRING, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_label; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterLabel) {
+            listener.enterLabel(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitLabel) {
+            listener.exitLabel(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitLabel) {
+            return visitor.visitLabel(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.LabelContext = LabelContext;
+class BlockbodyContext extends ParserRuleContext_1.ParserRuleContext {
+    LCURL() { return this.getToken(TerraformParser.LCURL, 0); }
+    RCURL() { return this.getToken(TerraformParser.RCURL, 0); }
+    argument(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ArgumentContext);
+        }
+        else {
+            return this.getRuleContext(i, ArgumentContext);
+        }
+    }
+    block(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(BlockContext);
+        }
+        else {
+            return this.getRuleContext(i, BlockContext);
+        }
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_blockbody; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterBlockbody) {
+            listener.enterBlockbody(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitBlockbody) {
+            listener.exitBlockbody(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitBlockbody) {
+            return visitor.visitBlockbody(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.BlockbodyContext = BlockbodyContext;
+class ArgumentContext extends ParserRuleContext_1.ParserRuleContext {
+    identifier() {
+        return this.getRuleContext(0, IdentifierContext);
+    }
+    expression() {
+        return this.getRuleContext(0, ExpressionContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_argument; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterArgument) {
+            listener.enterArgument(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitArgument) {
+            listener.exitArgument(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitArgument) {
+            return visitor.visitArgument(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ArgumentContext = ArgumentContext;
+class IdentifierContext extends ParserRuleContext_1.ParserRuleContext {
+    identifierchain() {
+        return this.getRuleContext(0, IdentifierchainContext);
+    }
+    DOT() { return this.tryGetToken(TerraformParser.DOT, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_identifier; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterIdentifier) {
+            listener.enterIdentifier(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitIdentifier) {
+            listener.exitIdentifier(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitIdentifier) {
+            return visitor.visitIdentifier(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.IdentifierContext = IdentifierContext;
+class IdentifierchainContext extends ParserRuleContext_1.ParserRuleContext {
+    IDENTIFIER() { return this.tryGetToken(TerraformParser.IDENTIFIER, 0); }
+    IN() { return this.tryGetToken(TerraformParser.IN, 0); }
+    VARIABLE() { return this.tryGetToken(TerraformParser.VARIABLE, 0); }
+    PROVIDER() { return this.tryGetToken(TerraformParser.PROVIDER, 0); }
+    index() {
+        return this.tryGetRuleContext(0, IndexContext);
+    }
+    DOT(i) {
+        if (i === undefined) {
+            return this.getTokens(TerraformParser.DOT);
+        }
+        else {
+            return this.getToken(TerraformParser.DOT, i);
+        }
+    }
+    identifierchain(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(IdentifierchainContext);
+        }
+        else {
+            return this.getRuleContext(i, IdentifierchainContext);
+        }
+    }
+    STAR() { return this.tryGetToken(TerraformParser.STAR, 0); }
+    inline_index() {
+        return this.tryGetRuleContext(0, Inline_indexContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_identifierchain; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterIdentifierchain) {
+            listener.enterIdentifierchain(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitIdentifierchain) {
+            listener.exitIdentifierchain(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitIdentifierchain) {
+            return visitor.visitIdentifierchain(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.IdentifierchainContext = IdentifierchainContext;
+class Inline_indexContext extends ParserRuleContext_1.ParserRuleContext {
+    NATURAL_NUMBER() { return this.getToken(TerraformParser.NATURAL_NUMBER, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_inline_index; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterInline_index) {
+            listener.enterInline_index(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitInline_index) {
+            listener.exitInline_index(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitInline_index) {
+            return visitor.visitInline_index(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.Inline_indexContext = Inline_indexContext;
+class ExpressionContext extends ParserRuleContext_1.ParserRuleContext {
+    section() {
+        return this.tryGetRuleContext(0, SectionContext);
+    }
+    expression(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ExpressionContext);
+        }
+        else {
+            return this.getRuleContext(i, ExpressionContext);
+        }
+    }
+    operator_() {
+        return this.tryGetRuleContext(0, Operator_Context);
+    }
+    LPAREN() { return this.tryGetToken(TerraformParser.LPAREN, 0); }
+    RPAREN() { return this.tryGetToken(TerraformParser.RPAREN, 0); }
+    forloop() {
+        return this.tryGetRuleContext(0, ForloopContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_expression; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterExpression) {
+            listener.enterExpression(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitExpression) {
+            listener.exitExpression(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitExpression) {
+            return visitor.visitExpression(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ExpressionContext = ExpressionContext;
+class ForloopContext extends ParserRuleContext_1.ParserRuleContext {
+    identifier() {
+        return this.getRuleContext(0, IdentifierContext);
+    }
+    IN() { return this.getToken(TerraformParser.IN, 0); }
+    expression(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ExpressionContext);
+        }
+        else {
+            return this.getRuleContext(i, ExpressionContext);
+        }
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_forloop; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterForloop) {
+            listener.enterForloop(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitForloop) {
+            listener.exitForloop(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitForloop) {
+            return visitor.visitForloop(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ForloopContext = ForloopContext;
+class SectionContext extends ParserRuleContext_1.ParserRuleContext {
+    list_() {
+        return this.tryGetRuleContext(0, List_Context);
+    }
+    map_() {
+        return this.tryGetRuleContext(0, Map_Context);
+    }
+    val() {
+        return this.tryGetRuleContext(0, ValContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_section; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterSection) {
+            listener.enterSection(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitSection) {
+            listener.exitSection(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitSection) {
+            return visitor.visitSection(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.SectionContext = SectionContext;
+class ValContext extends ParserRuleContext_1.ParserRuleContext {
+    NULL_() { return this.tryGetToken(TerraformParser.NULL_, 0); }
+    signed_number() {
+        return this.tryGetRuleContext(0, Signed_numberContext);
+    }
+    string() {
+        return this.tryGetRuleContext(0, StringContext);
+    }
+    identifier() {
+        return this.tryGetRuleContext(0, IdentifierContext);
+    }
+    BOOL() { return this.tryGetToken(TerraformParser.BOOL, 0); }
+    DESCRIPTION() { return this.tryGetToken(TerraformParser.DESCRIPTION, 0); }
+    filedecl() {
+        return this.tryGetRuleContext(0, FiledeclContext);
+    }
+    functioncall() {
+        return this.tryGetRuleContext(0, FunctioncallContext);
+    }
+    EOF_() { return this.tryGetToken(TerraformParser.EOF_, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_val; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterVal) {
+            listener.enterVal(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitVal) {
+            listener.exitVal(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitVal) {
+            return visitor.visitVal(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.ValContext = ValContext;
+class FunctioncallContext extends ParserRuleContext_1.ParserRuleContext {
+    functionname() {
+        return this.tryGetRuleContext(0, FunctionnameContext);
+    }
+    LPAREN() { return this.getToken(TerraformParser.LPAREN, 0); }
+    functionarguments() {
+        return this.tryGetRuleContext(0, FunctionargumentsContext);
+    }
+    RPAREN() { return this.getToken(TerraformParser.RPAREN, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_functioncall; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterFunctioncall) {
+            listener.enterFunctioncall(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitFunctioncall) {
+            listener.exitFunctioncall(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitFunctioncall) {
+            return visitor.visitFunctioncall(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.FunctioncallContext = FunctioncallContext;
+class FunctionnameContext extends ParserRuleContext_1.ParserRuleContext {
+    IDENTIFIER() { return this.getToken(TerraformParser.IDENTIFIER, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_functionname; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterFunctionname) {
+            listener.enterFunctionname(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitFunctionname) {
+            listener.exitFunctionname(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitFunctionname) {
+            return visitor.visitFunctionname(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.FunctionnameContext = FunctionnameContext;
+class FunctionargumentsContext extends ParserRuleContext_1.ParserRuleContext {
+    expression(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ExpressionContext);
+        }
+        else {
+            return this.getRuleContext(i, ExpressionContext);
+        }
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_functionarguments; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterFunctionarguments) {
+            listener.enterFunctionarguments(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitFunctionarguments) {
+            listener.exitFunctionarguments(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitFunctionarguments) {
+            return visitor.visitFunctionarguments(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.FunctionargumentsContext = FunctionargumentsContext;
+class IndexContext extends ParserRuleContext_1.ParserRuleContext {
+    expression() {
+        return this.getRuleContext(0, ExpressionContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_index; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterIndex) {
+            listener.enterIndex(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitIndex) {
+            listener.exitIndex(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitIndex) {
+            return visitor.visitIndex(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.IndexContext = IndexContext;
+class FiledeclContext extends ParserRuleContext_1.ParserRuleContext {
+    LPAREN() { return this.getToken(TerraformParser.LPAREN, 0); }
+    expression() {
+        return this.getRuleContext(0, ExpressionContext);
+    }
+    RPAREN() { return this.getToken(TerraformParser.RPAREN, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_filedecl; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterFiledecl) {
+            listener.enterFiledecl(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitFiledecl) {
+            listener.exitFiledecl(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitFiledecl) {
+            return visitor.visitFiledecl(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.FiledeclContext = FiledeclContext;
+class List_Context extends ParserRuleContext_1.ParserRuleContext {
+    expression(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ExpressionContext);
+        }
+        else {
+            return this.getRuleContext(i, ExpressionContext);
+        }
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_list_; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterList_) {
+            listener.enterList_(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitList_) {
+            listener.exitList_(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitList_) {
+            return visitor.visitList_(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.List_Context = List_Context;
+class Map_Context extends ParserRuleContext_1.ParserRuleContext {
+    LCURL() { return this.getToken(TerraformParser.LCURL, 0); }
+    RCURL() { return this.getToken(TerraformParser.RCURL, 0); }
+    argument(i) {
+        if (i === undefined) {
+            return this.getRuleContexts(ArgumentContext);
+        }
+        else {
+            return this.getRuleContext(i, ArgumentContext);
+        }
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_map_; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterMap_) {
+            listener.enterMap_(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitMap_) {
+            listener.exitMap_(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitMap_) {
+            return visitor.visitMap_(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.Map_Context = Map_Context;
+class StringContext extends ParserRuleContext_1.ParserRuleContext {
+    STRING() { return this.tryGetToken(TerraformParser.STRING, 0); }
+    MULTILINESTRING() { return this.tryGetToken(TerraformParser.MULTILINESTRING, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_string; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterString) {
+            listener.enterString(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitString) {
+            listener.exitString(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitString) {
+            return visitor.visitString(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.StringContext = StringContext;
+class Signed_numberContext extends ParserRuleContext_1.ParserRuleContext {
+    number() {
+        return this.getRuleContext(0, NumberContext);
+    }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_signed_number; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterSigned_number) {
+            listener.enterSigned_number(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitSigned_number) {
+            listener.exitSigned_number(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitSigned_number) {
+            return visitor.visitSigned_number(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.Signed_numberContext = Signed_numberContext;
+class Operator_Context extends ParserRuleContext_1.ParserRuleContext {
+    STAR() { return this.getToken(TerraformParser.STAR, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_operator_; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterOperator_) {
+            listener.enterOperator_(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitOperator_) {
+            listener.exitOperator_(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitOperator_) {
+            return visitor.visitOperator_(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.Operator_Context = Operator_Context;
+class NumberContext extends ParserRuleContext_1.ParserRuleContext {
+    NATURAL_NUMBER(i) {
+        if (i === undefined) {
+            return this.getTokens(TerraformParser.NATURAL_NUMBER);
+        }
+        else {
+            return this.getToken(TerraformParser.NATURAL_NUMBER, i);
+        }
+    }
+    DOT() { return this.tryGetToken(TerraformParser.DOT, 0); }
+    constructor(parent, invokingState) {
+        super(parent, invokingState);
+    }
+    // @Override
+    get ruleIndex() { return TerraformParser.RULE_number; }
+    // @Override
+    enterRule(listener) {
+        if (listener.enterNumber) {
+            listener.enterNumber(this);
+        }
+    }
+    // @Override
+    exitRule(listener) {
+        if (listener.exitNumber) {
+            listener.exitNumber(this);
+        }
+    }
+    // @Override
+    accept(visitor) {
+        if (visitor.visitNumber) {
+            return visitor.visitNumber(this);
+        }
+        else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+exports.NumberContext = NumberContext;
+
+
+/***/ }),
+
 /***/ 94822:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -6339,12 +10335,11 @@ class OciCisListener {
     }
     exitVerb(ctx) {
         var _a;
-        this.currentVerb = ((_a = ctx === null || ctx === void 0 ? void 0 : ctx.getText()) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || '';
+        this.currentVerb = ((_a = ctx === null || ctx === void 0 ? void 0 : ctx.text) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || '';
     }
     exitResource(ctx) {
         var _a;
-        const resource = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.getText()) === null || _a === void 0 ? void 0 : _a.toLowerCase();
-        const statement = this.currentStatement.toLowerCase();
+        const resource = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.text) === null || _a === void 0 ? void 0 : _a.toLowerCase();
         this.currentResourceHasAllResources = !!(resource && resource.includes('all-resources'));
         // Check for network security group admin policies (require explicit manage verb)
         if (resource &&
@@ -6361,7 +10356,7 @@ class OciCisListener {
     }
     exitCondition(ctx) {
         var _a;
-        const condition = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.getText()) === null || _a === void 0 ? void 0 : _a.toLowerCase();
+        const condition = (_a = ctx === null || ctx === void 0 ? void 0 : ctx.text) === null || _a === void 0 ? void 0 : _a.toLowerCase();
         // Check for MFA condition (support various MFA field names and true/!=false patterns)
         if (condition) {
             const mfaPatterns = [
@@ -6381,7 +10376,7 @@ class OciCisListener {
     }
     exitScope(ctx) {
         var _a;
-        this.currentScope = ((_a = ctx === null || ctx === void 0 ? void 0 : ctx.getText()) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || '';
+        this.currentScope = ((_a = ctx === null || ctx === void 0 ? void 0 : ctx.text) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || '';
         // Check for overly permissive policies (manage all-resources in tenancy)
         if (this.currentResourceHasAllResources && this.currentVerb === 'manage' && this.currentScope === 'tenancy') {
             this.overlyPermissivePolicies.push(this.currentStatement);
@@ -6421,7 +10416,7 @@ class OciCisListener {
     enterGroupName(ctx) { }
     exitGroupName(ctx) {
         var _a;
-        const groupName = ctx === null || ctx === void 0 ? void 0 : ctx.getText();
+        const groupName = ctx === null || ctx === void 0 ? void 0 : ctx.text;
         if (groupName && groupName.includes('${')) {
             (_a = this.logger) === null || _a === void 0 ? void 0 : _a.debug(`Found HCL variable in group name for statement: ${this.currentStatement}`);
             this.policiesWithHclVariablesInGroup.push(this.currentStatement);
@@ -35293,6 +39288,157 @@ exports.toCharArray = toCharArray;
 // 	return s;
 // }
 //# sourceMappingURL=Utils.js.map
+
+/***/ }),
+
+/***/ 57474:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/*!
+ * Copyright 2016 The ANTLR Project. All rights reserved.
+ * Licensed under the BSD-3-Clause license. See LICENSE file in the project root for license information.
+ */
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AbstractParseTreeVisitor = void 0;
+const Decorators_1 = __nccwpck_require__(56966);
+class AbstractParseTreeVisitor {
+    /**
+     * {@inheritDoc}
+     *
+     * The default implementation calls {@link ParseTree#accept} on the
+     * specified tree.
+     */
+    visit(tree) {
+        return tree.accept(this);
+    }
+    /**
+     * {@inheritDoc}
+     *
+     * The default implementation initializes the aggregate result to
+     * {@link #defaultResult defaultResult()}. Before visiting each child, it
+     * calls {@link #shouldVisitNextChild shouldVisitNextChild}; if the result
+     * is `false` no more children are visited and the current aggregate
+     * result is returned. After visiting a child, the aggregate result is
+     * updated by calling {@link #aggregateResult aggregateResult} with the
+     * previous aggregate result and the result of visiting the child.
+     *
+     * The default implementation is not safe for use in visitors that modify
+     * the tree structure. Visitors that modify the tree should override this
+     * method to behave properly in respect to the specific algorithm in use.
+     */
+    visitChildren(node) {
+        let result = this.defaultResult();
+        let n = node.childCount;
+        for (let i = 0; i < n; i++) {
+            if (!this.shouldVisitNextChild(node, result)) {
+                break;
+            }
+            let c = node.getChild(i);
+            let childResult = c.accept(this);
+            result = this.aggregateResult(result, childResult);
+        }
+        return result;
+    }
+    /**
+     * {@inheritDoc}
+     *
+     * The default implementation returns the result of
+     * {@link #defaultResult defaultResult}.
+     */
+    visitTerminal(node) {
+        return this.defaultResult();
+    }
+    /**
+     * {@inheritDoc}
+     *
+     * The default implementation returns the result of
+     * {@link #defaultResult defaultResult}.
+     */
+    visitErrorNode(node) {
+        return this.defaultResult();
+    }
+    /**
+     * Aggregates the results of visiting multiple children of a node. After
+     * either all children are visited or {@link #shouldVisitNextChild} returns
+     * `false`, the aggregate value is returned as the result of
+     * {@link #visitChildren}.
+     *
+     * The default implementation returns `nextResult`, meaning
+     * {@link #visitChildren} will return the result of the last child visited
+     * (or return the initial value if the node has no children).
+     *
+     * @param aggregate The previous aggregate value. In the default
+     * implementation, the aggregate value is initialized to
+     * {@link #defaultResult}, which is passed as the `aggregate` argument
+     * to this method after the first child node is visited.
+     * @param nextResult The result of the immediately preceeding call to visit
+     * a child node.
+     *
+     * @returns The updated aggregate result.
+     */
+    aggregateResult(aggregate, nextResult) {
+        return nextResult;
+    }
+    /**
+     * This method is called after visiting each child in
+     * {@link #visitChildren}. This method is first called before the first
+     * child is visited; at that point `currentResult` will be the initial
+     * value (in the default implementation, the initial value is returned by a
+     * call to {@link #defaultResult}. This method is not called after the last
+     * child is visited.
+     *
+     * The default implementation always returns `true`, indicating that
+     * `visitChildren` should only return after all children are visited.
+     * One reason to override this method is to provide a "short circuit"
+     * evaluation option for situations where the result of visiting a single
+     * child has the potential to determine the result of the visit operation as
+     * a whole.
+     *
+     * @param node The {@link RuleNode} whose children are currently being
+     * visited.
+     * @param currentResult The current aggregate result of the children visited
+     * to the current point.
+     *
+     * @returns `true` to continue visiting children. Otherwise return
+     * `false` to stop visiting children and immediately return the
+     * current aggregate result from {@link #visitChildren}.
+     */
+    shouldVisitNextChild(node, currentResult) {
+        return true;
+    }
+}
+__decorate([
+    Decorators_1.Override,
+    __param(0, Decorators_1.NotNull)
+], AbstractParseTreeVisitor.prototype, "visit", null);
+__decorate([
+    Decorators_1.Override,
+    __param(0, Decorators_1.NotNull)
+], AbstractParseTreeVisitor.prototype, "visitChildren", null);
+__decorate([
+    Decorators_1.Override,
+    __param(0, Decorators_1.NotNull)
+], AbstractParseTreeVisitor.prototype, "visitTerminal", null);
+__decorate([
+    Decorators_1.Override,
+    __param(0, Decorators_1.NotNull)
+], AbstractParseTreeVisitor.prototype, "visitErrorNode", null);
+__decorate([
+    __param(0, Decorators_1.NotNull)
+], AbstractParseTreeVisitor.prototype, "shouldVisitNextChild", null);
+exports.AbstractParseTreeVisitor = AbstractParseTreeVisitor;
+//# sourceMappingURL=AbstractParseTreeVisitor.js.map
 
 /***/ }),
 

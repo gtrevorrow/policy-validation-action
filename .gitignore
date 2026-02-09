@@ -29,6 +29,9 @@ logs
 lib/
 dist/
 
+# Generated artifacts
+.antlr/
+
 # IDEs and editors
 .vscode/
 .idea/

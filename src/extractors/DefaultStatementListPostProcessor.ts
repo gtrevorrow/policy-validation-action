@@ -1,9 +1,14 @@
-import { ExtractionStrategy } from './ExtractionStrategy';
+import { StatementListPostProcessor } from './StatementListPostProcessor';
 
-export class DefaultExtractionStrategy implements ExtractionStrategy {
-    /**
-     * Extract policy statements from raw text
-     */
+/**
+ * Default implementation for turning a raw statement-list representation into individual statements.
+ *
+ * Notes:
+ * - Removes HCL-style line comments (`#` and `//`) while respecting quoted content.
+ * - Splits on commas while respecting quotes and `${...}` interpolation blocks.
+ * - Removes surrounding quotes and trims whitespace.
+ */
+export class DefaultStatementListPostProcessor implements StatementListPostProcessor {
     extractStatements(raw: string): string[] {
         if (!raw || raw.trim() === '') {
             return [];
@@ -17,46 +22,47 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
 
         // Split the input by commas, properly handling quotes and interpolation
         const statements = this.splitStatements(uncommentedText);
-        
+
         // Clean and filter each statement
         return statements
-            .map(statement => this.cleanStatement(statement))
-            .filter(statement => statement && statement.trim() !== '');
+            .map((statement) => this.cleanStatement(statement))
+            .filter((statement) => statement && statement.trim() !== '');
     }
 
     /**
-     * Preprocesses statement to fix common issues before extraction
+     * Preprocesses statement to fix common issues before extraction.
      */
     private preprocessStatement(statement: string): string {
         let result = statement;
-        
-        // Fix common issues with Terraform string concatenation
+
+        // Fix common issues with Terraform string concatenation.
         result = result.replace(/"\s*\+\s*"/g, '');
-        
-        // Remove extraneous commas inside variable interpolation
+
+        // Remove extraneous commas inside variable interpolation.
         result = result.replace(/(\${[^}]*),\s*([^}]*})/g, '$1 $2');
-        
+
         return result;
     }
 
     /**
-     * Remove HCL comments (# and //) from the text
+     * Remove HCL comments (# and //) from the text.
      */
     private removeHclComments(text: string): string {
-        // Process line by line to properly handle comments
-        return text.split('\n')
-            .map(line => {
-                // Find comment position, but ignore inside quotes
+        // Process line by line to properly handle comments.
+        return text
+            .split('\n')
+            .map((line) => {
+                // Find comment position, but ignore inside quotes.
                 let inQuote = false;
                 let quoteChar = '';
                 let commentPos = -1;
-                
+
                 for (let i = 0; i < line.length; i++) {
                     const char = line[i];
                     const nextChar = i < line.length - 1 ? line[i + 1] : '';
-                    
-                    // Toggle quote state (handling escaped quotes)
-                    if ((char === '"' || char === "'") && (i === 0 || line[i-1] !== '\\')) {
+
+                    // Toggle quote state (handling escaped quotes).
+                    if ((char === '"' || char === "'") && (i === 0 || line[i - 1] !== '\\')) {
                         if (!inQuote) {
                             inQuote = true;
                             quoteChar = char;
@@ -64,26 +70,26 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
                             inQuote = false;
                         }
                     }
-                    
-                    // Find comment start (but not inside quotes)
+
+                    // Find comment start (but not inside quotes).
                     if (!inQuote && (char === '#' || (char === '/' && nextChar === '/'))) {
                         commentPos = i;
                         break;
                     }
                 }
-                
-                // Remove comment if found
+
+                // Remove comment if found.
                 return commentPos >= 0 ? line.substring(0, commentPos).trim() : line;
             })
-            .filter(line => line.trim() !== '') // Remove empty lines
+            .filter((line) => line.trim() !== '') // Remove empty lines
             .join(' '); // Join with spaces instead of newlines
     }
 
     /**
-     * Split a statement string by commas, properly handling quoted content and interpolation
+     * Split a statement string by commas, properly handling quoted content and interpolation.
      */
     private splitStatements(text: string): string[] {
-        // If there are no commas, return the whole text as a single statement
+        // If there are no commas, return the whole text as a single statement.
         if (!text.includes(',')) {
             return [text];
         }
@@ -93,12 +99,12 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
         let inQuote = false;
         let quoteChar = '';
         let braceLevel = 0;
-        
+
         for (let i = 0; i < text.length; i++) {
             const char = text.charAt(i);
-            
-            // Handle quotes
-            if ((char === '"' || char === "'") && (i === 0 || text.charAt(i-1) !== '\\')) {
+
+            // Handle quotes.
+            if ((char === '"' || char === "'") && (i === 0 || text.charAt(i - 1) !== '\\')) {
                 if (!inQuote) {
                     inQuote = true;
                     quoteChar = char;
@@ -106,15 +112,15 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
                     inQuote = false;
                 }
             }
-            
-            // Track interpolation blocks ${...}
-            if (char === '{' && i > 0 && text.charAt(i-1) === '$') {
+
+            // Track interpolation blocks ${...}.
+            if (char === '{' && i > 0 && text.charAt(i - 1) === '$') {
                 braceLevel++;
             } else if (char === '}' && braceLevel > 0) {
                 braceLevel--;
             }
-            
-            // Only split on commas outside of quotes and interpolation blocks
+
+            // Only split on commas outside of quotes and interpolation blocks.
             if (char === ',' && !inQuote && braceLevel === 0) {
                 results.push(current.trim());
                 current = '';
@@ -122,30 +128,29 @@ export class DefaultExtractionStrategy implements ExtractionStrategy {
                 current += char;
             }
         }
-        
-        // Add the final segment
+
+        // Add the final segment.
         if (current.trim()) {
             results.push(current.trim());
         }
-        
+
         return results;
     }
-    
+
     /**
-     * Clean a statement by removing quotes and extra whitespace
+     * Clean a statement by removing quotes and extra whitespace.
      */
     private cleanStatement(statement: string): string {
         if (!statement) return '';
-        
+
         let result = statement.trim();
-        
-        // Remove surrounding quotes if present
-        if ((result.startsWith('"') && result.endsWith('"')) || 
-            (result.startsWith("'") && result.endsWith("'"))) {
+
+        // Remove surrounding quotes if present.
+        if ((result.startsWith('"') && result.endsWith('"')) || (result.startsWith("'") && result.endsWith("'"))) {
             result = result.substring(1, result.length - 1).trim();
         }
 
-        
         return result;
     }
 }
+
