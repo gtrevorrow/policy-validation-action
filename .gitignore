@@ -32,6 +32,10 @@ dist/
 # Generated artifacts
 .antlr/
 
+# Local AI/agent harness artifacts (developer-machine specific)
+codex-skills/
+AGENTS.md
+
 # IDEs and editors
 .vscode/
 .idea/

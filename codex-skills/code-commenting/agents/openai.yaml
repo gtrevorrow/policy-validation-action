@@ -1,5 +1,0 @@
-interface:
-  display_name: "Code Commenting"
-  short_description: "Add clear, maintainable code comments"
-  default_prompt: "Use $code-commenting to add high-value, best-practice comments to the selected files without restating the obvious."
-
