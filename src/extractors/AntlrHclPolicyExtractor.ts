@@ -6,7 +6,14 @@ import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor
 import { PolicyExtractor } from './PolicyExtractor';
 
 /**
- * Visitor to extract policy statements from Terraform HCL AST
+ * Visitor to extract policy statements from Terraform HCL AST.
+ *
+ * Semantics:
+ * - Collects variable defaults and locals defined in the same file.
+ * - Extracts `statements` arguments anywhere in the file, not only policy resources.
+ * - Resolves `var.*` / `local.*` references with static traversals (attribute and literal index).
+ * - Ignores dynamic traversals (e.g., `count.index`) and non-literal expressions.
+ * - Normalizes heredocs with any delimiter and returns trimmed strings.
  */
 class PolicyStatementVisitor extends AbstractParseTreeVisitor<string[]> implements TerraformVisitor<string[]> {
     private variableDefaults: Map<string, ExpressionContext> = new Map();
