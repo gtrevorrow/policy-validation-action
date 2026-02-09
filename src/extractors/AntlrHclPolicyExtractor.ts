@@ -210,6 +210,8 @@ class PolicyStatementVisitor extends AbstractParseTreeVisitor<string[]> implemen
         };
     }
 
+    // Flattens a traversal like `local.policy_map["main"]` into segments ["policy_map", "main"].
+    // Dynamic indices (e.g. `local.list[count.index]`) set `dynamic=true` so resolution is skipped.
     private collectIdentifierChain(ctx: IdentifierchainContext): { segments: Array<string | number>; dynamic: boolean } {
         const segments: Array<string | number> = [];
         let dynamic = false;
