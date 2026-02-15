@@ -73,13 +73,32 @@ export interface AgenticValidationOptions {
 }
 
 /**
+ * Options for semantic validation
+ */
+export interface SemanticValidationOptions {
+  enabled?: boolean;
+  attachmentPoint?: string;
+  contextPath?: string; // Path to hierarchy file
+}
+
+/**
+ * Options for reference validation
+ */
+export interface ReferenceValidationOptions {
+  enabled?: boolean;
+  // Lookup data for reference validation (groups now, more entities later)
+  groupLookup?: { has(name: string): boolean } | string[];
+}
+
+/**
  * Options for policy validation
  */
 export interface ValidationOptions {
+  // Global failure conditions
   failOn?: 'error' | 'warning' | 'info';
   treatWarningsAsFailures?: boolean; // Default: false
 
-  // New: Validator-specific warning behavior
+  // Validator-specific warning behavior
   validatorWarningConfig?: {
     [validatorName: string]: {
       treatWarningsAsFailures?: boolean;
@@ -87,18 +106,16 @@ export interface ValidationOptions {
     };
   };
 
-  // Lookup data for reference validation (groups now, more entities later)
-  groupLookup?: { has(name: string): boolean } | string[];
+  semanticValidation?: SemanticValidationOptions;
+  referenceValidation?: ReferenceValidationOptions;
 
-  customPattern?: string;
   extractorType?: string;
-  pattern?: string;
+  extractorPattern?: string;
   fileExtension?: string;
   fileNames?: string[];
   exitOnError?: boolean;
   validatorConfig?: ValidatorConfig;
   agenticValidation?: AgenticValidationOptions;
-  attachmentPoint?: string;
 }
 
 /**

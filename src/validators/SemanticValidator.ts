@@ -35,7 +35,7 @@ export class SemanticValidator implements PolicyValidator {
 
         const issues: ValidationIssue[] = [];
         // Extract attachment point from options (pragmatic cast) or assume root if untyped
-        const attachmentPoint = (options as any).attachmentPoint;
+        const attachmentPoint = options.semanticValidation?.attachmentPoint;
 
         if (!attachmentPoint && options.validatorConfig?.runGlobalValidators) {
             // If running globally without specific attachment, we might skip hierarchy checks 

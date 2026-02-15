@@ -152,7 +152,7 @@ export {
  * Validate policies at the given path using the specified options.
  *  
  * This function processes policy files found at `scanPath`. For each file, it extracts
- * policy statements based on `options.extractorType` and `options.pattern`.
+ * policy statements based on `options.extractorType`.
  * These statements are then run through validation pipelines.
  * 
  * The validation process includes:
@@ -207,7 +207,7 @@ export async function validatePolicies(
   // Per-file local pipeline (syntax validation)
   for (const file of filesToProcess) {
     logger.info(`Processing file ${file}`);
-    const expressions = await processFile(file, options.pattern, options.extractorType as ExtractorType, logger);
+    const expressions = await processFile(file, options.extractorPattern, options.extractorType as ExtractorType, logger);
     allExpressions.push(...expressions);
 
     const syntaxResults = await localPipeline.validate(expressions);
@@ -254,7 +254,7 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
     // Build options from inputs with appropriate defaults
     const options: ValidationOptions = {
       extractorType: platform.getInput('extractor') || 'regex',
-      pattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN,
+      extractorPattern: platform.getInput('pattern') || process.env.POLICY_STATEMENTS_PATTERN,
       fileExtension: platform.getInput('file-extension'),
       fileNames: parseFileNames(platform.getInput('files')),
       exitOnError: parseBooleanInput('exit-on-error', false, platform),
@@ -263,7 +263,9 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
         runGlobalValidators: parseBooleanInput('validators-global', false, platform) || envGlobalValidatorOverride
       },
       // Pass attachment point through options
-      attachmentPoint: platform.getInput('attachment-point')
+      semanticValidation: {
+        attachmentPoint: platform.getInput('attachment-point')
+      }
     };
 
     // Load validation context if hierarchy provided
@@ -289,8 +291,8 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
     if (options.fileNames && options.fileNames.length > 0) {
       logger.info(`Files filter: ${options.fileNames.join(', ')}`);
     }
-    if (options.pattern && options.pattern !== process.env.POLICY_STATEMENTS_PATTERN) { // Log if different from potential env var default
-      logger.info(`Custom pattern: ${options.pattern}`);
+    if (options.extractorPattern && options.extractorPattern !== process.env.POLICY_STATEMENTS_PATTERN) { // Log if different from potential env var default
+      logger.info(`Custom pattern: ${options.extractorPattern}`);
     } else if (process.env.POLICY_STATEMENTS_PATTERN) {
       logger.info(`Using pattern from env var POLICY_STATEMENTS_PATTERN`);
     } else {

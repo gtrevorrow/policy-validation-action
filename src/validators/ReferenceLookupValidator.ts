@@ -44,7 +44,7 @@ export class ReferenceLookupValidator implements PolicyValidator {
     statements: string[],
     options: ValidationOptions = {},
   ): Promise<ValidationReport[]> {
-    const lookup = options.groupLookup;
+    const lookup = options.referenceValidation?.groupLookup;
     if (!lookup) {
       this.logger?.debug('ReferenceLookupValidator: No lookup provided, skipping');
       return [];

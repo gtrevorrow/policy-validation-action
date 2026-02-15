@@ -110,7 +110,7 @@ export class ValidatorFactory {
     }
 
     // Add reference lookup validator if lookup data is provided
-    if (options.groupLookup) {
+    if (options.referenceValidation?.groupLookup) {
       const { ReferenceLookupValidator } = require('./ReferenceLookupValidator');
       pipeline.addValidator(new ReferenceLookupValidator(logger));
     }

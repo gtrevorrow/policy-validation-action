@@ -52,7 +52,7 @@ describe('SemanticValidator', () => {
 
     test('validates valid compartment scope', async () => {
         const statements = ['Allow group Admin to read all-resources in compartment compA'];
-        const reports = await validator.validate(statements, { attachmentPoint: 'root' });
+        const reports = await validator.validate(statements, { semanticValidation: { attachmentPoint: 'root' } });
 
         expect(reports[0].passed).toBe(true);
         expect(reports[0].issues).toHaveLength(0);
@@ -60,7 +60,7 @@ describe('SemanticValidator', () => {
 
     test('flags invalid scope (SEM-INVALID_SCOPE)', async () => {
         const statements = ['Allow group Admin to manage all-resources in compartment InvalidComp'];
-        const reports = await validator.validate(statements, { attachmentPoint: 'root' });
+        const reports = await validator.validate(statements, { semanticValidation: { attachmentPoint: 'root' } });
 
         expect(reports[0].passed).toBe(false);
         const issue = reports[0].issues.find((i: ValidationIssue) => i.checkId === 'SEM-INVALID_SCOPE');
@@ -71,7 +71,7 @@ describe('SemanticValidator', () => {
     test('flags hierarchy mismatch (SEM-HIERARCHY_MISMATCH)', async () => {
         // Attached to compB, but tries to scope to compA (parent)
         const statements = ['Allow group Admin to manage all-resources in compartment compA'];
-        const reports = await validator.validate(statements, { attachmentPoint: 'compB' });
+        const reports = await validator.validate(statements, { semanticValidation: { attachmentPoint: 'compB' } });
 
         expect(reports[0].passed).toBe(false);
         const issue = reports[0].issues.find((i: ValidationIssue) => i.checkId === 'SEM-HIERARCHY_MISMATCH');
@@ -82,7 +82,7 @@ describe('SemanticValidator', () => {
     test('flags deny depth deviation (SEM-DENY_DEPTH)', async () => {
         // Attached to compD (depth 4)
         const statements = ['Deny group BadActors to use all-resources in compartment compD'];
-        const reports = await validator.validate(statements, { attachmentPoint: 'compD' });
+        const reports = await validator.validate(statements, { semanticValidation: { attachmentPoint: 'compD' } });
 
         // Depth logic: compD -> compC -> compB -> compA -> root. Length = 5. Limit > 3.
         expect(reports[0].passed).toBe(false);
@@ -92,7 +92,7 @@ describe('SemanticValidator', () => {
 
     test('flags over-permissioned (SEM-OVER_PERMISSIONED)', async () => {
         const statements = ['Allow group Admin to manage all-resources in tenancy'];
-        const reports = await validator.validate(statements, { attachmentPoint: 'root' });
+        const reports = await validator.validate(statements, { semanticValidation: { attachmentPoint: 'root' } });
 
         // Should warn
         const issue = reports[0].issues.find((i: ValidationIssue) => i.checkId === 'SEM-OVER_PERMISSIONED');
@@ -105,7 +105,7 @@ describe('SemanticValidator', () => {
             'Allow group Admin to read buckets in compartment compA',
             'Allow group Admin to read buckets in compartment InvalidComp'
         ];
-        const reports = await validator.validate(statements, { attachmentPoint: 'root' });
+        const reports = await validator.validate(statements, { semanticValidation: { attachmentPoint: 'root' } });
 
         // Filter out any potential warnings, focus on errors
         const errors = reports[0].issues.filter((i: ValidationIssue) => i.severity === 'error');
