@@ -99,4 +99,18 @@ describe('SemanticValidator', () => {
         expect(issue).toBeDefined();
         expect(issue?.severity).toBe('warning');
     });
+
+    test('validates multiple statements and maps to original strings', async () => {
+        const statements = [
+            'Allow group Admin to read buckets in compartment compA',
+            'Allow group Admin to read buckets in compartment InvalidComp'
+        ];
+        const reports = await validator.validate(statements, { attachmentPoint: 'root' });
+
+        // Filter out any potential warnings, focus on errors
+        const errors = reports[0].issues.filter((i: ValidationIssue) => i.severity === 'error');
+        expect(errors).toHaveLength(1);
+        expect(errors[0].checkId).toBe('SEM-INVALID_SCOPE');
+        expect(errors[0].statement).toBe(statements[1]);
+    });
 });

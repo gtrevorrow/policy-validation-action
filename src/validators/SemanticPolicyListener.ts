@@ -20,20 +20,17 @@ export class SemanticPolicyListener implements PolicyListener {
 
     private currentSemantics: Partial<PolicySemantics> = {};
     private currentStatementString: string = '';
+    private currentIndex: number = 0;
 
     constructor(private statements: string[]) { }
 
     // -- Listener Methods --
 
     enterPolicy(ctx: any): void {
-        // We might be processing multiple statements in one go if the input was a file content,
-        // but PolicyValidator usually sends them one by one or as a list.
-        // However, the ANTLR root rule `policy` handles multiple expressions.
-        // We need to map them back to the original statements list if passing list.
-        // Actually, the OciCisValidator passes the whole list to the parser?
-        // Let's verify OciCisValidator.analyzePolicy. 
-        // parse.policy() calls the root rule.
-        // In OciCisListener, they handle `currentIndex`.
+        if (this.currentIndex < this.statements.length) {
+            this.currentStatementString = this.statements[this.currentIndex];
+            this.currentIndex++;
+        }
     }
 
     enterAllowExpression(ctx: any): void { this.startStatement('ALLOW', ctx); }
@@ -89,7 +86,7 @@ export class SemanticPolicyListener implements PolicyListener {
     private startStatement(type: string, ctx: any) {
         this.currentSemantics = {
             type,
-            originalStatement: ctx.text, // This gets just the parsed text, preserving whitespace matches might be lost
+            originalStatement: this.currentStatementString || ctx.text, // Use tracked statement if available, else fallback to parsed text
             scopes: [],
             services: []
         };
