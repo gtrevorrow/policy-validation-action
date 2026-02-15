@@ -58,8 +58,13 @@ export interface ValidationIssue {
 export interface ValidatorConfig {
   /** Enable local validators (per-file syntax validation) */
   runLocalValidators: boolean;
+  /** List of local validators to run (names or paths). Overrides runLocalValidators if present. */
+  localValidators?: string[];
+
   /** Enable global validators (cross-file CIS benchmark validation) */
   runGlobalValidators: boolean;
+  /** List of global validators to run (names or paths). Overrides runGlobalValidators if present. */
+  globalValidators?: string[];
 }
 
 /**

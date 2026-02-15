@@ -197,11 +197,11 @@ export async function validatePolicies(
 
   // Create pipelines using the ValidatorFactory
   const localPipeline = validatorConfig.runLocalValidators ?
-    ValidatorFactory.createLocalPipeline(logger, options) :
+    await ValidatorFactory.createLocalPipeline(logger, options) :
     new ValidationPipeline(logger);
 
   const globalPipeline = validatorConfig.runGlobalValidators ?
-    ValidatorFactory.createGlobalPipeline(logger, options, context) :
+    await ValidatorFactory.createGlobalPipeline(logger, options, context) :
     new ValidationPipeline(logger);
 
   // Per-file local pipeline (syntax validation)
@@ -260,7 +260,9 @@ export async function runAction(platform: PlatformOperations): Promise<void> {
       exitOnError: parseBooleanInput('exit-on-error', false, platform),
       validatorConfig: {
         runLocalValidators: parseBooleanInput('validators-local', true, platform),
-        runGlobalValidators: parseBooleanInput('validators-global', false, platform) || envGlobalValidatorOverride
+        localValidators: parseFileNames(platform.getInput('validators-local-list')),
+        runGlobalValidators: parseBooleanInput('validators-global', false, platform) || envGlobalValidatorOverride,
+        globalValidators: parseFileNames(platform.getInput('validators-global-list'))
       },
       // Pass attachment point through options
       semanticValidation: {

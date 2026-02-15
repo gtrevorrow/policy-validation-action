@@ -3,6 +3,7 @@ import { OciSyntaxValidator } from './OciSyntaxValidator';
 import { OciCisBenchmarkValidator } from './OciCisBenchmarkValidator';
 import { AgenticOciCisBenchmarkValidator } from './AgenticOciCisBenchmarkValidator';
 import { ValidationPipeline } from './ValidationPipeline';
+import { ValidatorLoader } from './ValidatorLoader';
 
 /**
  * Factory for creating validator instances based on validation type
@@ -73,13 +74,31 @@ export class ValidatorFactory {
    * @param options Optional configuration options for local validators
    * @returns A configured ValidationPipeline instance with local validators
    */
-  static createLocalPipeline(
+  static async createLocalPipeline(
     logger?: Logger,
-    options?: Record<string, any>
-  ): ValidationPipeline {
+    options?: ValidationOptions
+  ): Promise<ValidationPipeline> {
     const pipeline = new ValidationPipeline(logger);
-    const validators = ValidatorFactory.createLocalValidators(logger);
-    validators.forEach(validator => pipeline.addValidator(validator));
+    const loader = new ValidatorLoader(logger);
+
+    // Default behavior: if runLocalValidators is true (or undefined/default), run syntax validator
+    const runDefault = options?.validatorConfig?.runLocalValidators !== false;
+
+    // Explicit list overrides default behavior? Or adds to it? 
+    // Plan said: "List of ... overrides runLocalValidators if present"
+    const explicitValidators = options?.validatorConfig?.localValidators;
+
+    if (explicitValidators && explicitValidators.length > 0) {
+      for (const validatorName of explicitValidators) {
+        const validator = await loader.loadValidator(validatorName, logger);
+        if (validator) {
+          pipeline.addValidator(validator);
+        }
+      }
+    } else if (runDefault) {
+      pipeline.addValidator(new OciSyntaxValidator(logger));
+    }
+
     return pipeline;
   }
 
@@ -92,35 +111,55 @@ export class ValidatorFactory {
    * @param context Optional validation context for semantic validation
    * @returns A configured ValidationPipeline instance with global validators
    */
-  public static createGlobalPipeline(
+  public static async createGlobalPipeline(
     logger: Logger,
     options: ValidationOptions,
     context?: import('./context/ValidationContext').ValidationContext
-  ): ValidationPipeline {
+  ): Promise<ValidationPipeline> {
     const pipeline = new ValidationPipeline(logger);
+    const loader = new ValidatorLoader(logger);
 
-    // Always add the standard CIS validator (it will self-filter to statements without variables)
-    pipeline.addValidator(new OciCisBenchmarkValidator(logger));
+    const runDefault = options.validatorConfig?.runGlobalValidators === true;
+    const explicitValidators = options.validatorConfig?.globalValidators;
 
-    // Add semantic validator if context is provided
-    if (context) {
-      // Dynamic import to avoid circular dep if any (SemanticValidator imports ValidatorFactory?) No.
-      const { SemanticValidator } = require('./SemanticValidator');
-      pipeline.addValidator(new SemanticValidator(context, logger));
-    }
+    if (explicitValidators && explicitValidators.length > 0) {
+      for (const validatorName of explicitValidators) {
+        // Special case: Semantic validator needs context
+        let validator;
+        if (validatorName === 'SemanticValidator' && context) {
+          const { SemanticValidator } = require('./SemanticValidator');
+          validator = new SemanticValidator(context, logger);
+        } else {
+          validator = await loader.loadValidator(validatorName, logger);
+        }
 
-    // Add reference lookup validator if lookup data is provided
-    if (options.referenceValidation?.groupLookup) {
-      const { ReferenceLookupValidator } = require('./ReferenceLookupValidator');
-      pipeline.addValidator(new ReferenceLookupValidator(logger));
-    }
+        if (validator) {
+          pipeline.addValidator(validator);
+        }
+      }
+    } else if (runDefault) {
+      // Default Global Validators
+      pipeline.addValidator(new OciCisBenchmarkValidator(logger));
 
-    // Add the agentic validator if enabled (it will self-filter to statements with variables)
-    if (options.agenticValidation?.enabled) {
-      logger.info(
-        'Agentic validation is enabled. Adding agentic validator to the pipeline.',
-      );
-      pipeline.addValidator(new AgenticOciCisBenchmarkValidator(logger));
+      // Add semantic validator if context is provided
+      if (context) {
+        const { SemanticValidator } = require('./SemanticValidator');
+        pipeline.addValidator(new SemanticValidator(context, logger));
+      }
+
+      // Add reference lookup validator if lookup data is provided
+      if (options.referenceValidation?.groupLookup) {
+        const { ReferenceLookupValidator } = require('./ReferenceLookupValidator');
+        pipeline.addValidator(new ReferenceLookupValidator(logger));
+      }
+
+      // Add the agentic validator if enabled (it will self-filter to statements with variables)
+      if (options.agenticValidation?.enabled) {
+        logger.info(
+          'Agentic validation is enabled. Adding agentic validator to the pipeline.',
+        );
+        pipeline.addValidator(new AgenticOciCisBenchmarkValidator(logger));
+      }
     }
 
     return pipeline;

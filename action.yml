@@ -26,10 +26,16 @@ inputs:
     description: 'Enable local (per-file) validators like syntax validation'
     required: false
     default: 'true'
+  validators-local-list:
+    description: 'Comma-separated list of local validators to run (names or paths). Overrides validators-local default behavior if present.'
+    required: false
   validators-global:
     description: 'Enable global validators like CIS benchmark'
     required: false
     default: 'true'
+  validators-global-list:
+    description: 'Comma-separated list of global validators to run (names or paths). Overrides validators-global default behavior if present.'
+    required: false
   agentic-validation-enabled:
     description: 'Enable the agentic (AI-powered) validator.'
     required: false

@@ -130,6 +130,8 @@ This approach allows you to use the CLI directly from the source code without pu
 | `--agentic-validation-provider`| | Specify the LLM provider (e.g., 'openai').                        | `none`  |
 | `--agentic-validation-api-key` | | API key for the LLM provider.                                       | `none`  |
 | `--agentic-validation-model` | | Specify the model for the provider (e.g., 'gpt-4o').            | `none`  |
+| `--validators-local-list` | | Comma-separated list of local validators (names or paths). Overrides default behavior. | `none` |
+| `--validators-global-list` | | Comma-separated list of global validators (names or paths). Overrides default behavior. | `none` |
 
 
 ### Environment Variables
@@ -149,6 +151,8 @@ CLI options can also be set via environment variables. These are useful in CI/CD
 | `POLICY_AGENTIC_VALIDATION_PROVIDER`| `--agentic-validation-provider`| Specify the LLM provider. |
 | `POLICY_AGENTIC_VALIDATION_API_KEY` | `--agentic-validation-api-key` | API key for the LLM provider. |
 | `POLICY_AGENTIC_VALIDATION_MODEL` | `--agentic-validation-model` | Specify the model for the provider. |
+| `POLICY_VALIDATORS_LOCAL_LIST` | `--validators-local-list` | List of local validators to run. |
+| `POLICY_VALIDATORS_GLOBAL_LIST` | `--validators-global-list` | List of global validators to run. |
 
 ### Example with Environment Variables
 
@@ -281,7 +285,9 @@ jobs:
 | `files`             | Comma-separated list of specific files to process                  | No       | `none`  |
 | `file-extension`    | Filter files by specified extension (e.g., .tf)                      | No       | `none`  |
 | `validators-local`  | Enable local validators (syntax validation)                          | No       | `true`  |
+| `validators-local-list` | Comma-separated list of local validators (names or paths)            | No       | `none`  |
 | `validators-global` | Enable global validators (includes CIS benchmark)                   | No       | `true`  |
+| `validators-global-list` | Comma-separated list of global validators (names or paths)           | No       | `none`  |
 | `agentic-validation-enabled` | Enable the agentic (AI-powered) validator.                 | No       | `false` |
 | `agentic-validation-provider`| Specify the LLM provider (e.g., 'openai').                 | No       | `none`  |
 | `agentic-validation-api-key` | API key for the LLM provider.                                | No       | `none`  |
@@ -754,6 +760,35 @@ export POLICY_AGENTIC_VALIDATION_MODEL="gpt-4o"
 2. **Global Validators**: Run on all statements from all files together
    - Currently includes the OciCisBenchmarkValidator and the optional AgenticOciCisBenchmarkValidator.
    - Can be enabled/disabled with `validators-global`
+   - Specific validators can be selected with `validators-global-list`
+
+#### Dynamic Validator Loading
+
+You can specify exactly which validators to run using the `*-list` options. This allows you to run specific built-in validators or load custom validators from your project.
+
+**Built-in Validators:**
+- `OciSyntaxValidator` (Local)
+- `OciCisBenchmarkValidator` (Global)
+- `AgenticOciCisBenchmarkValidator` (Global)
+
+**Custom Validators:**
+You can provide the absolute or relative path to a JavaScript/TypeScript file that exports a `PolicyValidator` class as the default export.
+
+**Example: Running only specific validators**
+```bash
+# Run only syntax validation locally
+policy-validation-action validate --validators-local-list OciSyntaxValidator
+
+# Run a custom validator globally
+policy-validation-action validate --validators-global-list ./custom-validators/MyCustomValidator.js
+```
+
+**Example: Github Action with Custom Validator**
+```yaml
+- uses: gtrevorrow/policy-validation-action@v1
+  with:
+    validators-global-list: './validators/MyCustomValidator.js'
+```
 
 **Pipeline Behavior**: The system automatically determines whether to run each pipeline based on whether it has validators configured. When `validators-global` is enabled, it always includes the `OciCisBenchmarkValidator`. If `agentic-validation-enabled` is also true, the pipeline runs in a hybrid mode where the agentic validator handles policies with variables, and the standard validator handles the rest.
 
