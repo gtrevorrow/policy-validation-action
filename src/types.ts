@@ -87,6 +87,9 @@ export interface ValidationOptions {
     };
   };
 
+  // Lookup data for reference validation (groups now, more entities later)
+  groupLookup?: { has(name: string): boolean } | string[];
+
   customPattern?: string;
   extractorType?: string;
   pattern?: string;

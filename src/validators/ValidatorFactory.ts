@@ -109,6 +109,12 @@ export class ValidatorFactory {
       pipeline.addValidator(new SemanticValidator(context, logger));
     }
 
+    // Add reference lookup validator if lookup data is provided
+    if (options.groupLookup) {
+      const { ReferenceLookupValidator } = require('./ReferenceLookupValidator');
+      pipeline.addValidator(new ReferenceLookupValidator(logger));
+    }
+
     // Add the agentic validator if enabled (it will self-filter to statements with variables)
     if (options.agenticValidation?.enabled) {
       logger.info(
